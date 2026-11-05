@@ -1,36 +1,61 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# EDUVORA – VITEEE Counselling & Coaching Website
 
-## Getting Started
+*Discover Your Path, Build Your Future.*
 
-First, run the development server:
+Built with Next.js (App Router) + Tailwind CSS.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## How to run it on your computer
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+1. Install **Node.js** (LTS version) from https://nodejs.org (only once, if you don't have it).
+2. Open a terminal in this folder (`Viteee-Website`).
+   In VS Code: **Terminal → New Terminal**.
+3. First time only, install the packages:
+   ```
+   npm install
+   ```
+4. Start the website:
+   ```
+   npm run dev
+   ```
+5. Open **http://localhost:3000** in your browser. Saved changes appear automatically.
+6. To stop it, click in the terminal and press **Ctrl + C**.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+**See it on your phone:** connect your phone to the same Wi-Fi as the computer, run `ipconfig`
+in a terminal, note the "IPv4 Address" (e.g. 192.168.1.5), and open `http://192.168.1.5:3000` on the phone.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## ⭐ Change your phone number & business details
 
-## Learn More
+Edit **one file: `src/config/site.ts`**
 
-To learn more about Next.js, take a look at the following resources:
+It has the business name, logo letters, founder name/bio/photo, phone, WhatsApp number,
+WhatsApp message, email, address, office hours, Instagram, YouTube and the results numbers.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `phone` → shown on the site and used by the "Call Now" button. Example: `"+91 98765 43210"`
+- `whatsappNumber` → country code + number, **no + and no spaces**. Example: `"919876543210"`
+- Founder photo: put `founder.jpg` in the `public` folder, then set `photo: "/founder.jpg"`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Supabase (database, login, files)
 
-## Deploy on Vercel
+Courses, study material, tests, slots, bookings, reviews and student accounts live in **Supabase**.
+👉 Follow **[SUPABASE_SETUP.md](SUPABASE_SETUP.md)** step by step to connect it.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- Your Supabase keys go in **`.env.local`** (private — never uploaded to GitHub).
+- The whole database is created by **`supabase/setup.sql`** (paste it into Supabase → SQL Editor → Run).
+- You add/edit products, slots, reviews and questions in **Supabase → Table Editor** (no code needed).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Other files you may edit
+
+| What | File |
+| --- | --- |
+| Home page FAQs | `src/data/misc.ts` |
+| Hero slideshow text | `src/components/home/HeroSlider.tsx` (top of file) |
+| Founder story (About page) | `src/app/about/page.tsx` (top of file) |
+| Colours | top of `src/app/globals.css` |
+
+## Before going live
+
+- Replace all placeholders (phone, WhatsApp, email, address, social links, results).
+- Replace the SAMPLE reviews in Supabase → `reviews` with real ones.
+- "Buy Now" / "Enroll Now" still open WhatsApp — Razorpay checkout is the next step.
+- Get the policy pages reviewed by a legal professional.
+- Check the production build works: `npm run build`

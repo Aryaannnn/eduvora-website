@@ -1,0 +1,34 @@
+import type { Metadata } from "next";
+import { Suspense } from "react";
+import TestsManager, { type AdminQuestion, type AdminTest } from "@/components/admin/TestsManager";
+import { DashSkeleton } from "@/components/dashboard/ui";
+import { requireAdmin } from "@/lib/admin";
+
+export const metadata: Metadata = { title: "Tests" };
+
+export default function TestsPage() {
+  return (
+    <Suspense fallback={<DashSkeleton />}>
+      <Content />
+    </Suspense>
+  );
+}
+
+async function Content() {
+  const s = await requireAdmin("/admin/tests");
+  // Admins can read questions WITH answers (students never can — see setup.sql)
+  const [tests, questions, products] = await Promise.all([
+    s.supabase.from("tests").select("id,title,type,duration_minutes,total_marks,is_free,is_active,product_id,created_at").order("created_at", { ascending: false }),
+    s.supabase.from("questions").select("id,test_id,question,options,correct_option,explanation,marks,sort_order").order("sort_order").order("created_at").limit(5000),
+    s.supabase.from("products").select("id,title,category").order("category").order("sort_order"),
+  ]);
+  const err = tests.error ?? questions.error ?? products.error;
+  if (err) return <p className="card p-6 text-red-600">Could not load tests: {err.message}</p>;
+  return (
+    <TestsManager
+      tests={(tests.data ?? []) as AdminTest[]}
+      questions={(questions.data ?? []) as AdminQuestion[]}
+      products={(products.data ?? []) as { id: string; title: string; category: string }[]}
+    />
+  );
+}

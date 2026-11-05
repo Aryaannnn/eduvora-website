@@ -1,0 +1,457 @@
+"use server";
+
+// =====================================================================
+//  ADMIN ACTIONS — every add / edit / delete in the admin panel.
+//  Each action: (1) checks role = 'admin' on the server,
+//               (2) runs with the admin's own login, so Supabase RLS checks it again,
+//               (3) refreshes the public website cache (updateTag) so changes show at once.
+// =====================================================================
+import { updateTag } from "next/cache";
+import { adminOrError, friendlyDbError, isError, type ActionResult } from "@/lib/admin";
+import { yearInIndia } from "@/lib/format";
+import { getAdminSupabase } from "@/lib/supabase/admin";
+import { notifyBookingChanged, notifyBookingConfirmed, notifyPurchasePaid, sendKind } from "@/lib/email/notify";
+
+const fail = (error: string): ActionResult => ({ ok: false, error });
+const dbResult = (error: { message: string } | null, message?: string): ActionResult =>
+  error ? fail(friendlyDbError(error.message)) : { ok: true, message };
+
+const slugify = (s: string) =>
+  s.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80);
+const int = (v: unknown) => (v === "" || v === null || v === undefined ? null : Math.round(Number(v)));
+const isUrl = (s: string) => /^https?:\/\/\S+$/.test(s);
+
+// ---------------------------------------------------------------- PRODUCTS
+export type ProductInput = {
+  id?: string;
+  title: string;
+  slug?: string;
+  description?: string;
+  category: "crash_course" | "study_material" | "previous_paper" | "mock_test";
+  college?: string;
+  price: number | string;
+  original_price?: number | string | null;
+  is_free: boolean;
+  is_active: boolean;
+  thumbnail_url?: string;
+  file_path?: string;
+  content_links: { title: string; url: string }[];
+  details?: string; // JSON text (advanced)
+  sort_order?: number | string;
+};
+
+export async function saveProduct(input: ProductInput): Promise<ActionResult<{ id: string }>> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+
+  const title = input.title?.trim();
+  if (!title) return fail("Please enter a title.");
+  if (!["crash_course", "study_material", "previous_paper", "mock_test"].includes(input.category)) return fail("Please choose a category.");
+  const price = input.is_free ? 0 : int(input.price);
+  if (price === null || Number.isNaN(price) || price < 0) return fail("Please enter a valid price in rupees.");
+  const original = int(input.original_price);
+  if (original !== null && (Number.isNaN(original) || original < 0)) return fail("Original price must be a number.");
+  const thumb = input.thumbnail_url?.trim() || null;
+  if (thumb && !isUrl(thumb)) return fail("Thumbnail must be a full web address starting with https://");
+  const links = (input.content_links ?? []).filter((l) => l.url?.trim());
+  for (const l of links) if (!isUrl(l.url.trim())) return fail(`"${l.url}" is not a valid link. Links must start with https://`);
+
+  let details: Record<string, unknown> | undefined;
+  if (input.details !== undefined && input.details.trim() !== "") {
+    try {
+      const parsed = JSON.parse(input.details);
+      if (typeof parsed !== "object" || Array.isArray(parsed) || parsed === null) return fail("Extra display info must be a JSON object { ... }.");
+      details = parsed;
+    } catch {
+      return fail("Extra display info is not valid JSON. Check commas and quotes.");
+    }
+  }
+
+  const row = {
+    title,
+    slug: slugify(input.slug?.trim() || title),
+    description: input.description?.trim() || null,
+    category: input.category,
+    college: input.college?.trim() || null,
+    price,
+    original_price: original,
+    is_free: input.is_free,
+    is_active: input.is_active,
+    thumbnail_url: thumb,
+    // file_path is kept up to date by the Files section (file-actions.ts) — only set it if given
+    ...(input.file_path !== undefined ? { file_path: input.file_path.trim() || null } : {}),
+    content_links: links.map((l, i) => ({ title: l.title?.trim() || `Link ${i + 1}`, url: l.url.trim() })),
+    sort_order: int(input.sort_order) ?? 0,
+    ...(details ? { details } : {}),
+  };
+  if (!row.slug) return fail("Please enter a title with letters or numbers.");
+
+  if (input.id) {
+    const { error } = await s.supabase.from("products").update(row).eq("id", input.id);
+    updateTag("products");
+    return dbResult(error, "Product saved.");
+  }
+  const { data: created, error } = await s.supabase.from("products").insert(row).select("id").single();
+  updateTag("products");
+  if (error) return fail(friendlyDbError(error.message));
+  return { ok: true, data: { id: created.id as string }, message: "Product added — now you can add its files below." };
+}
+
+export async function setProductFlag(id: string, field: "is_active" | "is_free", value: boolean): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const patch = field === "is_free" && value ? { is_free: true, price: 0 } : { [field]: value };
+  const { error } = await s.supabase.from("products").update(patch).eq("id", id);
+  updateTag("products");
+  return dbResult(error);
+}
+
+export async function deleteProduct(id: string): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const { data: p } = await s.supabase.from("products").select("file_path").eq("id", id).maybeSingle();
+  // all of its uploaded files (product_files) — removed from storage too
+  const db = getAdminSupabase();
+  const { data: files } = db ? await db.from("product_files").select("file_path").eq("product_id", id) : { data: [] };
+  const { error } = await s.supabase.from("products").delete().eq("id", id);
+  if (!error) {
+    const paths = [...new Set([...(files ?? []).map((f) => f.file_path as string), ...(p?.file_path ? [p.file_path] : [])])];
+    if (paths.length) await (db ?? s.supabase).storage.from("materials").remove(paths);
+  }
+  updateTag("products");
+  return dbResult(error, "Product deleted.");
+}
+
+/** Private class links (admins can read them through this function) */
+export async function loadProductLinks(id: string): Promise<ActionResult<{ title: string; url: string }[]>> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const { data, error } = await s.supabase.rpc("get_product_content", { p_product_id: id });
+  if (error) return fail(error.message);
+  const list = Array.isArray(data) ? data : [];
+  return {
+    ok: true,
+    data: list.map((x: unknown, i: number) =>
+      typeof x === "string" ? { title: `Link ${i + 1}`, url: x } : { title: String((x as { title?: string }).title ?? ""), url: String((x as { url?: string }).url ?? "") },
+    ),
+  };
+}
+
+// ---------------------------------------------------------------- SLOTS
+const TIME = /^\d{2}:\d{2}$/;
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+export async function addSlot(input: { date: string; start: string; end: string; price: number | string }): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  if (!DATE.test(input.date) || !TIME.test(input.start) || !TIME.test(input.end)) return fail("Please fill date, start time and end time.");
+  if (input.end <= input.start) return fail("End time must be after start time.");
+  const price = int(input.price);
+  if (price === null || price < 0) return fail("Please enter a valid price.");
+  const { error } = await s.supabase.from("slots").insert({ date: input.date, start_time: input.start, end_time: input.end, price });
+  updateTag("slots");
+  return dbResult(error, "Slot added.");
+}
+
+export async function addSlotsBulk(input: {
+  from: string;
+  to: string;
+  weekdays: number[]; // 1 = Monday … 7 = Sunday
+  times: { start: string; end: string }[];
+  price: number | string;
+}): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  if (!DATE.test(input.from) || !DATE.test(input.to) || input.to < input.from) return fail("Please choose a valid date range.");
+  const times = input.times.filter((t) => TIME.test(t.start) && TIME.test(t.end));
+  if (times.length === 0) return fail("Add at least one time.");
+  if (times.some((t) => t.end <= t.start)) return fail("Each end time must be after its start time.");
+  if (input.weekdays.length === 0) return fail("Choose at least one day of the week.");
+  const price = int(input.price);
+  if (price === null || price < 0) return fail("Please enter a valid price.");
+
+  const rows: { date: string; start_time: string; end_time: string; price: number }[] = [];
+  const end = new Date(`${input.to}T00:00:00Z`);
+  for (let d = new Date(`${input.from}T00:00:00Z`); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
+    const isoDow = ((d.getUTCDay() + 6) % 7) + 1;
+    if (!input.weekdays.includes(isoDow)) continue;
+    const date = d.toISOString().slice(0, 10);
+    for (const t of times) rows.push({ date, start_time: t.start, end_time: t.end, price });
+  }
+  if (rows.length === 0) return fail("No dates match the chosen days.");
+  if (rows.length > 500) return fail(`That would create ${rows.length} slots. Please choose a shorter range (max 500).`);
+
+  // Skips slots that already exist at the same date + start time
+  const { error, count } = await s.supabase
+    .from("slots")
+    .upsert(rows, { onConflict: "date,start_time", ignoreDuplicates: true, count: "exact" });
+  updateTag("slots");
+  return dbResult(error, `${count ?? rows.length} slot(s) added (existing ones were skipped).`);
+}
+
+export async function setSlotAvailable(id: string, available: boolean): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const { error } = await s.supabase.from("slots").update({ is_available: available }).eq("id", id);
+  updateTag("slots");
+  return dbResult(error);
+}
+
+export async function deleteSlot(id: string): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const { error } = await s.supabase.from("slots").delete().eq("id", id);
+  updateTag("slots");
+  return dbResult(error, "Slot deleted.");
+}
+
+// ---------------------------------------------------------------- BOOKINGS
+export async function updateBooking(
+  id: string,
+  patch: { status?: "pending" | "confirmed" | "cancelled" | "completed"; payment_status?: "unpaid" | "pending" | "paid" | "failed" | "refunded" },
+): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const { data: before } = await s.supabase.from("bookings").select("status,payment_status,invoice_number").eq("id", id).maybeSingle();
+  const full: Record<string, unknown> = { ...patch };
+  // Marked as paid by hand (offline payment) → invoice number + confirmed, like an online payment
+  if (patch.payment_status === "paid" && before?.payment_status !== "paid") {
+    if (!before?.invoice_number) full.invoice_number = await nextInvoiceNumber();
+    full.paid_at = new Date().toISOString();
+    if (!patch.status && before?.status === "pending") full.status = "confirmed";
+  }
+  const { error } = await s.supabase.from("bookings").update(full).eq("id", id);
+  updateTag("slots"); // cancelling frees the slot
+  if (!error && patch.status === "cancelled" && before?.status !== "cancelled") notifyBookingChanged(id, "cancelled");
+  if (!error && patch.payment_status === "paid" && before?.payment_status !== "paid") notifyBookingConfirmed(id);
+  return dbResult(error, patch.status === "cancelled" ? "Booking cancelled — the student has been emailed." : "Booking updated.");
+}
+
+/** Move a booking to another free slot; the student gets an email with the new time. */
+export async function rescheduleBooking(id: string, newSlotId: string): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const { error } = await s.supabase.rpc("reschedule_booking", { p_booking: id, p_new_slot: newSlotId });
+  updateTag("slots");
+  if (error) return fail(/function/i.test(error.message) && /find/i.test(error.message) ? "Run supabase/emails-invoices.sql in Supabase first." : error.message);
+  notifyBookingChanged(id, "rescheduled");
+  return { ok: true, message: "Booking moved — the student has been emailed the new time." };
+}
+
+// ---------------------------------------------------------------- EMAIL LOGS
+/** Rebuild an email from the database and send it again. */
+export async function resendEmail(logId: string): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const db = getAdminSupabase();
+  if (!db) return fail("Server key missing.");
+  const { data: log } = await db.from("email_logs").select("kind,ref_id").eq("id", logId).maybeSingle();
+  if (!log?.ref_id) return fail("Email not found.");
+  const ok = await sendKind(log.kind as string, log.ref_id as string, logId);
+  return ok ? { ok: true, message: "Email sent." } : fail("Could not send — see the error in the list.");
+}
+
+// ---------------------------------------------------------------- ENQUIRIES
+export async function updateEnquiryStatus(id: string, status: "new" | "contacted" | "converted"): Promise<ActionResult> {
+  if (!["new", "contacted", "converted"].includes(status)) return fail("Unknown status.");
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const { error } = await s.supabase.from("enquiries").update({ status }).eq("id", id);
+  return dbResult(error, `Marked as ${status}.`);
+}
+
+export async function deleteEnquiry(id: string): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const { error } = await s.supabase.from("enquiries").delete().eq("id", id);
+  return dbResult(error, "Enquiry deleted.");
+}
+
+// ---------------------------------------------------------------- TESTS & QUESTIONS
+export type TestInput = { id?: string; title: string; type: "mock" | "mcq"; duration_minutes: number | string; is_free: boolean; is_active: boolean; product_id?: string | null };
+
+export async function saveTest(input: TestInput): Promise<ActionResult<{ id: string }>> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const title = input.title?.trim();
+  if (!title) return fail("Please enter a test title.");
+  if (!["mock", "mcq"].includes(input.type)) return fail("Type must be Mock or MCQ.");
+  const duration = int(input.duration_minutes);
+  if (!duration || duration < 1 || duration > 600) return fail("Duration must be between 1 and 600 minutes.");
+  if (!input.is_free && !input.product_id) return fail("A paid test must be linked to a product (so buyers can open it). Or tick Free.");
+
+  const row = { title, type: input.type, duration_minutes: duration, is_free: input.is_free, is_active: input.is_active, product_id: input.product_id || null };
+  if (input.id) {
+    const { error } = await s.supabase.from("tests").update(row).eq("id", input.id);
+    updateTag("products");
+    return error ? fail(friendlyDbError(error.message)) : { ok: true, data: { id: input.id }, message: "Test saved." };
+  }
+  const { data, error } = await s.supabase.from("tests").insert(row).select("id").single();
+  updateTag("products");
+  return error ? fail(friendlyDbError(error.message)) : { ok: true, data: { id: data.id as string }, message: "Test created." };
+}
+
+export async function deleteTest(id: string): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const { error } = await s.supabase.from("tests").delete().eq("id", id);
+  updateTag("products");
+  return dbResult(error, "Test deleted (with its questions and attempts).");
+}
+
+export type QuestionInput = { id?: string; test_id: string; question: string; options: string[]; correct_option: number; explanation?: string; marks: number | string; sort_order?: number };
+
+function validateQuestion(q: QuestionInput): string | null {
+  if (!q.question?.trim()) return "Question text is empty.";
+  if (!Array.isArray(q.options) || q.options.length !== 4 || q.options.some((o) => !String(o ?? "").trim())) return "All 4 options must be filled.";
+  if (![0, 1, 2, 3].includes(Number(q.correct_option))) return "Correct answer must be A, B, C or D.";
+  const marks = int(q.marks);
+  if (!marks || marks < 1) return "Marks must be 1 or more.";
+  return null;
+}
+
+const questionRow = (q: QuestionInput) => ({
+  test_id: q.test_id,
+  question: q.question.trim(),
+  options: q.options.map((o) => String(o).trim()),
+  correct_option: Number(q.correct_option),
+  explanation: q.explanation?.trim() || null,
+  marks: int(q.marks) ?? 1,
+  sort_order: q.sort_order ?? 0,
+});
+
+export async function saveQuestion(q: QuestionInput): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const problem = validateQuestion(q);
+  if (problem) return fail(problem);
+  const row = questionRow(q);
+  const { error } = q.id
+    ? await s.supabase.from("questions").update(row).eq("id", q.id)
+    : await s.supabase.from("questions").insert(row);
+  updateTag("products");
+  return dbResult(error, q.id ? "Question saved." : "Question added.");
+}
+
+export async function deleteQuestion(id: string): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const { error } = await s.supabase.from("questions").delete().eq("id", id);
+  updateTag("products");
+  return dbResult(error, "Question deleted.");
+}
+
+/** Bulk add from CSV. Either ALL rows are added, or none (with a list of problems). */
+export async function bulkAddQuestions(testId: string, rows: QuestionInput[]): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  if (rows.length === 0) return fail("The CSV file has no questions.");
+  if (rows.length > 1000) return fail("Please upload at most 1000 questions at a time.");
+  const problems = rows.map((r, i) => [i, validateQuestion({ ...r, test_id: testId })] as const).filter(([, p]) => p);
+  if (problems.length) return fail(problems.slice(0, 8).map(([i, p]) => `Row ${i + 2}: ${p}`).join("\n") + (problems.length > 8 ? `\n…and ${problems.length - 8} more` : ""));
+
+  const { data: last } = await s.supabase.from("questions").select("sort_order").eq("test_id", testId).order("sort_order", { ascending: false }).limit(1).maybeSingle();
+  const start = (last?.sort_order ?? 0) + 1;
+  const { error } = await s.supabase.from("questions").insert(rows.map((r, i) => questionRow({ ...r, test_id: testId, sort_order: start + i })));
+  updateTag("products");
+  return dbResult(error, `${rows.length} question(s) added.`);
+}
+
+// ---------------------------------------------------------------- REVIEWS
+export type ReviewInput = { id?: string; name: string; type: "student" | "parent"; rating: number | string; comment: string; photo_url?: string; is_approved: boolean };
+
+export async function saveReview(r: ReviewInput): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  if (!r.name?.trim()) return fail("Please enter a name.");
+  if (!r.comment?.trim()) return fail("Please enter the review text.");
+  const rating = int(r.rating);
+  if (!rating || rating < 1 || rating > 5) return fail("Rating must be from 1 to 5.");
+  const photo = r.photo_url?.trim() || null;
+  if (photo && !isUrl(photo)) return fail("Photo must be a full web address starting with https://");
+  const row = { name: r.name.trim(), type: r.type === "parent" ? "parent" : "student", rating, comment: r.comment.trim(), photo_url: photo, is_approved: r.is_approved };
+  const { error } = r.id ? await s.supabase.from("reviews").update(row).eq("id", r.id) : await s.supabase.from("reviews").insert(row);
+  updateTag("reviews");
+  return dbResult(error, r.id ? "Review saved." : "Review added.");
+}
+
+export async function setReviewApproved(id: string, approved: boolean): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const { error } = await s.supabase.from("reviews").update({ is_approved: approved }).eq("id", id);
+  updateTag("reviews");
+  return dbResult(error);
+}
+
+export async function deleteReview(id: string): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const { error } = await s.supabase.from("reviews").delete().eq("id", id);
+  updateTag("reviews");
+  return dbResult(error, "Review deleted.");
+}
+
+// ---------------------------------------------------------------- STUDENTS
+export async function setUserRole(userId: string, role: "admin" | "student"): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  if (userId === s.user.id) return fail("You can't change your own role (so you don't lock yourself out).");
+  const { error } = await s.supabase.from("profiles").update({ role }).eq("id", userId);
+  return dbResult(error, role === "admin" ? "User is now an admin." : "Admin access removed.");
+}
+
+/** Predictor access by hand: "give" / "remove" override, or "auto" (paid counselling decides). */
+export async function setPredictorAccess(userId: string, mode: "auto" | "give" | "remove"): Promise<ActionResult> {
+  if (!["auto", "give", "remove"].includes(mode)) return fail("Unknown option.");
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const { error } =
+    mode === "auto"
+      ? await s.supabase.from("predictor_access_overrides").delete().eq("user_id", userId)
+      : await s.supabase
+          .from("predictor_access_overrides")
+          .upsert({ user_id: userId, has_access: mode === "give", updated_by: s.user.id, updated_at: new Date().toISOString() });
+  return dbResult(error, mode === "give" ? "Predictor access given." : mode === "remove" ? "Predictor access removed." : "Back to automatic (paid counselling).");
+}
+
+// ---------------------------------------------------------------- PAYMENTS
+/** Invoice numbers like EDU-2026-0001 (same series as Razorpay payments). */
+async function nextInvoiceNumber(): Promise<string> {
+  const admin = getAdminSupabase();
+  const { data } = admin ? await admin.rpc("next_invoice_number") : { data: null };
+  // fallback if supabase/payments.sql hasn't been run yet
+  return typeof data === "string" ? data : `EDU-${yearInIndia()}-M${Date.now().toString(36).toUpperCase()}`;
+}
+
+/** Record a payment by hand (until Razorpay is connected). */
+export async function recordPurchase(input: { user_id: string; product_id: string; amount: number | string; status: "paid" | "failed" }): Promise<ActionResult> {
+  if (!["paid", "failed"].includes(input.status)) return fail("Choose Paid or Failed.");
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  if (!input.user_id || !input.product_id) return fail("Choose a student and a product.");
+  const amount = int(input.amount);
+  if (amount === null || amount < 0) return fail("Enter a valid amount.");
+  const invoice = input.status === "paid" ? await nextInvoiceNumber() : null;
+  const { data: row, error } = await s.supabase
+    .from("purchases")
+    .insert({ user_id: input.user_id, product_id: input.product_id, amount, status: input.status, invoice_number: invoice, paid_at: input.status === "paid" ? new Date().toISOString() : null })
+    .select("id")
+    .single();
+  if (!error && row && input.status === "paid") notifyPurchasePaid(row.id);
+  return dbResult(error, "Payment recorded.");
+}
+
+export async function setPurchaseStatus(id: string, status: "paid" | "failed"): Promise<ActionResult> {
+  if (!["paid", "failed"].includes(status)) return fail("Unknown status.");
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const patch: Record<string, unknown> = { status };
+  if (status === "paid") {
+    const { data: cur } = await s.supabase.from("purchases").select("invoice_number").eq("id", id).maybeSingle();
+    if (!cur?.invoice_number) patch.invoice_number = await nextInvoiceNumber();
+    patch.paid_at = new Date().toISOString();
+  }
+  const { error } = await s.supabase.from("purchases").update(patch).eq("id", id);
+  if (!error && status === "paid") notifyPurchasePaid(id);
+  return dbResult(error, "Payment updated.");
+}

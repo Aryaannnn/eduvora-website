@@ -1,26 +1,249 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* Card colours you can use in Supabase → products → details → "color".
+   Pick any "from-X-600 to-Y-500" pair from these colours: */
+@source inline("from-{indigo,blue,sky,cyan,teal,emerald,green,lime,amber,orange,red,rose,pink,fuchsia,purple,violet,slate}-{500,600} to-{indigo,blue,sky,cyan,teal,emerald,green,lime,amber,orange,red,rose,pink,fuchsia,purple,violet,slate}-{500,600}");
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+/* ---------- Colours & fonts (change these to re-colour the whole site) ---------- */
+@theme {
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  /* EDUVORA navy (main colour — headings, navbar text, buttons). 600 = logo navy #0B2A5B */
+  --color-brand-50: #eef3fa;
+  --color-brand-100: #dce6f5;
+  --color-brand-200: #b9cdea;
+  --color-brand-300: #8eabd8;
+  --color-brand-400: #5a82bf;
+  --color-brand-500: #2b5a9e;
+  --color-brand-600: #0b2a5b;
+  --color-brand-700: #08214a;
+  --color-brand-800: #061a3b;
+  --color-brand-900: #05142e;
+  --color-brand-950: #030c1d;
+
+  /* EDUVORA gold (accent — highlights, stars, important buttons). 400 = logo gold #F2A900.
+     Use 700/800 for gold-coloured TEXT on white so it stays easy to read. */
+  --color-accent-50: #fffaeb;
+  --color-accent-100: #fff1c7;
+  --color-accent-200: #ffe08a;
+  --color-accent-300: #ffcd4d;
+  --color-accent-400: #f2a900;
+  --color-accent-500: #d99600;
+  --color-accent-600: #b07700;
+  --color-accent-700: #8a5d00;
+  --color-accent-800: #6e4a00;
+
+  /* Headings and strong text use the logo navy */
+  --color-slate-900: #0b2a5b;
+
+  --animate-fade-up: fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-float: float 6s ease-in-out infinite;
+
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(18px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  /* Hero slideshow: new slide glides in from the right (next) or left (previous) */
+  --animate-slide-in-right: slide-in-right 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-slide-in-left: slide-in-left 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  @keyframes slide-in-right {
+    from { opacity: 0; transform: translateX(48px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes slide-in-left {
+    from { opacity: 0; transform: translateX(-48px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  /* Gold bar that fills inside the active dot while the slide is showing */
+  @keyframes dot-progress {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 6rem;
 }
+
+body {
+  background: #ffffff;
+  color: #0f172a;
+  overflow-x: clip; /* never let decorations cause sideways scrolling on phones */
+}
+
+/* ---------- Scroll-in animation (used by <Reveal>) ---------- */
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1), transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .reveal { opacity: 1; transform: none; transition: none; }
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+}
+
+/* ---------- Reusable helpers ---------- */
+@utility container-page {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 76rem;
+  padding-inline: 1rem;
+  @media (width >= 640px) {
+    padding-inline: 1.5rem;
+  }
+}
+
+@utility hero-bg {
+  background:
+    radial-gradient(55rem 30rem at 100% 0%, rgb(43 90 158 / 0.55), transparent 60%),
+    radial-gradient(40rem 25rem at 0% 100%, rgb(242 169 0 / 0.18), transparent 60%),
+    var(--color-brand-800);
+}
+
+@utility grid-pattern {
+  background-image:
+    linear-gradient(rgb(255 255 255 / 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 0.05) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+}
+
+@utility section {
+  padding-block: 4.5rem;
+  @media (width >= 640px) {
+    padding-block: 6rem;
+  }
+}
+
+@utility card {
+  border-radius: 1.25rem;
+  border: 1px solid var(--color-slate-200);
+  background: white;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+  transition: transform 250ms, box-shadow 250ms, border-color 250ms;
+}
+
+@utility card-hover {
+  &:hover {
+    transform: translateY(-4px);
+    border-color: var(--color-brand-200);
+    box-shadow: 0 20px 40px -18px rgb(11 42 91 / 0.35);
+  }
+}
+
+@utility btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.8rem;
+  background: var(--color-brand-600);
+  padding: 0.8rem 1.3rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: white;
+  box-shadow: 0 8px 20px -8px rgb(11 42 91 / 0.55);
+  transition: background 150ms, transform 150ms;
+  &:hover { background: var(--color-brand-700); }
+  &:active { transform: scale(0.97); }
+}
+
+@utility btn-accent {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.8rem;
+  background: var(--color-accent-400);
+  padding: 0.8rem 1.3rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-brand-950);
+  box-shadow: 0 8px 20px -8px rgb(242 169 0 / 0.7);
+  transition: background 150ms, transform 150ms;
+  &:hover { background: var(--color-accent-300); }
+  &:active { transform: scale(0.97); }
+}
+
+@utility btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.8rem;
+  border: 1px solid rgb(255 255 255 / 0.3);
+  padding: 0.8rem 1.3rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: white;
+  transition: background 150ms;
+  &:hover { background: rgb(255 255 255 / 0.1); }
+}
+
+@utility btn-light {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.8rem;
+  border: 1px solid var(--color-slate-300);
+  background: white;
+  padding: 0.8rem 1.3rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-slate-800);
+  transition: border-color 150ms, color 150ms;
+  &:hover { border-color: var(--color-brand-400); color: var(--color-brand-700); }
+}
+
+@utility input {
+  width: 100%;
+  border-radius: 0.8rem;
+  border: 1px solid var(--color-slate-300);
+  background: white;
+  padding: 0.8rem 1rem;
+  font-size: 1rem; /* 16px stops iPhones from zooming in on tap */
+  color: var(--color-slate-900);
+  outline: none;
+  transition: border-color 150ms, box-shadow 150ms;
+  &::placeholder { color: var(--color-slate-400); }
+  &:focus { border-color: var(--color-brand-500); box-shadow: 0 0 0 4px var(--color-brand-100); }
+}
+
+/* ---------- Text styling for policy pages ---------- */
+.legal h2 { margin-top: 2rem; font-size: 1.25rem; font-weight: 800; color: #0f172a; }
+.legal p, .legal li { margin-top: 0.75rem; line-height: 1.75; color: #475569; }
+.legal ul { list-style: disc; padding-left: 1.25rem; }
+.legal a { color: var(--color-brand-700); text-decoration: underline; }
+
+/* ---------- Confetti (booking greeting page) ---------- */
+.confetti-piece {
+  position: absolute;
+  top: -16px;
+  opacity: 0;
+  animation-name: confetti-fall;
+  animation-timing-function: cubic-bezier(0.25, 0.6, 0.4, 1);
+  animation-fill-mode: forwards;
+}
+@keyframes confetti-fall {
+  0% { opacity: 1; translate: 0 0; rotate: 0deg; }
+  100% { opacity: 0; translate: 40px 105vh; rotate: 720deg; }
+}
+@keyframes pop-in {
+  0% { transform: scale(0.3); opacity: 0; }
+  60% { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1); }
+}
+.animate-pop-in { animation: pop-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@media (prefers-reduced-motion: reduce) { .animate-pop-in { animation: none; } }
