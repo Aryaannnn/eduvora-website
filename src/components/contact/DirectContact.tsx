@@ -1,19 +1,28 @@
 // =====================================================================
-//  DIRECT CALL & WHATSAPP BOX
+//  DIRECT CALL BOX (+ WhatsApp chat for everyone)
 //  Runs on the SERVER. It asks src/lib/contact.ts whether this visitor has
-//  paid. Only then is the full number put into the page. Everyone else gets
-//  the masked number ("+91 93440 XXXXX") — the real number never reaches
-//  their browser at all.
+//  paid. Only then is the full number + Call button put into the page.
+//  Everyone else gets the masked number ("+91 93440 XXXXX") and the unlock
+//  message — plus a WhatsApp chat button, which is open to all.
 // =====================================================================
 import Link from "next/link";
 import { Suspense } from "react";
-import { siteConfig } from "@/config/site";
+import { siteConfig, whatsappLink } from "@/config/site";
 import { getContactAccess } from "@/lib/contact";
 import { CheckIcon, LockIcon, PhoneIcon, WhatsAppIcon } from "../Icons";
 
 type Variant = "card" | "footer";
 
 export const unlockMessage = `Book a counselling session or buy any course or material to get direct access to ${siteConfig.founder.name.split(" ")[0]} Sir's number.`;
+
+/** Green "Chat on WhatsApp" button — works for everyone. */
+function WhatsAppButton({ className = "" }: { className?: string }) {
+  return (
+    <a href={whatsappLink()} target="_blank" rel="noopener noreferrer" className={`btn-primary !bg-[#25D366] !py-3 hover:!bg-[#1ebe5b] ${className}`}>
+      <WhatsAppIcon className="h-5 w-5" /> Chat on WhatsApp
+    </a>
+  );
+}
 
 export default function DirectContact({ variant = "card" }: { variant?: Variant }) {
   return (
@@ -27,7 +36,7 @@ async function DirectContactInner({ variant }: { variant: Variant }) {
   const access = await getContactAccess();
   if (!access.unlocked) return <Masked variant={variant} />;
 
-  const wa = `https://wa.me/${access.whatsappDigits}?text=${encodeURIComponent(siteConfig.whatsappMessage)}`;
+  const wa = whatsappLink();
   const tel = `tel:${access.tel}`;
 
   if (variant === "footer") {
@@ -48,9 +57,7 @@ async function DirectContactInner({ variant }: { variant: Variant }) {
       <p className="mt-1 text-2xl font-extrabold tracking-wide text-brand-700">{access.display}</p>
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
         <a href={tel} className="btn-primary !py-3"><PhoneIcon className="h-4 w-4" /> Call Now</a>
-        <a href={wa} target="_blank" rel="noopener noreferrer" className="btn-primary !bg-[#25D366] !py-3 hover:!bg-[#1ebe5b]">
-          <WhatsAppIcon className="h-5 w-5" /> WhatsApp
-        </a>
+        <WhatsAppButton />
       </div>
     </div>
   );
@@ -61,8 +68,9 @@ function Masked({ variant, loading = false }: { variant: Variant; loading?: bool
   if (variant === "footer") {
     return (
       <div className="space-y-2">
+        <a href={whatsappLink()} target="_blank" rel="noopener noreferrer" className="flex gap-2.5 hover:text-white"><WhatsAppIcon className="mt-0.5 h-4 w-4 shrink-0" />Chat on WhatsApp</a>
         <p className="flex items-center gap-2.5"><LockIcon className="h-4 w-4 shrink-0 text-accent-400" />{siteConfig.phoneMasked}</p>
-        {!loading && <Link href="/unlock" className="inline-block text-xs font-semibold text-accent-400 hover:text-accent-300">Unlock Direct Call &amp; WhatsApp →</Link>}
+        {!loading && <Link href="/unlock" className="inline-block text-xs font-semibold text-accent-400 hover:text-accent-300">Unlock Direct Call →</Link>}
       </div>
     );
   }
@@ -78,8 +86,9 @@ function Masked({ variant, loading = false }: { variant: Variant; loading?: bool
         <>
           <p className="mt-3 text-sm leading-relaxed text-slate-600">{unlockMessage}</p>
           <Link href="/book-a-slot" className="btn-accent mt-5 w-full !py-3">
-            <LockIcon className="h-4 w-4" /> Unlock Direct Call &amp; WhatsApp
+            <LockIcon className="h-4 w-4" /> Unlock Direct Call
           </Link>
+          <WhatsAppButton className="mt-3 w-full" />
           <p className="mt-3 text-center text-xs text-slate-500">
             Already paid? <Link href="/login?next=/contact" className="font-semibold text-brand-600 underline">Log in</Link> to see the number. · Just a question?{" "}
             <Link href="/unlock#enquiry" className="font-semibold text-brand-600 underline">Send a free enquiry</Link>

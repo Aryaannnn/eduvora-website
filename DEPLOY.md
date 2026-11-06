@@ -26,7 +26,8 @@ Add each one for the **Production** environment. Add them for **Preview** too if
 | `RAZORPAY_WEBHOOK_SECRET` | The text you type when creating the webhook (step 4) | **yes** | **YES**: Live mode has its own webhook |
 | `RESEND_API_KEY` | Resend → API Keys | **yes** | no |
 | `ADMIN_EMAIL` | Where "new payment / booking / enquiry" alerts go | no | no |
-| `CONTACT_PHONE` | Your full phone number (shown only to paid students) | **yes** | no |
+| `CONTACT_PHONE` | Your full phone number (full number + Call button only for paid students; WhatsApp chat uses it for everyone) | **yes** | no |
+| `WHATSAPP_PHONE` | *Optional.* A separate number just for WhatsApp chat. Leave it out to use `CONTACT_PHONE` | no | no |
 | `CRON_SECRET` | Any long random text (40+ characters) that protects the automatic jobs | **yes** | Use a new one for the live site (don't reuse the one on your computer) |
 
 ⚠️ Values that start with `NEXT_PUBLIC_` are baked in when the site is built. If you change one later, go to **Deployments → ⋯ → Redeploy**.

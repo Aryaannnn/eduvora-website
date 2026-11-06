@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default function ContactPage() {
   return (
     <>
-      <PageHero eyebrow="Contact" title="Talk to us" subtitle="Call, WhatsApp or send an enquiry — we usually reply within a few hours." />
+      <PageHero eyebrow="Contact" title="Talk to us" subtitle={siteConfig.contactNote} />
       <div className="-mt-6 sm:-mt-10"><ContactSection showHeading={false} /></div>
     </>
   );

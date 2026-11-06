@@ -8,17 +8,18 @@ import PageHero from "@/components/PageHero";
 import { siteConfig } from "@/config/site";
 
 export const metadata: Metadata = {
-  title: "Unlock Direct Call & WhatsApp",
+  title: "Unlock Direct Call",
   description: `Get direct access to ${siteConfig.founder.name}'s number after booking a counselling session or buying any course or material.`,
   robots: { index: false },
 };
 
-// Where every "Call" / "WhatsApp" button leads visitors who haven't paid yet.
+// Where every "Call" button leads visitors who haven't paid yet.
+// (WhatsApp chat is open to everyone and does NOT come here.)
 // ✏️ The message text lives in src/components/contact/DirectContact.tsx (unlockMessage)
 export default function UnlockPage({ searchParams }: PageProps<"/unlock">) {
   return (
     <>
-      <PageHero eyebrow="Direct access" title="Unlock Direct Call & WhatsApp" subtitle={unlockMessage} />
+      <PageHero eyebrow="Direct access" title="Unlock Direct Call" subtitle={unlockMessage} />
       <section className="section bg-slate-50">
         <div className="container-page grid gap-8 lg:grid-cols-[1fr_1.15fr]">
           <div className="space-y-5">
@@ -28,7 +29,7 @@ export default function UnlockPage({ searchParams }: PageProps<"/unlock">) {
               <ol className="mt-4 space-y-3 text-slate-700">
                 <li className="flex gap-3"><Num n={1} /> Book a counselling session, or buy any course, test series or study material.</li>
                 <li className="flex gap-3"><Num n={2} /> Log in with the same account you paid with.</li>
-                <li className="flex gap-3"><Num n={3} /> The full number with Call &amp; WhatsApp buttons appears on your dashboard, the contact page and the footer.</li>
+                <li className="flex gap-3"><Num n={3} /> The full number with the Call button appears on your dashboard, the contact page and the footer. (WhatsApp chat is open to everyone already.)</li>
               </ol>
               <div className="mt-6 grid gap-3 sm:grid-cols-2">
                 <Link href="/book-a-slot" className="btn-accent !py-3"><CalendarIcon className="h-5 w-5" /> Book a Session</Link>

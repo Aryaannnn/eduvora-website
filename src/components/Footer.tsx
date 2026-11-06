@@ -25,8 +25,8 @@ export default function Footer() {
   const socials = [
     { href: siteConfig.instagram, label: "Instagram", icon: InstagramIcon, newTab: true },
     { href: siteConfig.youtube, label: "YouTube", icon: YouTubeIcon, newTab: true },
-    // goes through the server check — unpaid visitors see the unlock page
-    { href: whatsappLink(), label: "WhatsApp", icon: WhatsAppIcon, newTab: false },
+    // WhatsApp chat is open to everyone (/go/whatsapp adds the number on the server)
+    { href: whatsappLink(), label: "WhatsApp", icon: WhatsAppIcon, newTab: true },
   ];
 
   return (
@@ -52,8 +52,9 @@ export default function Footer() {
 
         <div>
           <p className="text-sm font-bold uppercase tracking-wider text-white">Get in touch</p>
+          <p className="mt-3 text-sm leading-relaxed text-slate-400">{siteConfig.contactNote}</p>
           <ul className="mt-4 space-y-3 text-sm">
-            {/* Full number only for paid students (checked on the server) */}
+            {/* WhatsApp for everyone · full number & call only for paid students (checked on the server) */}
             <li><DirectContact variant="footer" /></li>
             <li><a href={emailLink} className="flex gap-2.5 break-all hover:text-white"><MailIcon className="mt-0.5 h-4 w-4 shrink-0" />{siteConfig.email}</a></li>
             {siteConfig.showAddress && <li className="flex gap-2.5"><MapPinIcon className="mt-0.5 h-4 w-4 shrink-0" />{siteConfig.address}</li>}

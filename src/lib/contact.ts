@@ -16,6 +16,18 @@ function privateDigits(): string | null {
 }
 
 /**
+ * The WhatsApp CHAT number — open to everyone (used only by /go/whatsapp).
+ * Uses WHATSAPP_PHONE if you set one (e.g. a separate business WhatsApp),
+ * otherwise CONTACT_PHONE.
+ */
+export function whatsappDigits(): string | null {
+  const d = (process.env.WHATSAPP_PHONE ?? "").replace(/\D/g, "");
+  if (d.length === 10) return `91${d}`;
+  if (d.length >= 11) return d;
+  return privateDigits();
+}
+
+/**
  * The full number for emails to students who have ALREADY PAID
  * (booking confirmation). Never use this for anyone else.
  */

@@ -74,12 +74,15 @@ export const siteConfig = {
     "EDUVORA is an independent counselling and coaching platform. We are not affiliated with, associated with, or endorsed by Vellore Institute of Technology (VIT). VIT and VITEEE are names of their respective owners, used only for informational purposes.",
 
   // ---------- Contact ----------
-  // 🔒 Your FULL phone/WhatsApp number is NOT stored here (this file is public).
-  //    It lives in .env.local as CONTACT_PHONE and is only shown to students who
-  //    have paid (checked on the server — see src/lib/contact.ts).
-  //    Only the masked version below is public:
+  // 🔒 Your FULL phone number is NOT stored here (this file is public).
+  //    It lives in .env.local / Vercel as CONTACT_PHONE.
+  //    • WhatsApp CHAT: open to everyone (the server adds the number)
+  //    • Direct CALL + the full number on screen: only students who paid, and admins
+  //    Only the masked version below is shown to everyone else:
   phoneMasked: "+91 93440 XXXXX",
   whatsappMessage: "Hi, I need help with VITEEE counselling",
+  // ✏️ Shown on the contact page and in the footer
+  contactNote: "Chat with us on WhatsApp anytime. Direct call support is available for enrolled students.",
   email: SUPPORT_EMAIL,
   // 📍 Address is HIDDEN everywhere (footer, contact page, invoices).
   //    To show it again: write your real address below and set showAddress: true
@@ -126,10 +129,9 @@ export const siteConfig = {
 // ---------------------------------------------------------------------
 //  Helper links (you normally don't need to change anything below)
 // ---------------------------------------------------------------------
-// These links do NOT contain your number. They go to small server routes
-// (src/app/go/...) that check if the student has paid:
-//   paid  → opens WhatsApp / the phone dialer with your real number
-//   not paid → shows the "Unlock Direct Call & WhatsApp" page instead
+// These links do NOT contain your number. They go to small server routes (src/app/go/...):
+//   /go/whatsapp → opens WhatsApp for EVERYONE
+//   /go/call     → paid students & admins: phone dialer · everyone else: the "Unlock Direct Call" page
 export function whatsappLink(message: string = siteConfig.whatsappMessage) {
   return `/go/whatsapp?text=${encodeURIComponent(message)}`;
 }

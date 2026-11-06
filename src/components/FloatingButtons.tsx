@@ -9,9 +9,10 @@ import { PhoneIcon, WhatsAppIcon } from "./Icons";
 // and a bottom menu in the same spot):
 //  • WhatsApp button (bottom-right, all screens)
 //  • "Call Now" button (bottom-left, phones/tablets only)
-// 🔒 Both go to /go/whatsapp and /go/call. The SERVER checks if the visitor
-//    has paid: paid → WhatsApp / dialer; not paid → the "Unlock" page.
-//    The real number is never in this file or in the browser.
+//  • WhatsApp → /go/whatsapp: opens WhatsApp for EVERYONE
+//  • Call Now → /go/call: the SERVER checks if the visitor has paid:
+//    paid / admin → phone dialer; everyone else → the "Unlock Direct Call" page.
+//  The real number is never written in this file or in the page.
 export default function FloatingButtons() {
   return (
     <Suspense fallback={null}>
@@ -36,6 +37,8 @@ function Buttons() {
 
       <a
         href={whatsappLink()}
+        target="_blank"
+        rel="noopener noreferrer"
         aria-label="Chat with us on WhatsApp"
         className="fixed bottom-5 right-4 z-50 grid h-14 w-14 place-items-center rounded-full bg-[#25D366] text-white shadow-xl shadow-black/25 transition hover:scale-110 active:scale-95 sm:right-6"
       >
