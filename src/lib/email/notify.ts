@@ -54,11 +54,34 @@ async function invoiceAttachment(db: SupabaseClient, id: string) {
 // ---------------------------------------------------------------------
 //  BUILDERS (kind + id → email)
 // ---------------------------------------------------------------------
+// Counselling package bought → sessions + "Book your first session"
+async function packageEmail(db: SupabaseClient, id: string, inv: NonNullable<Awaited<ReturnType<typeof getInvoiceData>>>, attachments: Email["attachments"]): Promise<Email> {
+  const { data: s } = await db.from("purchases").select("sessions_granted,sessions_unlimited").eq("id", id).maybeSingle();
+  const sessions = s?.sessions_unlimited ? "Unlimited sessions until admission" : s?.sessions_granted ? `${s.sessions_granted} counselling session${s.sessions_granted === 1 ? "" : "s"}` : "Counselling sessions";
+  return {
+    to: inv.email!,
+    subject: `Your ${inv.item} package is active ✅`,
+    attachments,
+    html: layout({
+      preheader: `We received ${formatPrice(inv.amount)}. ${sessions} — book your first session now.`,
+      title: `Welcome to the ${esc(inv.item)} package 🎉`,
+      body: `<p>Hi ${esc(inv.name.split(" ")[0])},</p>
+<p>Thank you! Your payment was received and your <strong>${esc(inv.item)}</strong> counselling package is now active.</p>
+${details([["Package", inv.item], ["Includes", sessions], ["Amount paid", formatPrice(inv.amount)], ["Invoice number", inv.invoiceNumber], ["Payment method", inv.method], ["Date", formatDateTime(inv.date)]])}
+<p>${button("Book Your First Session", url("/book-a-slot"))}${button("Rank & College Predictor", url("/dashboard/predictor"), "navy")}</p>
+${note(`🎯 <strong>Unlocked with your package:</strong> the full Rank &amp; College Predictor and ${esc(founderFirst)} Sir's direct number (on your dashboard).`, "navy")}
+<p style="font-size:13px;color:#64748b">Book each session from the Book a Slot page — it uses one credit, no payment needed. Your invoice (PDF) is attached.</p>`,
+    }),
+  };
+}
+
 export const builders: Record<string, (db: SupabaseClient, id: string) => Promise<Email | null>> = {
   // ---------- student: payment successful (course / material / papers / tests) ----------
   async payment_success(db, id) {
     const { inv, attachments } = await invoiceAttachment(db, id);
     if (!inv || inv.kind !== "purchase" || !inv.email) return null;
+    const { data: pr } = await db.from("purchases").select("products(category)").eq("id", id).maybeSingle();
+    if ((pr?.products as unknown as { category?: string } | null)?.category === "counselling_package") return packageEmail(db, id, inv, attachments);
     return {
       to: inv.email,
       subject: `Payment successful — ${inv.item}`,
@@ -86,7 +109,7 @@ ${details([["Item", inv.item], ["Amount paid", formatPrice(inv.amount)], ["Invoi
     const rows: [string, string][] = [
       ["Date & time", slotLine(b)],
       ["Booking ID", bookingRef(b.id)],
-      ["Amount paid", paid ? formatPrice(b.amount ?? b.slots?.price ?? 0) : "Free"],
+      ["Amount paid", paid && b.amount === 0 && !b.invoice_number ? "1 session credit (package)" : paid ? formatPrice(b.amount ?? b.slots?.price ?? 0) : "Free"],
       ...(b.invoice_number ? ([["Invoice number", b.invoice_number]] as [string, string][]) : []),
     ];
     return {

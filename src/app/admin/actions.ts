@@ -501,3 +501,77 @@ export async function setPurchaseStatus(id: string, status: "paid" | "failed"): 
   if (!error && status === "paid") notifyPurchasePaid(id);
   return dbResult(error, "Payment updated.");
 }
+
+// ---------------------------------------------------------------- COUNSELLING PACKAGES
+// A package is a product with category "counselling_package" (supabase/packages.sql).
+export type PackageInput = {
+  id?: string;
+  title: string;
+  description?: string;
+  tagline?: string;
+  price: number | string;
+  original_price?: number | string | null;
+  sessions?: number | string | null; // ignored when unlimited
+  unlimited: boolean;
+  features: string; // one per line
+  popular: boolean;
+  is_active: boolean;
+  sort_order?: number | string;
+};
+
+export async function savePackage(input: PackageInput): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const title = input.title?.trim();
+  if (!title) return fail("Please enter a package name.");
+  const price = int(input.price);
+  if (price === null || Number.isNaN(price) || price < 1) return fail("Please enter a price in rupees (at least ₹1).");
+  const original = int(input.original_price);
+  if (original !== null && (Number.isNaN(original) || original <= price)) return fail("The strike-through price must be higher than the price (or leave it empty).");
+  const sessions = input.unlimited ? null : int(input.sessions);
+  if (!input.unlimited && (sessions === null || Number.isNaN(sessions) || sessions < 1 || sessions > 100)) return fail("Sessions must be a number from 1 to 100 (or tick Unlimited).");
+  const features = input.features.split("\n").map((f) => f.trim()).filter(Boolean).slice(0, 12);
+
+  const details = { tagline: input.tagline?.trim() || undefined, popular: input.popular || undefined, features };
+  const row = {
+    title,
+    description: input.description?.trim() || null,
+    category: "counselling_package",
+    price,
+    original_price: original,
+    is_free: false,
+    is_active: input.is_active,
+    sort_order: int(input.sort_order) ?? 0,
+    package_sessions: sessions,
+    package_unlimited: input.unlimited,
+    details,
+  };
+
+  // Only ONE package can be "Most Popular"
+  if (input.popular) {
+    const { data: others } = await s.supabase.from("products").select("id,details").eq("category", "counselling_package");
+    for (const o of (others ?? []) as { id: string; details: Record<string, unknown> }[]) {
+      if (o.id !== input.id && o.details?.popular) await s.supabase.from("products").update({ details: { ...o.details, popular: false } }).eq("id", o.id);
+    }
+  }
+
+  const res = input.id
+    ? await s.supabase.from("products").update(row).eq("id", input.id)
+    : await s.supabase.from("products").insert({ ...row, slug: `package-${slugify(title)}-${Date.now().toString(36)}` });
+  updateTag("products");
+  if (res.error && /package_sessions|package_unlimited|products_category_check/.test(res.error.message)) return fail("Run supabase/packages.sql in Supabase first.");
+  return dbResult(res.error, input.id ? "Package saved." : "Package added.");
+}
+
+/** Add or remove session credits for a student (e.g. +1 bonus, −1 correction). */
+export async function adjustSessionCredits(userId: string, delta: number, note: string): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const d = Math.round(Number(delta));
+  if (!Number.isFinite(d) || d === 0 || Math.abs(d) > 100) return fail("Enter a number like 2 (add) or -1 (remove).");
+  const { error } = await s.supabase
+    .from("session_credit_adjustments")
+    .insert({ user_id: userId, delta: d, note: note.trim().slice(0, 300) || null, created_by: s.user.id });
+  if (error && /session_credit_adjustments/.test(error.message)) return fail("Run supabase/packages.sql in Supabase first.");
+  return dbResult(error, `${d > 0 ? "Added" : "Removed"} ${Math.abs(d)} session credit${Math.abs(d) === 1 ? "" : "s"}.`);
+}

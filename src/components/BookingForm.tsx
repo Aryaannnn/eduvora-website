@@ -9,6 +9,8 @@
 //   (then the student sees the greeting page).
 //   Popup closed / payment failed → slot released, friendly message, form
 //   kept so they can try again with one click.
+//   Students with package SESSION CREDITS book with one credit instead
+//   (no payment) — "Sessions left: 2 of 3" is shown in the summary.
 // =====================================================================
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -22,7 +24,9 @@ import { Spinner } from "./BuyButton";
 import { Field } from "./ContactForm";
 import EmptyState from "./EmptyState";
 import RefundNote from "./RefundNote";
-import { LockIcon, ShieldIcon, UserIcon } from "./Icons";
+import { CheckIcon, LockIcon, ShieldIcon, UserIcon } from "./Icons";
+
+type Credits = { total: number; used: number; remaining: number; unlimited: boolean };
 
 const CLASS_YEARS = ["Class 11", "Class 12", "Dropper / Repeater", "Parent", "Other"];
 const DRAFT_KEY = "eduvora-booking-draft";
@@ -43,6 +47,8 @@ export default function BookingForm() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [notice, setNotice] = useState<Notice>(null);
   const [formError, setFormError] = useState("");
+  const [credits, setCredits] = useState<Credits | null>(null);
+  const [useCredit, setUseCredit] = useState(true);
 
   async function loadSlots() {
     if (!supabase) return;
@@ -79,6 +85,11 @@ export default function BookingForm() {
         if (draft.slotId) setSlotId(draft.slotId);
       }
       if (!data.user) return;
+      // Session credits from a counselling package (checked again on the server)
+      fetch("/api/bookings/credits", { cache: "no-store" })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d: { credits?: Credits | null } | null) => setCredits(d?.credits ?? null))
+        .catch(() => undefined);
       const { data: p } = await supabase.from("profiles").select("full_name,phone,email").eq("id", data.user.id).maybeSingle();
       setForm((f) => ({
         ...f,
@@ -95,6 +106,8 @@ export default function BookingForm() {
   const daySlots = (slots ?? []).filter((s) => s.date === activeDate);
   const selected = (slots ?? []).find((s) => s.id === slotId);
   const busy = phase !== "idle";
+  const hasCredit = !!credits && (credits.unlimited || credits.remaining > 0);
+  const payingWithCredit = hasCredit && useCredit;
 
   const update = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -114,6 +127,7 @@ export default function BookingForm() {
 
     setPhase("creating");
     const res = await postJson("/api/bookings/start", {
+      useCredit: payingWithCredit,
       slotId: selected.id,
       name: form.name,
       phone: form.phone,
@@ -138,7 +152,7 @@ export default function BookingForm() {
       setPhase("idle");
       return setNotice({ kind: "error", text: String(d.error ?? "Something went wrong. Please try again.") });
     }
-    if (typeof d.redirect === "string") return router.push(d.redirect); // free slot → booked
+    if (typeof d.redirect === "string") return router.push(d.redirect); // free slot or session credit → booked
 
     const bookingId = String(d.bookingId);
     setPhase("paying");
@@ -186,7 +200,7 @@ export default function BookingForm() {
   const price = selected ? formatPrice(selected.price) : "";
   const buttonLabel =
     phase === "creating" ? (
-      <><Spinner /> Starting secure payment…</>
+      <><Spinner /> {payingWithCredit ? "Booking your session…" : "Starting secure payment…"}</>
     ) : phase === "paying" ? (
       "Complete payment in the Razorpay window"
     ) : phase === "verifying" ? (
@@ -194,7 +208,7 @@ export default function BookingForm() {
     ) : !user ? (
       "Sign In to Book"
     ) : selected ? (
-      selected.price > 0 ? `Pay ${price} & Book Slot` : "Book Free Slot"
+      payingWithCredit ? "Book with 1 Session Credit" : selected.price > 0 ? `Pay ${price} & Book Slot` : "Book Free Slot"
     ) : (
       "Choose a time slot"
     );
@@ -284,10 +298,22 @@ export default function BookingForm() {
             <div className="flex justify-between gap-3"><dt className="text-slate-500">Date</dt><dd className="font-semibold text-slate-900">{selected ? formatDate(selected.date) : "—"}</dd></div>
             <div className="flex justify-between gap-3"><dt className="text-slate-500">Time</dt><dd className="font-semibold text-slate-900">{selected ? `${formatTime(selected.start_time)} – ${formatTime(selected.end_time)} IST` : "—"}</dd></div>
           </dl>
+          {hasCredit && (
+            <div className="mt-5 rounded-2xl bg-emerald-50 p-4 ring-1 ring-emerald-200">
+              <p className="flex items-center gap-1.5 text-sm font-extrabold text-emerald-800">
+                <CheckIcon className="h-4 w-4" /> {credits!.unlimited ? "Unlimited sessions (until admission)" : `Sessions left: ${credits!.remaining} of ${credits!.total}`}
+              </p>
+              <label className="mt-2 flex cursor-pointer items-center gap-2 text-sm text-emerald-900">
+                <input type="checkbox" checked={useCredit} onChange={(e) => setUseCredit(e.target.checked)} className="h-4 w-4 accent-emerald-600" />
+                Use 1 session credit from my package
+              </label>
+            </div>
+          )}
           <div className="mt-5 flex items-baseline justify-between border-t border-slate-100 pt-5">
             <span className="font-semibold text-slate-700">Total</span>
-            <span className="text-3xl font-extrabold text-slate-900">{selected ? price : "—"}</span>
+            <span className="text-3xl font-extrabold text-slate-900">{selected ? (payingWithCredit ? "₹0" : price) : "—"}</span>
           </div>
+          {payingWithCredit && <p className="mt-1 text-right text-xs font-semibold text-emerald-700">1 session credit · no payment needed</p>}
 
           {notice && (
             <div role="alert" className={`mt-4 rounded-xl p-3 text-sm ring-1 ${notice.kind === "taken" ? "bg-amber-50 text-amber-900 ring-amber-200" : "bg-red-50 text-red-800 ring-red-200"}`}>
@@ -302,12 +328,23 @@ export default function BookingForm() {
           <button type="submit" disabled={busy || (!!user && !selected)} className="btn-accent mt-5 w-full !py-3.5 text-base disabled:cursor-not-allowed disabled:opacity-70">
             {buttonLabel}
           </button>
-          <p className="mt-3 flex items-center justify-center gap-1.5 text-center text-xs font-semibold text-slate-500">
-            <ShieldIcon className="h-3.5 w-3.5 text-emerald-600" /> 100% Secure Payments by Razorpay
-          </p>
-          <p className="mt-1 flex items-center justify-center gap-1.5 text-center text-[11px] text-slate-400">
-            <LockIcon className="h-3 w-3" /> Your slot is booked only after the payment succeeds.
-          </p>
+          {payingWithCredit ? (
+            <p className="mt-3 text-center text-xs font-semibold text-slate-500">Your session is confirmed straight away.</p>
+          ) : (
+            <>
+              <p className="mt-3 flex items-center justify-center gap-1.5 text-center text-xs font-semibold text-slate-500">
+                <ShieldIcon className="h-3.5 w-3.5 text-emerald-600" /> 100% Secure Payments by Razorpay
+              </p>
+              <p className="mt-1 flex items-center justify-center gap-1.5 text-center text-[11px] text-slate-400">
+                <LockIcon className="h-3 w-3" /> Your slot is booked only after the payment succeeds.
+              </p>
+              {user && !hasCredit && (
+                <p className="mt-2 text-center text-xs text-slate-500">
+                  Need more than one session? <a href="#packages" className="font-semibold text-brand-700 underline">Save with a package</a>
+                </p>
+              )}
+            </>
+          )}
           <RefundNote kind="counselling" className="mt-3 border-t border-slate-100 pt-3" />
         </div>
       </aside>

@@ -19,6 +19,7 @@ async function Content() {
   const { data, error } = await s.supabase
     .from("products")
     .select("id,title,slug,description,category,college,price,original_price,is_free,is_active,thumbnail_url,file_path,details,sort_order,created_at")
+    .neq("category", "counselling_package") // packages are managed in Admin → Packages
     .order("category")
     .order("sort_order")
     .order("created_at");

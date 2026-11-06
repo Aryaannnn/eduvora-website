@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { DashSkeleton } from "@/components/dashboard/ui";
+import SessionCreditsCard from "@/components/packages/SessionCreditsCard";
 import { ArrowRightIcon, BookIcon, CalendarIcon, ClipboardIcon, RocketIcon, TargetIcon } from "@/components/Icons";
 import { displayName, getMyAttempts, getMyBookings, getMyPurchases, nextBooking, paidOnly, requireUser } from "@/lib/dashboard";
 import { formatDate, formatTime } from "@/lib/format";
 import { welcomeIfNew } from "@/lib/email/notify";
+import { getCredits } from "@/lib/packages";
 
 export default function DashboardHome() {
   return (
@@ -17,7 +19,7 @@ export default function DashboardHome() {
 async function HomeContent() {
   const s = await requireUser("/dashboard");
   welcomeIfNew(s.user.id); // new students get a welcome email (once)
-  const [purchases, bookings, attempts] = await Promise.all([getMyPurchases(s), getMyBookings(s), getMyAttempts(s, 1)]);
+  const [purchases, bookings, attempts, credits] = await Promise.all([getMyPurchases(s), getMyBookings(s), getMyAttempts(s, 1), getCredits(s.supabase)]);
   const paidCount = paidOnly(purchases).length;
   const upcoming = nextBooking(bookings);
   const latest = attempts[0];
@@ -37,6 +39,9 @@ async function HomeContent() {
           )}
         </div>
       </section>
+
+      {/* Counselling package: "Sessions left: 2 of 3" */}
+      <SessionCreditsCard credits={credits} />
 
       {/* Quick cards */}
       <div className="grid gap-4 sm:grid-cols-3">

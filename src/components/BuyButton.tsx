@@ -32,6 +32,9 @@ export default function BuyButton({
   trust = true,
   trustClassName = "",
   free = false,
+  ownedHref,
+  ownedLabel,
+  ownedNote,
 }: {
   productId: string;
   label?: string;
@@ -40,6 +43,10 @@ export default function BuyButton({
   trustClassName?: string;
   /** free item: no payment wording, "log in to unlock" hint */
   free?: boolean;
+  /** where the button goes once the student owns it (e.g. packages → "Book a Session") */
+  ownedHref?: string;
+  ownedLabel?: string;
+  ownedNote?: string;
 }) {
   const router = useRouter();
   const [owned, setOwned] = useState(false);
@@ -114,6 +121,14 @@ export default function BuyButton({
     }
   }
 
+  if (owned && ownedHref) {
+    return (
+      <div className="w-full">
+        <a href={ownedHref} className={`${className} !bg-emerald-600 !text-white hover:!bg-emerald-700`}>{ownedLabel ?? "Open"}</a>
+        {ownedNote && <p className={`mt-2 text-center text-xs font-semibold text-emerald-600 ${trustClassName}`}>{ownedNote}</p>}
+      </div>
+    );
+  }
   if (owned) {
     return (
       <div className="w-full">

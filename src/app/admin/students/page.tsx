@@ -40,7 +40,7 @@ export default function StudentsPage() {
 
 async function Content() {
   const s = await requireAdmin("/admin/students");
-  const [profiles, purchases, paidCounselling, overrides, signIn, freeAttempts] = await Promise.all([
+  const [profiles, purchases, paidCounselling, overrides, signIn, freeAttempts, pkgPurchases, creditBookings, adjustments] = await Promise.all([
     s.supabase.from("profiles").select("id,full_name,email,phone,role,created_at").order("created_at", { ascending: false }).limit(2000),
     s.supabase.from("purchases").select("user_id,amount,created_at,products(title,is_free)").eq("status", "paid").order("created_at", { ascending: false }).limit(10000),
     // Same rule as has_predictor_access() in supabase/predictor-access.sql
@@ -49,6 +49,10 @@ async function Content() {
     loadSignInMethods(),
     // Free tests each student took (admins can read every attempt)
     s.supabase.from("test_attempts").select("user_id,started_at,tests!inner(title,is_free)").eq("tests.is_free", true).order("started_at", { ascending: false }).limit(10000),
+    // Session credits (same rule as session_credits() in supabase/packages.sql) — empty until packages.sql is run
+    s.supabase.from("purchases").select("user_id,sessions_granted,sessions_unlimited").eq("status", "paid").or("sessions_granted.not.is.null,sessions_unlimited.eq.true").limit(20000),
+    s.supabase.from("bookings").select("user_id").eq("paid_with", "credit").in("status", ["pending", "confirmed", "completed"]).limit(20000),
+    s.supabase.from("session_credit_adjustments").select("user_id,delta").limit(20000),
   ]);
   if (profiles.error) return <p className="card p-6 text-red-600">Could not load students: {profiles.error.message}</p>;
 
@@ -61,6 +65,17 @@ async function Content() {
     if (p.amount === 0 || p.products?.is_free) addFree(p.user_id, { title, kind: "item", at: p.created_at });
     else bought.set(p.user_id, [...(bought.get(p.user_id) ?? []), title]);
   }
+  const creditsSetup = !pkgPurchases.error && !adjustments.error;
+  const cred = new Map<string, { total: number; used: number; unlimited: boolean }>();
+  const c = (uid: string) => cred.get(uid) ?? (cred.set(uid, { total: 0, used: 0, unlimited: false }), cred.get(uid)!);
+  for (const p of (pkgPurchases.data ?? []) as { user_id: string; sessions_granted: number | null; sessions_unlimited: boolean }[]) {
+    const x = c(p.user_id);
+    x.total += p.sessions_granted ?? 0;
+    x.unlimited ||= p.sessions_unlimited;
+  }
+  for (const a of (adjustments.data ?? []) as { user_id: string; delta: number }[]) c(a.user_id).total += a.delta;
+  for (const b of (creditBookings.data ?? []) as { user_id: string }[]) c(b.user_id).used += 1;
+
   const seenTest = new Set<string>();
   for (const a of (freeAttempts.data ?? []) as unknown as { user_id: string; started_at: string; tests: { title: string } | null }[]) {
     const title = a.tests?.title ?? "Free test";
@@ -81,6 +96,7 @@ async function Content() {
     ...p,
     bought: bought.get(p.id) ?? [],
     freeItems: freeItems.get(p.id as string) ?? [],
+    credits: creditsSetup ? (cred.get(p.id as string) ?? { total: 0, used: 0, unlimited: false }) : null,
     predictor: predictorFor(p.id as string, p.role as string),
     signedUpWith: signIn.get(p.id as string) ?? [],
   })) as AdminStudent[];

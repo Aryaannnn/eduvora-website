@@ -3,9 +3,11 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { CancelBookingButton } from "@/components/dashboard/Actions";
 import { DashSkeleton, EmptyBox, PageHeader, StatusBadge } from "@/components/dashboard/ui";
+import SessionCreditsCard from "@/components/packages/SessionCreditsCard";
 import { CalendarIcon, ClockIcon } from "@/components/Icons";
 import { getMyBookings, requireUser } from "@/lib/dashboard";
 import { formatDate, formatDateTime, formatPrice, formatTime, todayInIndia } from "@/lib/format";
+import { getCredits } from "@/lib/packages";
 
 export const metadata: Metadata = { title: "My Bookings" };
 
@@ -19,7 +21,7 @@ export default function BookingsPage() {
 
 async function BookingsContent() {
   const s = await requireUser("/dashboard/bookings");
-  const bookings = await getMyBookings(s);
+  const [bookings, credits] = await Promise.all([getMyBookings(s), getCredits(s.supabase)]);
   const today = todayInIndia();
 
   return (
@@ -27,6 +29,7 @@ async function BookingsContent() {
       <PageHeader title="My Bookings" subtitle="Your one-to-one counselling calls.">
         <Link href="/book-a-slot" className="btn-primary">Book a new slot</Link>
       </PageHeader>
+      <div className="mb-6"><SessionCreditsCard credits={credits} /></div>
 
       {bookings.length === 0 ? (
         <EmptyBox text="You haven't booked a counselling call yet." href="/book-a-slot" cta="Book your first slot" />
@@ -44,7 +47,7 @@ async function BookingsContent() {
                     <p className="text-lg font-extrabold text-slate-900">{b.slots ? formatDate(b.slots.date, true) : "Slot removed"}</p>
                     {b.slots && (
                       <p className="flex items-center gap-1.5 text-sm text-slate-600">
-                        <ClockIcon className="h-4 w-4" /> {formatTime(b.slots.start_time)} – {formatTime(b.slots.end_time)} IST · {formatPrice(b.amount ?? b.slots.price)}
+                        <ClockIcon className="h-4 w-4" /> {formatTime(b.slots.start_time)} – {formatTime(b.slots.end_time)} IST · {b.payment_status === "paid" && b.amount === 0 && !b.invoice_number ? "Package credit" : formatPrice(b.amount ?? b.slots.price)}
                       </p>
                     )}
                     <p className="mt-1 text-xs text-slate-500">Booked on {formatDateTime(b.created_at)} · Payment: {b.payment_status}</p>

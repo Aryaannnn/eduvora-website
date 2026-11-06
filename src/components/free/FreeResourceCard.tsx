@@ -10,6 +10,7 @@ const KIND: Record<ProductCategory | "test", { label: string; icon: typeof BookI
   study_material: { label: "PDF Guide", icon: BookIcon, box: "bg-sky-500" },
   mock_test: { label: "Mock Test", icon: ClipboardIcon, box: "bg-emerald-500" },
   crash_course: { label: "Course", icon: RocketIcon, box: "bg-brand-600" },
+  counselling_package: { label: "Counselling", icon: RocketIcon, box: "bg-brand-600" },
   test: { label: "Practice Test", icon: TargetIcon, box: "bg-rose-500" },
 };
 

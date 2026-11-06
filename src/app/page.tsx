@@ -6,6 +6,7 @@ import TestCard from "@/components/cards/TestCard";
 import EmptyState from "@/components/EmptyState";
 import { FreeProductCard, FreeTestCard } from "@/components/free/FreeResourceCard";
 import BookCallSection from "@/components/home/BookCallSection";
+import PackageCards from "@/components/packages/PackageCards";
 import ContactSection from "@/components/home/ContactSection";
 import FounderSection from "@/components/home/FounderSection";
 import HeroSlider from "@/components/home/HeroSlider";
@@ -49,6 +50,11 @@ export default async function Home() {
 
       {/* 3. Book a call */}
       <BookCallSection slots={slots} />
+
+      {/* Counselling packages (hidden when there are none) */}
+      <section className="section bg-slate-50">
+        <div className="container-page"><PackageCards /></div>
+      </section>
 
       {/* Free resources (hidden until at least one item is marked Free in the admin) */}
       {freeItems.length > 0 && (

@@ -40,7 +40,10 @@ export async function POST(request: NextRequest) {
     .eq("status", "paid")
     .limit(1)
     .maybeSingle();
-  if (owned) return json({ owned: true, redirect: product.is_free ? `/dashboard/courses?unlocked=${product.id}#item-${product.id}` : "/dashboard/courses" });
+  if (owned) {
+    const redirect = product.category === "counselling_package" ? "/book-a-slot" : product.is_free ? `/dashboard/courses?unlocked=${product.id}#item-${product.id}` : "/dashboard/courses";
+    return json({ owned: true, redirect });
+  }
 
   // FREE items unlock immediately (amount 0, no Razorpay)
   if (product.is_free || product.price <= 0) {

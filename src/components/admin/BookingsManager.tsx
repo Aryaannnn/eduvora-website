@@ -105,7 +105,7 @@ export default function BookingsManager({ bookings, today, freeSlots = [] }: { b
                     {b.message && <p className="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-700 ring-1 ring-slate-200">“{b.message}”</p>}
                     {b.payment_status === "paid" && (
                       <p className="text-xs text-emerald-700">
-                        Paid {formatPrice(b.amount ?? b.slots?.price ?? 0)}{b.paid_at ? ` · ${formatDateTime(b.paid_at)}` : ""}
+                        {b.amount === 0 && !b.invoice_number ? "Paid with a package session credit" : `Paid ${formatPrice(b.amount ?? b.slots?.price ?? 0)}`}{b.paid_at ? ` · ${formatDateTime(b.paid_at)}` : ""}
                         {b.invoice_number && <> · <a href={`/invoice/${b.id}`} className="font-semibold underline">{b.invoice_number}</a> · <a href={`/api/invoices/${b.id}`} download className="font-semibold underline">PDF</a></>}
                         {b.status === "pending" && <strong className="ml-1 text-amber-700">· Paid late — time was taken: reschedule or refund</strong>}
                       </p>

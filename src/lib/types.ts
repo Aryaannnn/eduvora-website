@@ -1,6 +1,6 @@
 // Shapes of the data that comes from Supabase (matches supabase/setup.sql)
 
-export type ProductCategory = "crash_course" | "study_material" | "previous_paper" | "mock_test";
+export type ProductCategory = "crash_course" | "study_material" | "previous_paper" | "mock_test" | "counselling_package";
 
 // Extra display info stored in products.details (all optional)
 export type ProductDetails = {

@@ -155,4 +155,34 @@ export async function releaseStaleHolds(db: SupabaseClient, limit = 25) {
 }
 
 /** Booking statuses that are hidden from every list (unpaid attempts). */
+/**
+ * Book a slot using ONE session credit (from a counselling package).
+ * Confirmed at once, no payment. The credit check runs inside Supabase
+ * (book_with_credit in supabase/packages.sql), so it can't be faked.
+ */
+export async function bookWithCredit(db: SupabaseClient, userId: string, input: BookingInput): Promise<StartResult> {
+  const { data, error } = await db.rpc("book_with_credit", {
+    p_user: userId,
+    p_slot: input.slotId,
+    p_name: input.name,
+    p_phone: input.phone,
+    p_email: input.email,
+    p_class_year: input.classYear,
+    p_expected_marks: input.expectedMarks,
+    p_message: input.message,
+  });
+  if (error) {
+    if (/no longer available/i.test(error.message)) return { kind: "slot_taken" };
+    if (/no session credits/i.test(error.message)) return { kind: "error", status: 402, message: "You have no session credits left. Please pay for this slot or buy a package." };
+    if (error.code === "PGRST202" || /could not find the function/i.test(error.message)) {
+      return { kind: "error", status: 503, message: "Packages are being set up. (Admin: run supabase/packages.sql in Supabase.)" };
+    }
+    console.warn("[booking] credit booking failed:", error.message);
+    return { kind: "error", status: 500, message: "Could not book the slot. Please try again." };
+  }
+  const b = (Array.isArray(data) ? data[0] : data) as { id: string };
+  notifyBookingConfirmed(b.id); // confirmation emails (sent once)
+  return { kind: "free", bookingId: b.id };
+}
+
 export const HIDDEN_BOOKING_STATUSES = ["awaiting_payment", "expired"];

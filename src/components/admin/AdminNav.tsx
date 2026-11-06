@@ -10,6 +10,7 @@ import { BookIcon, CalendarIcon, ChartIcon, ClipboardIcon, ClockIcon, GridIcon, 
 const links = [
   { href: "/admin", label: "Overview", icon: ChartIcon },
   { href: "/admin/products", label: "Products", icon: BookIcon },
+  { href: "/admin/packages", label: "Packages", icon: StarIcon },
   { href: "/admin/slots", label: "Slots", icon: ClockIcon },
   { href: "/admin/bookings", label: "Bookings", icon: CalendarIcon },
   { href: "/admin/enquiries", label: "Enquiries", icon: MailIcon },

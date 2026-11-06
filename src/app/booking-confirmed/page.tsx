@@ -65,6 +65,8 @@ async function Content({ searchParams }: { searchParams: PageProps<"/booking-con
   }
 
   const isFree = (b.amount ?? b.slots?.price ?? 0) === 0;
+  // Booked with a package session credit: marked paid, ₹0, no invoice of its own
+  const byCredit = b.payment_status === "paid" && b.amount === 0 && !b.invoice_number;
   const booked = b.payment_status === "paid" || (isFree && b.status === "confirmed");
 
   // ---------- not paid (yet) ----------
@@ -107,9 +109,9 @@ async function Content({ searchParams }: { searchParams: PageProps<"/booking-con
     ["Date", slot ? formatDate(slot.date, true) : "—"],
     ["Time", slot ? `${formatTime(slot.start_time)} – ${formatTime(slot.end_time)} IST` : "—"],
     ["Duration", duration > 0 ? `${duration} minutes` : "—"],
-    ["Amount paid", isFree ? "Free" : formatPrice(b.amount ?? slot?.price ?? 0)],
+    ["Amount paid", byCredit ? "1 session credit (package)" : isFree ? "Free" : formatPrice(b.amount ?? slot?.price ?? 0)],
     ["Booking ID", b.id.slice(0, 8).toUpperCase()],
-    ["Invoice number", b.invoice_number ?? (isFree ? "— (free session)" : "Being generated…")],
+    ["Invoice number", b.invoice_number ?? (byCredit ? "— (on your package invoice)" : isFree ? "— (free session)" : "Being generated…")],
     ...(b.paid_at ? ([["Paid on", formatDateTime(b.paid_at)]] as [string, string][]) : []),
   ];
 

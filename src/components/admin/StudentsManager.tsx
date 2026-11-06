@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { setPredictorAccess, setUserRole } from "@/app/admin/actions";
+import { adjustSessionCredits, setPredictorAccess, setUserRole } from "@/app/admin/actions";
 import { csvDateTimeIST, formatDateTime } from "@/lib/format";
 import { LockIcon, SearchIcon, ShieldIcon, TargetIcon } from "../Icons";
 import { AdminHeader, Notice, downloadCsv } from "./ui";
@@ -14,6 +14,8 @@ export type AdminStudent = {
   signedUpWith: string[];
   /** free items this student unlocked (₹0) or free tests they took — newest first */
   freeItems: { title: string; kind: "item" | "test"; at: string }[];
+  /** package session credits (null until supabase/packages.sql is run) */
+  credits: { total: number; used: number; unlimited: boolean } | null;
 };
 
 const PROVIDER: Record<string, { label: string; style: string }> = {
@@ -81,12 +83,26 @@ export default function StudentsManager({ students, currentUserId, setupMissing 
   };
   const withAccess = students.filter((s) => s.predictor.access && s.role !== "admin").length;
 
+  const adjustCredits = (s: AdminStudent) => {
+    const who = s.full_name || s.email || "this student";
+    const raw = prompt(`Adjust session credits for ${who}.\n\nType a number: 2 = give 2 sessions, -1 = take 1 away.`, "1");
+    if (raw === null) return;
+    const delta = Number(raw);
+    if (!Number.isInteger(delta) || delta === 0) return alert("Please type a whole number like 2 or -1.");
+    const note = prompt("Reason (optional) — e.g. Paid offline, Bonus session, Correction", "") ?? "";
+    start(async () => {
+      const res = await adjustSessionCredits(s.id, delta, note);
+      setMsg(res.ok ? { kind: "success", text: res.message ?? "Saved." } : { kind: "error", text: res.error });
+      if (res.ok) router.refresh();
+    });
+  };
+
   return (
     <>
       <AdminHeader title="Students" subtitle={`${students.length} registered user${students.length === 1 ? "" : "s"} · ${withAccess} with predictor access.`}>
         <button
           type="button"
-          onClick={() => downloadCsv("students.csv", ["Name", "Email", "Phone", "Role", "Signed up with", "Joined", "Bought", "Free items", "Predictor access"], shown.map((s) => [s.full_name, s.email, s.phone, s.role, s.signedUpWith.map(providerLabel).join(" + "), csvDateTimeIST(s.created_at), s.bought.join("; "), s.freeItems.map((f) => `${f.title}${f.kind === "test" ? " (test)" : ""} — ${csvDateTimeIST(f.at)}`).join("; "), `${s.predictor.access ? "Yes" : "No"} (${REASON[s.predictor.reason]})`]))}
+          onClick={() => downloadCsv("students.csv", ["Name", "Email", "Phone", "Role", "Signed up with", "Joined", "Bought", "Free items", "Sessions", "Predictor access"], shown.map((s) => [s.full_name, s.email, s.phone, s.role, s.signedUpWith.map(providerLabel).join(" + "), csvDateTimeIST(s.created_at), s.bought.join("; "), s.freeItems.map((f) => `${f.title}${f.kind === "test" ? " (test)" : ""} — ${csvDateTimeIST(f.at)}`).join("; "), s.credits ? (s.credits.unlimited ? "Unlimited" : `${Math.max(s.credits.total - s.credits.used, 0)} of ${s.credits.total} left`) : "", `${s.predictor.access ? "Yes" : "No"} (${REASON[s.predictor.reason]})`]))}
           className="btn-light"
         >
           Export CSV
@@ -106,7 +122,7 @@ export default function StudentsManager({ students, currentUserId, setupMissing 
       {msg && <div className="mb-4"><Notice kind={msg.kind}>{msg.text}</Notice></div>}
 
       <div className={`card overflow-x-auto ${pending ? "opacity-60" : ""}`}>
-        <table className="w-full min-w-[1140px] text-left text-sm">
+        <table className="w-full min-w-[1260px] text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
             <tr>
               <th className="px-4 py-3">Name</th>
@@ -114,12 +130,13 @@ export default function StudentsManager({ students, currentUserId, setupMissing 
               <th className="px-4 py-3">Joined</th>
               <th className="px-4 py-3">Bought</th>
               <th className="px-4 py-3">Free items</th>
+              <th className="px-4 py-3">Sessions</th>
               <th className="px-4 py-3">Predictor access</th>
               <th className="px-4 py-3 text-right">Role</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {shown.length === 0 && <tr><td colSpan={7} className="px-4 py-10 text-center text-slate-500">No users found.</td></tr>}
+            {shown.length === 0 && <tr><td colSpan={8} className="px-4 py-10 text-center text-slate-500">No users found.</td></tr>}
             {shown.map((s) => (
               <tr key={s.id}>
                 <td className="px-4 py-3">
@@ -147,6 +164,17 @@ export default function StudentsManager({ students, currentUserId, setupMissing 
                       ))}
                     </ul>
                   ) : <span className="text-xs text-slate-400">—</span>}
+                </td>
+                <td className="whitespace-nowrap px-4 py-3 text-xs">
+                  {s.credits ? (
+                    <>
+                      <p className="font-bold text-slate-800">
+                        {s.credits.unlimited ? "Unlimited" : s.credits.total > 0 || s.credits.used > 0 ? `${Math.max(s.credits.total - s.credits.used, 0)} of ${s.credits.total} left` : "—"}
+                      </p>
+                      {s.credits.used > 0 && <p className="text-slate-500">{s.credits.used} booked</p>}
+                      {s.role !== "admin" && <button type="button" onClick={() => adjustCredits(s)} className="mt-1 font-semibold text-brand-700 underline">Adjust</button>}
+                    </>
+                  ) : <span className="text-slate-400">Run packages.sql</span>}
                 </td>
                 <td className="px-4 py-3">
                   <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold ${s.predictor.access ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200" : "bg-slate-100 text-slate-600"}`}>

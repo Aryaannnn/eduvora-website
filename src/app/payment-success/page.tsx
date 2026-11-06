@@ -7,6 +7,7 @@ import { CheckIcon, ClockIcon, ReceiptIcon } from "@/components/Icons";
 import { getContactAccess } from "@/lib/contact";
 import { requireUser } from "@/lib/dashboard";
 import { formatDateTime, formatPrice } from "@/lib/format";
+import { creditsLine, getCredits } from "@/lib/packages";
 
 export const metadata: Metadata = { title: "Payment Successful", robots: { index: false } };
 
@@ -81,6 +82,9 @@ async function Content({ searchParams }: { searchParams: PageProps<"/payment-suc
   }
 
   const free = order?.amount === 0;
+  // Counselling package → show the session credits and "Book your first session"
+  const isPackage = order?.products?.category === "counselling_package";
+  const credits = isPackage ? await getCredits(s.supabase) : null;
   const rows: [string, string][] = order
     ? [
         ["Item", order.products?.title ?? "Your purchase"],
@@ -99,8 +103,13 @@ async function Content({ searchParams }: { searchParams: PageProps<"/payment-suc
           <span className="mx-auto grid h-16 w-16 animate-fade-up place-items-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/30"><CheckIcon className="h-9 w-9" /></span>
           <h1 className="mt-4 text-2xl font-extrabold text-brand-700 sm:text-3xl">{free ? "Unlocked! 🎉" : "Payment Successful 🎉"}</h1>
           <p className="mt-2 text-slate-600">
-            {free ? "This free item is now in your dashboard." : "Thank you! Your item is unlocked and ready in your dashboard."}
+            {isPackage
+              ? `Your ${order?.products?.title} package is active. Book your sessions any time — no more payments needed.`
+              : free ? "This free item is now in your dashboard." : "Thank you! Your item is unlocked and ready in your dashboard."}
           </p>
+          {isPackage && credits && (
+            <p className="mt-3 inline-flex rounded-full bg-white px-4 py-1.5 text-sm font-extrabold text-emerald-700 ring-1 ring-emerald-200">{creditsLine(credits)}</p>
+          )}
         </div>
 
         {rows.length > 0 && (
@@ -118,7 +127,11 @@ async function Content({ searchParams }: { searchParams: PageProps<"/payment-suc
         )}
 
         <div className={`flex flex-col gap-3 px-6 pb-8 sm:flex-row sm:px-8 ${rows.length ? "" : "pt-8"}`}>
-          <Link href="/dashboard/courses" className="btn-primary flex-1 !py-3.5 text-base">Go to Dashboard</Link>
+          {isPackage ? (
+            <Link href="/book-a-slot" className="btn-accent flex-1 !py-3.5 text-base">Book Your First Session</Link>
+          ) : (
+            <Link href="/dashboard/courses" className="btn-primary flex-1 !py-3.5 text-base">Go to Dashboard</Link>
+          )}
           {!free && order?.invoice_number && (
             <a href={`/api/invoices/${order.id}`} download className="btn-light flex-1 !py-3.5">Download invoice (PDF)</a>
           )}

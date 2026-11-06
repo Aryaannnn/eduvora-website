@@ -1,8 +1,10 @@
 // POST /api/bookings/start — the "Pay ₹… & Book Slot" button.
 // Quietly holds the slot for 10 minutes and creates the Razorpay order.
 // The PRICE comes from the slot in our database, never from the browser.
+// With { useCredit: true } it books with one package session credit instead
+// (no payment; the credit is checked inside Supabase).
 import { after, NextResponse, type NextRequest } from "next/server";
-import { releaseStaleHolds, parseBookingInput, SLOT_TAKEN_MESSAGE, startBooking, HOLD_MINUTES } from "@/lib/bookings-server";
+import { bookWithCredit, releaseStaleHolds, parseBookingInput, SLOT_TAKEN_MESSAGE, startBooking, HOLD_MINUTES } from "@/lib/bookings-server";
 import { getSession } from "@/lib/dashboard";
 import { welcomeIfNew } from "@/lib/email/notify";
 import { getAdminSupabase } from "@/lib/supabase/admin";
@@ -20,7 +22,7 @@ export async function POST(request: NextRequest) {
   const db = getAdminSupabase();
   if (!db) return json({ error: "Booking is not available right now." }, 503);
 
-  const res = await startBooking(db, session.user.id, input);
+  const res = body.useCredit === true ? await bookWithCredit(db, session.user.id, input) : await startBooking(db, session.user.id, input);
   after(() => releaseStaleHolds(db).catch(() => {})); // tidy old holds in the background
 
   if (res.kind === "slot_taken") return json({ error: SLOT_TAKEN_MESSAGE, slotTaken: true }, 409);
