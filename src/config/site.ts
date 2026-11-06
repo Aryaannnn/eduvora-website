@@ -92,13 +92,9 @@ export const siteConfig = {
   youtube: "https://youtube.com/@utkarsh_shrivastava_1819",
   youtubeHandle: "@utkarsh_shrivastava_1819",
 
-  // ---------- Results (placeholder numbers — change to your real ones) ----------
-  results: [
-    { value: 1000, suffix: "+", label: "Students guided" },
-    { value: 1200, suffix: "+", label: "VIT selections" }, // ⚠️ placeholder — replace with your real number (should not be more than students guided)
-    { value: 2, suffix: "+", label: "Years of counselling" },
-    { value: 98, suffix: "%", label: "Parents satisfied" },
-  ],
+  // ---------- Results numbers ----------
+  // These now live in the database — edit them in Admin → Settings.
+  // A number left empty is hidden on the website.
 
   // Date shown on the policy pages
   policiesUpdated: "5 November 2026",

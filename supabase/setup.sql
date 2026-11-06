@@ -748,16 +748,8 @@ where extract(isodow from d) <> 7   -- no Sunday slots
 on conflict (date, start_time) do nothing;
 
 -- ---------- Sample reviews (REPLACE with real ones!) ----------
-insert into public.reviews (name, type, rating, comment, is_approved)
-select * from (values
-  ('Sample Student 1', 'student', 5::smallint, 'SAMPLE REVIEW — replace with a real student''s words. The mock tests felt just like the real exam.', true),
-  ('Sample Student 2', 'student', 5::smallint, 'SAMPLE REVIEW — replace with a real student''s words. The counselling call helped me choose the right branch.', true),
-  ('Sample Student 3', 'student', 4::smallint, 'SAMPLE REVIEW — replace with a real student''s words. Notes were short and clear.', true),
-  ('Sample Parent 1',  'parent',  5::smallint, 'SAMPLE REVIEW — replace with a real parent''s words. The fee categories were explained clearly.', true),
-  ('Sample Parent 2',  'parent',  5::smallint, 'SAMPLE REVIEW — replace with a real parent''s words. We felt confident during counselling.', true),
-  ('Sample Parent 3',  'parent',  4::smallint, 'SAMPLE REVIEW — replace with a real parent''s words. Regular updates helped us a lot.', true)
-) as v (name, type, rating, comment, is_approved)
-where not exists (select 1 from public.reviews where name like 'Sample %');
+-- (No sample reviews: real reviews come from paid students via the dashboard,
+--  approved in Admin → Reviews. See supabase/stats-reviews.sql)
 
 -- =====================================================================
 -- DONE! 🎉  To make YOURSELF an admin (after you sign up on the website):

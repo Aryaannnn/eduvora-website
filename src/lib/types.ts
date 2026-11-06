@@ -61,4 +61,7 @@ export type Review = {
   rating: number;
   comment: string;
   photo_url: string | null;
+  is_verified?: boolean; // written by a student who paid → "Verified Student" badge
 };
+
+export type SiteStat = { id: string; label: string; value: number | null; suffix: string; sort_order: number };

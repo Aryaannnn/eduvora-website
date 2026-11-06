@@ -8,7 +8,10 @@ import Stars from "../Stars";
 import { EditIcon, PlusIcon, TrashIcon } from "../Icons";
 import { AdminHeader, Label, Modal, Notice, Toggle } from "./ui";
 
-export type AdminReview = { id: string; name: string; type: "student" | "parent"; rating: number; comment: string; photo_url: string | null; is_approved: boolean; created_at: string };
+export type AdminReview = {
+  id: string; name: string; type: "student" | "parent"; rating: number; comment: string; photo_url: string | null; is_approved: boolean; created_at: string;
+  user_id?: string | null; is_verified?: boolean; consent_given?: boolean; writer_email?: string;
+};
 
 export default function ReviewsManager({ reviews }: { reviews: AdminReview[] }) {
   const router = useRouter();
@@ -27,7 +30,7 @@ export default function ReviewsManager({ reviews }: { reviews: AdminReview[] }) 
 
   return (
     <>
-      <AdminHeader title="Reviews" subtitle="Only approved reviews appear on the website.">
+      <AdminHeader title="Reviews" subtitle="Students who paid can write a review from their dashboard. Nothing shows on the website until you approve it.">
         <select value={filter} onChange={(e) => setFilter(e.target.value as typeof filter)} className="input !w-auto" aria-label="Filter reviews">
           <option value="all">All ({reviews.length})</option>
           <option value="approved">Approved ({reviews.filter((r) => r.is_approved).length})</option>
@@ -57,6 +60,19 @@ export default function ReviewsManager({ reviews }: { reviews: AdminReview[] }) 
                 <Stars rating={r.rating} />
               </div>
               <p className="mt-3 flex-1 text-sm text-slate-700">“{r.comment}”</p>
+              <div className="mt-3 flex flex-wrap gap-1.5 text-[11px] font-bold">
+                {r.is_verified && <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-emerald-700 ring-1 ring-emerald-200">✓ Verified Student</span>}
+                {r.user_id ? (
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-slate-600" title={r.writer_email}>Written by the student{r.writer_email ? ` · ${r.writer_email}` : ""}</span>
+                ) : (
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-slate-500">Added by admin</span>
+                )}
+                {r.user_id && (r.consent_given ? (
+                  <span className="rounded-full bg-sky-50 px-2.5 py-1 text-sky-700 ring-1 ring-sky-200">Consent given ✓</span>
+                ) : (
+                  <span className="rounded-full bg-red-50 px-2.5 py-1 text-red-700">No consent — don&apos;t approve</span>
+                ))}
+              </div>
               <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">
                 <Toggle checked={r.is_approved} onChange={(v) => run(() => setReviewApproved(r.id, v))} label={r.is_approved ? "Approved (shown)" : "Not approved (hidden)"} />
                 <div className="flex gap-2">

@@ -8,7 +8,7 @@
 import { cacheLife, cacheTag } from "next/cache";
 import { todayInIndia } from "./format";
 import { getPublicSupabase } from "./supabase/public";
-import type { Product, ProductCategory, Review, Slot } from "./types";
+import type { Product, ProductCategory, Review, SiteStat, Slot } from "./types";
 
 // content_links is private, so we always list the public columns by name
 export const PRODUCT_COLUMNS =
@@ -82,14 +82,31 @@ export async function getApprovedReviews(): Promise<Review[]> {
   cacheTag("reviews");
   const supabase = getPublicSupabase();
   if (!supabase) return (ok(), []);
-  const { data, error } = await supabase
-    .from("reviews")
-    .select("id,name,type,rating,comment,photo_url")
-    .eq("is_approved", true)
-    .order("created_at", { ascending: false });
+  const cols = "id,name,type,rating,comment,photo_url";
+  const first = await supabase.from("reviews").select(`${cols},is_verified`).eq("is_approved", true).order("created_at", { ascending: false });
+  let data = first.data as Review[] | null;
+  let error = first.error;
+  // Before supabase/stats-reviews.sql is run there is no is_verified column yet
+  if (error && /is_verified/.test(error.message)) {
+    const again = await supabase.from("reviews").select(cols).eq("is_approved", true).order("created_at", { ascending: false });
+    data = again.data as Review[] | null;
+    error = again.error;
+  }
   if (error) return (retrySoon("getApprovedReviews", error.message), []);
   ok();
   return (data ?? []) as Review[];
+}
+
+/** "Our results" numbers (Admin → Settings). Only stats WITH a number are returned. */
+export async function getSiteStats(): Promise<SiteStat[]> {
+  "use cache";
+  cacheTag("settings");
+  const supabase = getPublicSupabase();
+  if (!supabase) return (ok(), []);
+  const { data, error } = await supabase.from("site_stats").select("id,label,value,suffix,sort_order").order("sort_order");
+  if (error) return (retrySoon("getSiteStats", error.message), []);
+  ok();
+  return ((data ?? []) as SiteStat[]).filter((s) => s.value !== null && s.label.trim());
 }
 
 // Rank & College Predictor data is PRIVATE now (paid counselling only) —

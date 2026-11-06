@@ -19,6 +19,7 @@ const links = [
   { href: "/admin/students", label: "Students", icon: UsersIcon },
   { href: "/admin/payments", label: "Payments", icon: ReceiptIcon },
   { href: "/admin/emails", label: "Email Logs", icon: MailIcon },
+  { href: "/admin/settings", label: "Settings", icon: GridIcon },
 ];
 
 export default function AdminNav() {

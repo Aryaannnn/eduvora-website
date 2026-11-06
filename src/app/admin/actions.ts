@@ -391,6 +391,33 @@ export async function deleteReview(id: string): Promise<ActionResult> {
   return dbResult(error, "Review deleted.");
 }
 
+// ---------------------------------------------------------------- SETTINGS
+/** "Our results" numbers. Empty number = hidden on the website. */
+export async function saveSiteStats(rows: { id?: string; label: string; value: string; suffix: string }[]): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  if (rows.length > 8) return fail("Please keep it to 8 stats or fewer.");
+  for (const r of rows) {
+    if (!r.label.trim()) return fail("Every stat needs a label (or remove it).");
+    if (r.value.trim() && !/^\d{1,9}$/.test(r.value.trim())) return fail(`"${r.label}": the number must be digits only.`);
+  }
+  const { data: existing } = await s.supabase.from("site_stats").select("id");
+  const keep = new Set(rows.filter((r) => r.id).map((r) => r.id));
+  const remove = (existing ?? []).map((e) => e.id as string).filter((id) => !keep.has(id));
+  if (remove.length) {
+    const { error } = await s.supabase.from("site_stats").delete().in("id", remove);
+    if (error) return fail(friendlyDbError(error.message));
+  }
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    const row = { label: r.label.trim().slice(0, 60), value: r.value.trim() ? Number(r.value.trim()) : null, suffix: r.suffix.trim().slice(0, 5), sort_order: i, updated_at: new Date().toISOString() };
+    const { error } = r.id ? await s.supabase.from("site_stats").update(row).eq("id", r.id) : await s.supabase.from("site_stats").insert(row);
+    if (error) return fail(friendlyDbError(error.message));
+  }
+  updateTag("settings"); // Home + About update immediately
+  return { ok: true, message: "Saved — the website shows the new numbers now." };
+}
+
 // ---------------------------------------------------------------- STUDENTS
 export async function setUserRole(userId: string, role: "admin" | "student"): Promise<ActionResult> {
   const s = await adminOrError();

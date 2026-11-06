@@ -96,7 +96,8 @@ export default async function Home() {
       <ResultsSection />
 
       {/* 8. Reviews */}
-      <ReviewsSection reviews={reviews} />
+      {/* Hidden automatically until at least one review is approved */}
+      {reviews.length > 0 && <ReviewsSection reviews={reviews} />}
 
       {/* 9. Trust / secure payments */}
       <TrustSection />

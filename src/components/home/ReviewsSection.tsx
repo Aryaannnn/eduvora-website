@@ -7,6 +7,7 @@ import EmptyState from "../EmptyState";
 import Reveal from "../Reveal";
 import SectionHeading from "../SectionHeading";
 import Stars from "../Stars";
+import { CheckIcon } from "../Icons";
 
 const tabs: { id: Review["type"]; label: string }[] = [
   { id: "student", label: "Student Reviews" },
@@ -70,10 +71,15 @@ export default function ReviewsSection({ reviews, showHeading = true }: { review
                         {initials(r.name)}
                       </span>
                     )}
-                    <figcaption>
+                    <figcaption className="min-w-0">
                       <p className="font-bold text-slate-900">{r.name}</p>
                       <p className="text-xs capitalize text-slate-500">{r.type}</p>
                     </figcaption>
+                    {r.is_verified && (
+                      <span className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700 ring-1 ring-emerald-200" title="Written by a student who paid for counselling, a course or material">
+                        <CheckIcon className="h-3.5 w-3.5" /> Verified Student
+                      </span>
+                    )}
                   </div>
                   <div className="mt-4"><Stars rating={r.rating} /></div>
                   <blockquote className="mt-3 flex-1 text-sm leading-relaxed text-slate-700">&ldquo;{r.comment}&rdquo;</blockquote>
