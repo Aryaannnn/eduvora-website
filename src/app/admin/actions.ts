@@ -442,6 +442,25 @@ export async function setPredictorAccess(userId: string, mode: "auto" | "give" |
 }
 
 // ---------------------------------------------------------------- PAYMENTS
+/**
+ * Record a refund. The student loses access to the item and it stops
+ * counting in revenue. (Send the money back in Razorpay Dashboard → Payments → Refund.)
+ */
+export async function markPurchaseRefunded(id: string, note: string): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const { data: p } = await s.supabase.from("purchases").select("status").eq("id", id).maybeSingle();
+  if (!p) return fail("Payment not found.");
+  if (p.status !== "paid") return fail("Only paid payments can be marked as refunded.");
+  const { error } = await s.supabase
+    .from("purchases")
+    .update({ status: "refunded", refunded_at: new Date().toISOString(), refund_note: note.trim().slice(0, 300) || null, refunded_by: s.user.id })
+    .eq("id", id)
+    .eq("status", "paid");
+  if (error) return fail(/status_check|refunded_at|refund_note/.test(error.message) ? "Run supabase/refunds.sql in Supabase first." : friendlyDbError(error.message));
+  return { ok: true, message: "Marked as refunded — the student no longer has access. Remember to refund the money in Razorpay." };
+}
+
 /** Invoice numbers like EDU-2026-0001 (same series as Razorpay payments). */
 async function nextInvoiceNumber(): Promise<string> {
   const admin = getAdminSupabase();

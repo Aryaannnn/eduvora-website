@@ -11,7 +11,7 @@
 
 alter table public.purchases drop constraint if exists purchases_status_check;
 alter table public.purchases add constraint purchases_status_check
-  check (status in ('pending', 'paid', 'failed', 'abandoned'));
+  check (status in ('created', 'pending', 'paid', 'failed', 'abandoned', 'refunded'));
 
 -- When we looked at it (so the sweep doesn't check the same order again and again)
 alter table public.purchases add column if not exists checked_at timestamptz;

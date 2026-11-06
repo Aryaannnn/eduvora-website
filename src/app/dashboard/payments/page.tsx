@@ -23,7 +23,7 @@ async function PaymentsContent() {
   const db = getAdminSupabase();
   if (db) await sweepStalePayments(db, { userId: s.user.id, limit: 10 }).catch((e) => console.warn("[payments] cleanup failed:", e));
   // Only real outcomes: paid and failed. Unfinished attempts are never shown.
-  const rows = (await getMyPurchases(s)).filter((r) => r.status === "paid" || r.status === "failed");
+  const rows = (await getMyPurchases(s)).filter((r) => r.status === "paid" || r.status === "failed" || r.status === "refunded");
   const totalPaid = rows.filter((r) => r.status === "paid").reduce((sum, r) => sum + r.amount, 0);
 
   return (

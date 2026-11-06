@@ -2,22 +2,24 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { recordPurchase, setPurchaseStatus } from "@/app/admin/actions";
+import { markPurchaseRefunded, recordPurchase, setPurchaseStatus } from "@/app/admin/actions";
 import { csvDateTimeIST, formatDateTime, formatPrice, todayInIndia } from "@/lib/format";
 import { DownloadIcon, PlusIcon, SearchIcon } from "../Icons";
 import CheckPaymentButton from "../CheckPaymentButton";
 import { AdminHeader, Label, Modal, Notice, downloadCsv } from "./ui";
 
 export type AdminPayment = {
-  id: string; user_id: string; amount: number; status: "created" | "pending" | "paid" | "failed" | "abandoned"; invoice_number: string | null;
+  id: string; user_id: string; amount: number; status: "created" | "pending" | "paid" | "failed" | "abandoned" | "refunded"; invoice_number: string | null;
   razorpay_order_id: string | null; razorpay_payment_id: string | null; created_at: string; product: string; student: string; email: string;
   failure_reason?: string | null;
+  refunded_at?: string | null;
+  refund_note?: string | null;
 };
 
 // Only real outcomes are listed. Unfinished attempts ('created' / 'abandoned') stay hidden
 // and appear only under "Show unfinished attempts" at the bottom (for support cases).
 const STATUSES = ["paid", "failed"] as const;
-const color: Record<string, string> = { paid: "bg-green-50 text-green-700", failed: "bg-red-50 text-red-700" };
+const color: Record<string, string> = { paid: "bg-green-50 text-green-700", failed: "bg-red-50 text-red-700", refunded: "bg-sky-50 text-sky-700" };
 const dayIST = (iso: string) => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date(iso));
 
 export default function PaymentsManager({
@@ -32,7 +34,7 @@ export default function PaymentsManager({
   products: { id: string; title: string; price: number }[];
 }) {
   const router = useRouter();
-  const [status, setStatus] = useState<"all" | (typeof STATUSES)[number]>("all");
+  const [status, setStatus] = useState<"all" | (typeof STATUSES)[number] | "refunded">("all");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [q, setQ] = useState("");
@@ -61,8 +63,8 @@ export default function PaymentsManager({
   const exportCsv = () =>
     downloadCsv(
       `payments-${todayInIndia()}.csv`,
-      ["Date", "Student", "Email", "Item", "Amount (INR)", "Status", "Invoice", "Razorpay order", "Razorpay payment"],
-      shown.map((p) => [csvDateTimeIST(p.created_at), p.student, p.email, p.product, p.amount, p.status, p.invoice_number, p.razorpay_order_id, p.razorpay_payment_id]),
+      ["Date", "Student", "Email", "Item", "Amount (INR)", "Status", "Refunded on", "Refund note", "Invoice", "Razorpay order", "Razorpay payment"],
+      shown.map((p) => [csvDateTimeIST(p.created_at), p.student, p.email, p.product, p.amount, p.status, p.refunded_at ? csvDateTimeIST(p.refunded_at) : "", p.refund_note ?? "", p.invoice_number, p.razorpay_order_id, p.razorpay_payment_id]),
     );
 
   return (
@@ -81,6 +83,7 @@ export default function PaymentsManager({
           <option value="all">All</option>
           <option value="paid">Paid</option>
           <option value="failed">Failed</option>
+          <option value="refunded">Refunded</option>
         </select>
         <label className="flex items-center gap-2 text-sm text-slate-600">From <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="input" /></label>
         <label className="flex items-center gap-2 text-sm text-slate-600">To <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="input" /></label>
@@ -92,10 +95,10 @@ export default function PaymentsManager({
       <div className={`card overflow-x-auto ${pending ? "opacity-60" : ""}`}>
         <table className="w-full min-w-[760px] text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
-            <tr><th className="px-4 py-3">Date</th><th className="px-4 py-3">Student</th><th className="px-4 py-3">Item</th><th className="px-4 py-3">Amount</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Invoice / Source</th></tr>
+            <tr><th className="px-4 py-3">Date</th><th className="px-4 py-3">Student</th><th className="px-4 py-3">Item</th><th className="px-4 py-3">Amount</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Refund status</th><th className="px-4 py-3">Invoice / Source</th></tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {shown.length === 0 && <tr><td colSpan={6} className="px-4 py-10 text-center text-slate-500">No payments match.</td></tr>}
+            {shown.length === 0 && <tr><td colSpan={7} className="px-4 py-10 text-center text-slate-500">No payments match.</td></tr>}
             {shown.map((p) => (
               <tr key={p.id}>
                 <td className="whitespace-nowrap px-4 py-3 text-slate-600">{formatDateTime(p.created_at)}</td>
@@ -103,11 +106,40 @@ export default function PaymentsManager({
                 <td className="px-4 py-3 text-slate-700">{p.product}</td>
                 <td className="whitespace-nowrap px-4 py-3 font-semibold text-slate-900">{formatPrice(p.amount)}</td>
                 <td className="px-4 py-3">
-                  <select value={p.status} onChange={(e) => confirm(`Change this payment to "${e.target.value}"? Paid = student gets access.`) && run(() => setPurchaseStatus(p.id, e.target.value as "paid" | "failed"))}
-                    className={`rounded-xl border-0 px-3 py-1.5 text-xs font-bold capitalize ring-1 ring-slate-200 ${color[p.status]}`} aria-label="Payment status">
-                    {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-                  </select>
+                  {p.status === "refunded" ? (
+                    <span className={`inline-block rounded-xl px-3 py-1.5 text-xs font-bold ${color.refunded}`}>Refunded</span>
+                  ) : (
+                    <select value={p.status} onChange={(e) => confirm(`Change this payment to "${e.target.value}"? Paid = student gets access.`) && run(() => setPurchaseStatus(p.id, e.target.value as "paid" | "failed"))}
+                      className={`rounded-xl border-0 px-3 py-1.5 text-xs font-bold capitalize ring-1 ring-slate-200 ${color[p.status]}`} aria-label="Payment status">
+                      {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  )}
                   {p.status === "failed" && p.failure_reason && <p className="mt-1 max-w-[14rem] text-[11px] text-red-600">{p.failure_reason}</p>}
+                </td>
+                <td className="px-4 py-3 text-xs">
+                  {p.status === "refunded" ? (
+                    <div>
+                      <p className="font-bold text-sky-700">✓ Refunded</p>
+                      {p.refunded_at && <p className="text-slate-500">{formatDateTime(p.refunded_at)}</p>}
+                      {p.refund_note && <p className="mt-0.5 max-w-[12rem] text-slate-500">“{p.refund_note}”</p>}
+                    </div>
+                  ) : p.status === "paid" && p.amount > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const note = prompt(
+                          `Mark this ${formatPrice(p.amount)} payment by ${p.student} as REFUNDED?\n\n• The student loses access to "${p.product}".\n• It stops counting in revenue.\n• Refund the money yourself in Razorpay Dashboard → Payments.\n\nOptional note (reason):`,
+                          "",
+                        );
+                        if (note !== null) run(() => markPurchaseRefunded(p.id, note));
+                      }}
+                      className="btn-light !px-2.5 !py-1 text-[11px]"
+                    >
+                      Mark as refunded
+                    </button>
+                  ) : (
+                    <span className="text-slate-400">—</span>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-xs text-slate-500">
                   {p.status === "paid" && p.invoice_number ? (
@@ -122,7 +154,7 @@ export default function PaymentsManager({
                   {p.razorpay_order_id ? (
                     <>
                       <p className="mt-0.5" title={`Order ${p.razorpay_order_id}`}>Razorpay{p.razorpay_payment_id ? ` · ${p.razorpay_payment_id}` : ""}</p>
-                      {p.status !== "paid" && (
+                      {p.status === "failed" && (
                         <div className="mt-1.5"><CheckPaymentButton purchaseId={p.id} className="btn-light !px-2.5 !py-1 text-[11px]" label="Check with Razorpay" /></div>
                       )}
                     </>

@@ -23,7 +23,7 @@ export const HIDDEN_STATUSES = ["created", "pending", "abandoned"] as const;
 export const OPEN_ATTEMPT_STATUSES = ["created", "pending"] as const; // not decided yet
 export const ABANDON_AFTER_MINUTES = 30;
 
-type Status = "created" | "pending" | "paid" | "failed" | "abandoned";
+type Status = "created" | "pending" | "paid" | "failed" | "abandoned" | "refunded";
 type PurchaseRow = { id: string; user_id: string; amount: number; status: Status; razorpay_order_id: string | null; invoice_number: string | null };
 
 const missingFunction = (e: { code?: string; message?: string } | null) =>
@@ -50,10 +50,11 @@ export async function markPurchasePaid(db: SupabaseClient, orderId: string, paym
   const { data: p } = await db.from("purchases").select("id,status,invoice_number").eq("razorpay_order_id", orderId).maybeSingle();
   if (!p) return { id: null, error: "Order not found" };
   if (p.status === "paid") return { id: p.id, error: null };
+  if (p.status === "refunded") return { id: p.id, error: "This payment was refunded." };
   const patch: Record<string, unknown> = { status: "paid", invoice_number: p.invoice_number ?? (await nextInvoice(db)) };
   if (paymentId) patch.razorpay_payment_id = paymentId;
-  let { error: e2 } = await db.from("purchases").update({ ...patch, paid_at: new Date().toISOString() }).eq("id", p.id).neq("status", "paid");
-  if (e2 && /paid_at/.test(e2.message)) ({ error: e2 } = await db.from("purchases").update(patch).eq("id", p.id).neq("status", "paid"));
+  let { error: e2 } = await db.from("purchases").update({ ...patch, paid_at: new Date().toISOString() }).eq("id", p.id).not("status", "in", "(paid,refunded)");
+  if (e2 && /paid_at/.test(e2.message)) ({ error: e2 } = await db.from("purchases").update(patch).eq("id", p.id).not("status", "in", "(paid,refunded)"));
   if (!e2) notifyPurchasePaid(p.id);
   return { id: p.id, error: e2?.message ?? null };
 }
@@ -71,6 +72,7 @@ export type SettleResult = { status: Status; message: string; purchaseId: string
 export async function settleAttempt(db: SupabaseClient, p: PurchaseRow, opts: { allowAbandon: boolean }): Promise<SettleResult> {
   const r = (status: Status, message: string): SettleResult => ({ status, message, purchaseId: p.id });
   if (p.status === "paid") return r("paid", "This payment is already confirmed.");
+  if (p.status === "refunded") return r("refunded", "This payment was refunded — nothing to check.");
   if (!p.razorpay_order_id) return r(p.status, "This purchase has no online (Razorpay) payment to check.");
 
   const out = await getOrderOutcome(p.razorpay_order_id);
@@ -98,12 +100,12 @@ export async function settleAttempt(db: SupabaseClient, p: PurchaseRow, opts: { 
 
 /** Update a purchase, tolerating columns that only exist after the newest SQL. */
 async function update(db: SupabaseClient, id: string, patch: Record<string, unknown>) {
-  let { error } = await db.from("purchases").update(patch).eq("id", id).neq("status", "paid");
+  let { error } = await db.from("purchases").update(patch).eq("id", id).not("status", "in", "(paid,refunded)");
   for (const col of ["checked_at", "failure_reason"]) {
     if (error && error.message.includes(col)) {
       delete patch[col];
       if (Object.keys(patch).length === 0) return { error: null };
-      ({ error } = await db.from("purchases").update(patch).eq("id", id).neq("status", "paid"));
+      ({ error } = await db.from("purchases").update(patch).eq("id", id).not("status", "in", "(paid,refunded)"));
     }
   }
   if (error && /status_check/.test(error.message)) return { error: "Run supabase/payment-statuses.sql in Supabase first." };

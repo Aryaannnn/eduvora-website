@@ -17,6 +17,14 @@ export default function PaymentsPage() {
   );
 }
 
+// Paid, failed and refunded payments (refund columns only exist after supabase/refunds.sql)
+async function loadMain(s: Awaited<ReturnType<typeof requireAdmin>>) {
+  const cols = "id,user_id,amount,status,invoice_number,razorpay_order_id,razorpay_payment_id,created_at,products(title),failure_reason";
+  const full = await s.supabase.from("purchases").select(`${cols},refunded_at,refund_note`).in("status", ["paid", "failed", "refunded"]).order("created_at", { ascending: false }).limit(5000);
+  if (!full.error || !/refund/.test(full.error.message)) return full;
+  return s.supabase.from("purchases").select(cols).in("status", ["paid", "failed"]).order("created_at", { ascending: false }).limit(5000);
+}
+
 async function Content() {
   const s = await requireAdmin("/admin/payments");
   // Automatic check first: hidden attempts older than 30 min → ask Razorpay →
@@ -26,7 +34,7 @@ async function Content() {
   const cols = "id,user_id,amount,status,invoice_number,razorpay_order_id,razorpay_payment_id,created_at,products(title)";
   const [purchases, hidden, users, products] = await Promise.all([
     // Only real outcomes in the main list
-    s.supabase.from("purchases").select(`${cols},failure_reason`).in("status", ["paid", "failed"]).order("created_at", { ascending: false }).limit(5000),
+    loadMain(s),
     // Unfinished attempts — only for the collapsed support section
     s.supabase.from("purchases").select(cols).in("status", ["created", "pending", "abandoned"]).order("created_at", { ascending: false }).limit(300),
     s.supabase.from("profiles").select("id,full_name,email,phone").order("full_name").limit(5000),

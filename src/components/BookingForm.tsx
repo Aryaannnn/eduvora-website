@@ -21,6 +21,7 @@ import type { Slot } from "@/lib/types";
 import { Spinner } from "./BuyButton";
 import { Field } from "./ContactForm";
 import EmptyState from "./EmptyState";
+import RefundNote from "./RefundNote";
 import { LockIcon, ShieldIcon, UserIcon } from "./Icons";
 
 const CLASS_YEARS = ["Class 11", "Class 12", "Dropper / Repeater", "Parent", "Other"];
@@ -307,6 +308,7 @@ export default function BookingForm() {
           <p className="mt-1 flex items-center justify-center gap-1.5 text-center text-[11px] text-slate-400">
             <LockIcon className="h-3 w-3" /> Your slot is booked only after the payment succeeds.
           </p>
+          <RefundNote kind="counselling" className="mt-3 border-t border-slate-100 pt-3" />
         </div>
       </aside>
     </form>

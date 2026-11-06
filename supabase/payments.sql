@@ -54,7 +54,7 @@ begin
            paid_at             = coalesce(paid_at, now()),
            failure_reason      = null
      where razorpay_order_id = p_order_id
-       and status <> 'paid'
+       and status not in ('paid', 'refunded')   -- a refunded purchase is never marked paid again
     returning *;
   if not found then
     return query select * from public.purchases where razorpay_order_id = p_order_id;

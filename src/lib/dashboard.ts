@@ -43,7 +43,7 @@ export type TestInfo = { id: string; title: string; type: "mock" | "mcq"; durati
 export type PurchaseRow = {
   id: string;
   amount: number;
-  status: "created" | "pending" | "paid" | "failed" | "abandoned";
+  status: "created" | "pending" | "paid" | "failed" | "abandoned" | "refunded";
   invoice_number: string | null;
   razorpay_payment_id: string | null;
   created_at: string;

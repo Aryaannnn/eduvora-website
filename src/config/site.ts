@@ -96,6 +96,20 @@ export const siteConfig = {
   // These now live in the database — edit them in Admin → Settings.
   // A number left empty is hidden on the website.
 
+  // ---------- Refund & Cancellation rules ----------
+  // ✏️ Change the numbers / sentences here — the Refund Policy page and the
+  //    short notes next to every "Buy Now" and "Pay & Book Slot" button update.
+  refunds: {
+    // Counselling sessions
+    counsellingHours: 24, // free reschedule / full refund up to this many hours before the slot
+    // Digital products (crash courses, study material, previous year papers, mock tests)
+    techIssueDays: 7, // we fix the problem or refund within this many days
+    processingTime: "5–7 working days", // how long a refund takes to reach the student
+    // Short notes shown next to the payment buttons
+    counsellingNote: "Free reschedule or full refund up to 24 hours before your slot. No refund within 24 hours or if the session is missed.",
+    digitalNote: "Digital product — non-refundable once access is given. If you can't access it, we'll fix it or refund within 7 days.",
+  },
+
   // Date shown on the policy pages
   policiesUpdated: "5 November 2026",
 

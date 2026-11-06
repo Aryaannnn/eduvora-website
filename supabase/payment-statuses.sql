@@ -15,7 +15,7 @@
 
 alter table public.purchases drop constraint if exists purchases_status_check;
 alter table public.purchases add constraint purchases_status_check
-  check (status in ('created', 'pending', 'paid', 'failed', 'abandoned'));
+  check (status in ('created', 'pending', 'paid', 'failed', 'abandoned', 'refunded'));
 alter table public.purchases alter column status set default 'created';
 
 alter table public.purchases add column if not exists failure_reason text;

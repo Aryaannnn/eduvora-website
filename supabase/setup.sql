@@ -53,7 +53,7 @@ create table if not exists public.purchases (
   amount               integer not null check (amount >= 0),  -- in rupees
   razorpay_order_id    text unique,
   razorpay_payment_id  text unique,
-  status               text not null default 'created' check (status in ('created', 'pending', 'paid', 'failed', 'abandoned')), -- created / abandoned are hidden attempts
+  status               text not null default 'created' check (status in ('created', 'pending', 'paid', 'failed', 'abandoned', 'refunded')), -- created / abandoned are hidden attempts
   invoice_number       text unique,
   created_at           timestamptz not null default now()
 );

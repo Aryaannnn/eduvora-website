@@ -8,6 +8,7 @@ import CourseCard from "@/components/cards/CourseCard";
 import { CalendarIcon, CheckIcon, ClockIcon, HomeIcon, LockIcon, MonitorIcon, PhoneIcon } from "@/components/Icons";
 import Reveal from "@/components/Reveal";
 import BuyButton from "@/components/BuyButton";
+import RefundNote from "@/components/RefundNote";
 import { phoneLink } from "@/config/site";
 import { getProductBySlug, getProducts } from "@/lib/data";
 import { discountPercent, formatPrice } from "@/lib/format";
@@ -93,9 +94,9 @@ async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
                 <p className="mt-0.5 text-xs text-emerald-700">UPI · Cards · Net banking · Wallets</p>
               </div>
             )}
-            <p className="mt-3 text-center text-xs text-slate-500">
-              <Link href="/refund-policy" className="underline">Refund policy</Link>
-            </p>
+            {course.price > 0 && (
+              <RefundNote kind="digital" className="mt-3" />
+            )}
           </div>
         </aside>
 

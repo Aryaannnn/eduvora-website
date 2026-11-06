@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { failedUrl, openCheckout, postJson, preloadCheckout } from "@/lib/razorpay-checkout";
 import { ShieldIcon } from "./Icons";
+import RefundNote from "./RefundNote";
 
 // ---- shared (one request per page) list of products this student owns ----
 type Owned = { loggedIn: boolean; owned: string[] };
@@ -133,9 +134,12 @@ export default function BuyButton({
         )}
       </button>
       {trust && (
-        <p className={`mt-2 flex items-center justify-center gap-1 text-[11px] font-semibold text-slate-500 ${trustClassName}`}>
-          <ShieldIcon className="h-3.5 w-3.5 text-emerald-600" /> 100% Secure Payments by Razorpay
-        </p>
+        <>
+          <p className={`mt-2 flex items-center justify-center gap-1 text-[11px] font-semibold text-slate-500 ${trustClassName}`}>
+            <ShieldIcon className="h-3.5 w-3.5 text-emerald-600" /> 100% Secure Payments by Razorpay
+          </p>
+          <RefundNote kind="digital" className="mt-1" />
+        </>
       )}
       {error && (
         <div className="mt-2 rounded-xl bg-red-50 p-2.5 text-center ring-1 ring-red-200" role="alert">
@@ -150,9 +154,12 @@ export default function BuyButton({
 /** "100% Secure Payments by Razorpay" line for layouts where the button is small */
 export function SecurePaymentNote({ className = "" }: { className?: string }) {
   return (
-    <p className={`flex items-center justify-center gap-1 text-[11px] font-semibold text-slate-500 ${className}`}>
-      <ShieldIcon className="h-3.5 w-3.5 text-emerald-600" /> 100% Secure Payments by Razorpay
-    </p>
+    <div className={className}>
+      <p className="flex items-center justify-center gap-1 text-[11px] font-semibold text-slate-500">
+        <ShieldIcon className="h-3.5 w-3.5 text-emerald-600" /> 100% Secure Payments by Razorpay
+      </p>
+      <RefundNote kind="digital" className="mt-1" />
+    </div>
   );
 }
 
