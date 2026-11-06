@@ -7,6 +7,7 @@ import { after, NextResponse, type NextRequest } from "next/server";
 import { bookWithCredit, releaseStaleHolds, parseBookingInput, SLOT_TAKEN_MESSAGE, startBooking, HOLD_MINUTES } from "@/lib/bookings-server";
 import { getSession } from "@/lib/dashboard";
 import { welcomeIfNew } from "@/lib/email/notify";
+import { claimReferralFromCookie } from "@/lib/pricing";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: { "Cache-Control": "private, no-store" } });
@@ -22,7 +23,8 @@ export async function POST(request: NextRequest) {
   const db = getAdminSupabase();
   if (!db) return json({ error: "Booking is not available right now." }, 503);
 
-  const res = body.useCredit === true ? await bookWithCredit(db, session.user.id, input) : await startBooking(db, session.user.id, input);
+  await claimReferralFromCookie(db, session.user.id);
+  const res = body.useCredit === true ? await bookWithCredit(db, session.user.id, input) : await startBooking(db, session.user.id, input, body.coupon);
   after(() => releaseStaleHolds(db).catch(() => {})); // tidy old holds in the background
 
   if (res.kind === "slot_taken") return json({ error: SLOT_TAKEN_MESSAGE, slotTaken: true }, 409);

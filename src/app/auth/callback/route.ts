@@ -2,6 +2,8 @@
 // We swap the one-time code for a login session, then go to the right page.
 import { NextResponse, type NextRequest } from "next/server";
 import { welcomeIfNew } from "@/lib/email/notify";
+import { claimReferralFromCookie } from "@/lib/pricing";
+import { getAdminSupabase } from "@/lib/supabase/admin";
 import { serverOrigin } from "@/lib/site-url";
 import { getServerSupabase } from "@/lib/supabase/server";
 
@@ -24,7 +26,10 @@ export async function GET(request: NextRequest) {
     const res = supabase ? await supabase.auth.exchangeCodeForSession(code) : null;
     if (res && !res.error) {
       // New students get the welcome email once (the profile itself is made by the database trigger)
-      if (res.data.user) welcomeIfNew(res.data.user.id);
+      if (res.data.user) {
+        welcomeIfNew(res.data.user.id);
+        await claimReferralFromCookie(getAdminSupabase(), res.data.user.id); // joined through a friend's link?
+      }
       return NextResponse.redirect(`${origin}${next}`);
     }
   }

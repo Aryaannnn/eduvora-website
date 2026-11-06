@@ -24,7 +24,10 @@ export type InvoiceData = {
   email: string;
   phone: string;
   item: string;
-  amount: number; // rupees
+  amount: number; // rupees (what was paid)
+  /** price before discounts + each discount line (only when something was taken off) */
+  subtotal?: number;
+  discounts?: { label: string; amount: number }[];
   method: string;
   paymentId: string | null;
   orderId: string | null;
@@ -35,7 +38,7 @@ export async function getInvoiceData(db: SupabaseClient, id: string): Promise<In
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
 
   // ---- product purchase? ----
-  const p = await selectTolerant(db, "purchases", "id,user_id,amount,status,invoice_number,razorpay_order_id,razorpay_payment_id,created_at,paid_at,payment_method,products(title)", id);
+  const p = await selectTolerant(db, "purchases", "id,user_id,amount,status,invoice_number,razorpay_order_id,razorpay_payment_id,created_at,paid_at,payment_method,original_amount,coupon_code,coupon_discount,referral_discount,reward_used,products(title)", id);
   if (p) {
     if (p.status !== "paid" || !p.invoice_number) return null;
     const { data: prof } = await db.from("profiles").select("full_name,email,phone").eq("id", p.user_id).maybeSingle();
@@ -51,6 +54,7 @@ export async function getInvoiceData(db: SupabaseClient, id: string): Promise<In
       phone: prof?.phone ? `+${String(prof.phone).replace(/^\+/, "")}` : "",
       item: (p.products as unknown as { title: string } | null)?.title ?? "Purchase",
       amount: Number(p.amount),
+      ...discountLines(p),
       method,
       paymentId: p.razorpay_payment_id,
       orderId: p.razorpay_order_id,
@@ -58,7 +62,7 @@ export async function getInvoiceData(db: SupabaseClient, id: string): Promise<In
   }
 
   // ---- counselling booking? ----
-  const b = await selectTolerant(db, "bookings", "id,user_id,name,phone,email,amount,payment_status,invoice_number,razorpay_order_id,razorpay_payment_id,created_at,paid_at,payment_method,slots(date,start_time,end_time,price)", id);
+  const b = await selectTolerant(db, "bookings", "id,user_id,name,phone,email,amount,payment_status,invoice_number,razorpay_order_id,razorpay_payment_id,created_at,paid_at,payment_method,original_amount,coupon_code,coupon_discount,referral_discount,reward_used,slots(date,start_time,end_time,price)", id);
   if (!b || b.payment_status !== "paid" || !b.invoice_number) return null;
   const slot = b.slots as unknown as { date: string; start_time: string; end_time: string; price: number } | null;
   const { data: prof } = await db.from("profiles").select("email").eq("id", b.user_id).maybeSingle();
@@ -74,17 +78,29 @@ export async function getInvoiceData(db: SupabaseClient, id: string): Promise<In
     phone: b.phone || "",
     item: `One-to-one counselling session${slot ? ` - ${formatDate(slot.date, true)}, ${formatTime(slot.start_time)}-${formatTime(slot.end_time)} IST` : ""}`,
     amount,
+    ...discountLines(b),
     method: await methodFor(db, "bookings", b.id, b.payment_method as string | null, b.razorpay_payment_id as string | null, amount),
     paymentId: b.razorpay_payment_id,
     orderId: b.razorpay_order_id,
   };
 }
 
+/** Coupon / referral / reward lines for the invoice (supabase/coupons-referrals.sql). */
+function discountLines(r: Record<string, unknown>): Pick<InvoiceData, "subtotal" | "discounts"> {
+  const original = Number(r.original_amount ?? 0);
+  if (!original || original <= Number(r.amount)) return {};
+  const lines: { label: string; amount: number }[] = [];
+  if (Number(r.coupon_discount) > 0) lines.push({ label: `Coupon discount (${r.coupon_code ?? "code"})`, amount: Number(r.coupon_discount) });
+  if (Number(r.referral_discount) > 0) lines.push({ label: "Referral discount (first payment)", amount: Number(r.referral_discount) });
+  if (Number(r.reward_used) > 0) lines.push({ label: "Reward credit used", amount: Number(r.reward_used) });
+  return { subtotal: original, discounts: lines };
+}
+
 /** Select one row; if a newer column (e.g. payment_method) doesn't exist yet, try again without it. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function selectTolerant(db: SupabaseClient, table: string, cols: string, id: string): Promise<any> {
   let list = cols.split(",");
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 10; i++) {
     const { data, error } = await db.from(table).select(list.join(",")).eq("id", id).maybeSingle();
     if (!error) return data;
     const missing = /column [\w.]*?\.?(\w+) does not exist/.exec(error.message)?.[1];
@@ -211,8 +227,13 @@ export async function buildInvoicePdf(inv: InvoiceData): Promise<Uint8Array> {
   y -= 30;
   const itemLines = wrap(inv.item, font, 11, width - 2 * M - 160);
   itemLines.forEach((l, i) => text(l, M + 10, y - i * 15, 11, i === 0 ? bold : font));
-  right(money(inv.amount), width - M - 10, y, 11, bold);
+  right(money(inv.subtotal ?? inv.amount), width - M - 10, y, 11, bold);
   y -= itemLines.length * 15 + 10;
+  for (const d of inv.discounts ?? []) {
+    text(d.label, M + 10, y, 10, font, GREY);
+    right(`- ${money(d.amount)}`, width - M - 10, y, 10, bold, rgb(0.02, 0.47, 0.34));
+    y -= 16;
+  }
   page.drawLine({ start: { x: M, y }, end: { x: width - M, y }, thickness: 1, color: LINE });
 
   // ---- total ----

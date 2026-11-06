@@ -2,11 +2,13 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { DashSkeleton } from "@/components/dashboard/ui";
 import SessionCreditsCard from "@/components/packages/SessionCreditsCard";
-import { ArrowRightIcon, BookIcon, CalendarIcon, ClipboardIcon, RocketIcon, TargetIcon } from "@/components/Icons";
+import { ArrowRightIcon, BookIcon, CalendarIcon, ClipboardIcon, GiftIcon, RocketIcon, TargetIcon } from "@/components/Icons";
 import { displayName, getMyAttempts, getMyBookings, getMyPurchases, nextBooking, paidOnly, requireUser } from "@/lib/dashboard";
 import { formatDate, formatTime } from "@/lib/format";
 import { welcomeIfNew } from "@/lib/email/notify";
 import { getCredits } from "@/lib/packages";
+import { claimReferralFromCookie } from "@/lib/pricing";
+import { getAdminSupabase } from "@/lib/supabase/admin";
 
 export default function DashboardHome() {
   return (
@@ -19,6 +21,7 @@ export default function DashboardHome() {
 async function HomeContent() {
   const s = await requireUser("/dashboard");
   welcomeIfNew(s.user.id); // new students get a welcome email (once)
+  await claimReferralFromCookie(getAdminSupabase(), s.user.id); // joined through a friend's link?
   const [purchases, bookings, attempts, credits] = await Promise.all([getMyPurchases(s), getMyBookings(s), getMyAttempts(s, 1), getCredits(s.supabase)]);
   const paidCount = paidOnly(purchases).length;
   const upcoming = nextBooking(bookings);
@@ -67,12 +70,13 @@ async function HomeContent() {
       {/* Shortcuts */}
       <section className="card p-5 sm:p-6">
         <h2 className="text-lg font-extrabold text-slate-900">Quick actions</h2>
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
           {[
             { href: "/courses", label: "Browse courses", icon: RocketIcon },
             { href: "/mock-tests", label: "Take a test", icon: TargetIcon },
             { href: "/book-a-slot", label: "Book a slot", icon: CalendarIcon },
             { href: "/dashboard/predictor", label: "Rank predictor", icon: TargetIcon },
+            { href: "/dashboard/refer", label: "Refer & earn", icon: GiftIcon },
           ].map((a) => (
             <Link key={a.href} href={a.href} className="flex flex-col items-center gap-2 rounded-2xl bg-slate-50 p-4 text-center text-sm font-semibold text-slate-700 ring-1 ring-slate-200 transition hover:bg-brand-50 hover:text-brand-700 hover:ring-brand-200">
               <a.icon className="h-6 w-6" /> {a.label}

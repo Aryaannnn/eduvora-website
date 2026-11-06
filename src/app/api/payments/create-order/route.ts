@@ -2,11 +2,14 @@
 // 1. Must be logged in (otherwise 401 → the button sends them to login)
 // 2. Reads the PRICE FROM OUR DATABASE (never from the browser)
 // 3. Free item → unlocked straight away, no payment
-// 4. Paid item → creates a Razorpay order + saves a 'pending' purchase
+// 4. Paid item → works out the price ON THE SERVER (coupon, referral ₹ off,
+//    reward credit — src/lib/pricing.ts), creates the Razorpay order for
+//    that amount + saves a 'created' purchase with the discount details
 import { after, NextResponse, type NextRequest } from "next/server";
 import { getSession } from "@/lib/dashboard";
 import { welcomeIfNew } from "@/lib/email/notify";
 import { unlockFreeProduct } from "@/lib/free-resources";
+import { claimReferralFromCookie, discountColumns, quote, recordCouponUse } from "@/lib/pricing";
 import { sweepStalePayments } from "@/lib/payments-server";
 import { createRazorpayOrder, isRazorpayConfigured } from "@/lib/razorpay";
 import { getAdminSupabase } from "@/lib/supabase/admin";
@@ -14,7 +17,7 @@ import { getAdminSupabase } from "@/lib/supabase/admin";
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: { "Cache-Control": "private, no-store" } });
 
 export async function POST(request: NextRequest) {
-  const { productId } = (await request.json().catch(() => ({}))) as { productId?: unknown };
+  const { productId, coupon } = (await request.json().catch(() => ({}))) as { productId?: unknown; coupon?: unknown };
   if (typeof productId !== "string" || !/^[0-9a-f-]{36}$/i.test(productId)) return json({ error: "Invalid product." }, 400);
 
   const session = await getSession();
@@ -55,9 +58,14 @@ export async function POST(request: NextRequest) {
 
   if (!isRazorpayConfigured()) return json({ error: "Payments are not set up yet. Please try again later." }, 503);
 
+  // The real price: coupon + referral discount + reward credit (all checked here)
+  await claimReferralFromCookie(admin, session.user.id);
+  const q = await quote(admin, session.user.id, { kind: "product", id: product.id, price: product.price }, coupon);
+  if (q.couponError) return json({ error: q.couponError, couponError: true }, 400);
+
   let order;
   try {
-    order = await createRazorpayOrder(product.price, `p_${product.id.slice(0, 8)}_${Date.now()}`, {
+    order = await createRazorpayOrder(q.final, `p_${product.id.slice(0, 8)}_${Date.now()}`, {
       product_id: product.id,
       product: product.title.slice(0, 200),
       user_id: session.user.id,
@@ -69,14 +77,16 @@ export async function POST(request: NextRequest) {
 
   // Saved as a HIDDEN attempt ('created'): needed for the signature check and
   // the webhook, but never shown in payment lists until it is paid or failed.
-  const attempt = { user_id: session.user.id, product_id: product.id, amount: product.price, razorpay_order_id: order.id };
-  let { error } = await admin.from("purchases").insert({ ...attempt, status: "created" });
+  const attempt = { user_id: session.user.id, product_id: product.id, amount: q.final, razorpay_order_id: order.id, ...discountColumns(q) };
+  let { data: saved, error } = await admin.from("purchases").insert({ ...attempt, status: "created" }).select("id").single();
   // Older database without the 'created' status (payment-statuses.sql not run yet)
-  if (error && /status_check/.test(error.message)) ({ error } = await admin.from("purchases").insert({ ...attempt, status: "pending" }));
+  if (error && /status_check/.test(error.message)) ({ data: saved, error } = await admin.from("purchases").insert({ ...attempt, status: "pending" }).select("id").single());
   if (error) {
     console.warn("[payments] could not save pending purchase:", error.message);
     return json({ error: "Could not start the payment. Please try again." }, 500);
   }
+
+  if (saved) await recordCouponUse(admin, session.user.id, q, { purchaseId: saved.id as string });
 
   // Background tidy-up of old unpaid orders (doesn't slow this request down)
   after(() => sweepStalePayments(admin, { limit: 10 }).catch(() => {}));

@@ -25,6 +25,7 @@ import { Field } from "./ContactForm";
 import EmptyState from "./EmptyState";
 import RefundNote from "./RefundNote";
 import { CheckIcon, LockIcon, ShieldIcon, UserIcon } from "./Icons";
+import { CouponBox, PriceBreakdown, useQuote } from "./checkout/Checkout";
 
 type Credits = { total: number; used: number; remaining: number; unlimited: boolean };
 
@@ -108,6 +109,10 @@ export default function BookingForm() {
   const busy = phase !== "idle";
   const hasCredit = !!credits && (credits.unlimited || credits.remaining > 0);
   const payingWithCredit = hasCredit && useCredit;
+  // Price breakdown from the server (coupon, referral ₹ off, reward credit)
+  const paid = !!user && !!selected && selected.price > 0 && !payingWithCredit;
+  const checkout = useQuote(paid ? { slotId: selected!.id } : null);
+  const q = paid ? checkout.quote : null;
 
   const update = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -128,6 +133,7 @@ export default function BookingForm() {
     setPhase("creating");
     const res = await postJson("/api/bookings/start", {
       useCredit: payingWithCredit,
+      coupon: payingWithCredit ? "" : checkout.code,
       slotId: selected.id,
       name: form.name,
       phone: form.phone,
@@ -208,7 +214,7 @@ export default function BookingForm() {
     ) : !user ? (
       "Sign In to Book"
     ) : selected ? (
-      payingWithCredit ? "Book with 1 Session Credit" : selected.price > 0 ? `Pay ${price} & Book Slot` : "Book Free Slot"
+      payingWithCredit ? "Book with 1 Session Credit" : selected.price > 0 ? `Pay ${q ? `₹${q.final.toLocaleString("en-IN")}` : price} & Book Slot` : "Book Free Slot"
     ) : (
       "Choose a time slot"
     );
@@ -309,10 +315,17 @@ export default function BookingForm() {
               </label>
             </div>
           )}
-          <div className="mt-5 flex items-baseline justify-between border-t border-slate-100 pt-5">
-            <span className="font-semibold text-slate-700">Total</span>
-            <span className="text-3xl font-extrabold text-slate-900">{selected ? (payingWithCredit ? "₹0" : price) : "—"}</span>
-          </div>
+          {q ? (
+            <div className="mt-5 space-y-4 border-t border-slate-100 pt-5">
+              <CouponBox applied={checkout.code} error={checkout.couponError} loading={checkout.loading} onApply={checkout.apply} onRemove={checkout.remove} disabled={busy} />
+              <PriceBreakdown q={q} />
+            </div>
+          ) : (
+            <div className="mt-5 flex items-baseline justify-between border-t border-slate-100 pt-5">
+              <span className="font-semibold text-slate-700">Total</span>
+              <span className="text-3xl font-extrabold text-slate-900">{selected ? (payingWithCredit ? "₹0" : price) : "—"}</span>
+            </div>
+          )}
           {payingWithCredit && <p className="mt-1 text-right text-xs font-semibold text-emerald-700">1 session credit · no payment needed</p>}
 
           {notice && (

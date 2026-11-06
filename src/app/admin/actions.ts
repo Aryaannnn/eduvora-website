@@ -575,3 +575,96 @@ export async function adjustSessionCredits(userId: string, delta: number, note: 
   if (error && /session_credit_adjustments/.test(error.message)) return fail("Run supabase/packages.sql in Supabase first.");
   return dbResult(error, `${d > 0 ? "Added" : "Removed"} ${Math.abs(d)} session credit${Math.abs(d) === 1 ? "" : "s"}.`);
 }
+
+// ---------------------------------------------------------------- COUPONS (supabase/coupons-referrals.sql)
+export type CouponInput = {
+  id?: string;
+  code: string;
+  description?: string;
+  discount_type: "percent" | "flat";
+  discount_value: number | string;
+  max_discount?: number | string | null;
+  min_amount?: number | string | null;
+  applies_to: "all" | "selected";
+  product_ids: string[];
+  include_slots: boolean;
+  starts_at?: string | null; // "YYYY-MM-DD" (IST)
+  ends_at?: string | null;
+  max_uses?: number | string | null;
+  once_per_student: boolean;
+  is_active: boolean;
+};
+const setupCoupons = (m: string) => /coupons|coupon_redemptions|referral_settings/.test(m) && /does not exist|schema cache|relation/.test(m);
+
+export async function saveCoupon(input: CouponInput): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const code = input.code.trim().toUpperCase().replace(/\s+/g, "");
+  if (!/^[A-Z0-9_-]{3,30}$/.test(code)) return fail("Code: 3–30 letters, numbers, - or _ (no spaces).");
+  const value = int(input.discount_value);
+  if (value === null || Number.isNaN(value) || value < 1) return fail("Enter the discount amount.");
+  if (input.discount_type === "percent" && value > 100) return fail("A percentage can't be more than 100.");
+  const maxDiscount = input.discount_type === "percent" ? int(input.max_discount) : null;
+  const minAmount = int(input.min_amount) ?? 0;
+  const maxUses = int(input.max_uses);
+  if ([maxDiscount, maxUses].some((n) => n !== null && (Number.isNaN(n) || n < 1)) || Number.isNaN(minAmount) || minAmount < 0) return fail("Check the numbers (they must be positive).");
+  if (input.applies_to === "selected" && input.product_ids.length === 0 && !input.include_slots) return fail("Choose at least one product, package or single slots.");
+  // dates are whole days in India time: from 00:00 of the start day to 23:59 of the end day
+  const starts = input.starts_at ? new Date(`${input.starts_at}T00:00:00+05:30`).toISOString() : null;
+  const ends = input.ends_at ? new Date(`${input.ends_at}T23:59:59+05:30`).toISOString() : null;
+  if (starts && ends && ends < starts) return fail("The end date is before the start date.");
+
+  const row = {
+    code,
+    description: input.description?.trim().slice(0, 200) || null,
+    discount_type: input.discount_type,
+    discount_value: value,
+    max_discount: maxDiscount,
+    min_amount: minAmount,
+    applies_to: input.applies_to,
+    product_ids: input.applies_to === "selected" ? input.product_ids : [],
+    include_slots: input.include_slots,
+    starts_at: starts,
+    ends_at: ends,
+    max_uses: maxUses,
+    once_per_student: input.once_per_student,
+    is_active: input.is_active,
+  };
+  const res = input.id ? await s.supabase.from("coupons").update(row).eq("id", input.id) : await s.supabase.from("coupons").insert(row);
+  if (res.error && setupCoupons(res.error.message)) return fail("Run supabase/coupons-referrals.sql in Supabase first.");
+  if (res.error && /duplicate|unique/i.test(res.error.message)) return fail(`The code ${code} already exists.`);
+  return dbResult(res.error, input.id ? "Coupon saved." : `Coupon ${code} created.`);
+}
+
+export async function setCouponActive(id: string, active: boolean): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const { error } = await s.supabase.from("coupons").update({ is_active: active }).eq("id", id);
+  return dbResult(error, active ? "Coupon activated." : "Coupon deactivated.");
+}
+
+/** Delete only coupons that were never used (used ones stay for the records — deactivate them instead). */
+export async function deleteCoupon(id: string): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const { count } = await s.supabase.from("coupon_redemptions").select("id", { count: "exact", head: true }).eq("coupon_id", id).eq("status", "used");
+  if ((count ?? 0) > 0) return fail("This coupon has been used, so it is kept for your records. Deactivate it instead.");
+  const { error } = await s.supabase.from("coupons").delete().eq("id", id);
+  return dbResult(error, "Coupon deleted.");
+}
+
+// ---------------------------------------------------------------- REFERRAL SETTINGS
+export async function saveReferralSettings(input: { enabled: boolean; referred_discount: number | string; referrer_reward: number | string }): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const off = int(input.referred_discount);
+  const reward = int(input.referrer_reward);
+  if ([off, reward].some((n) => n === null || Number.isNaN(n) || n < 0 || n > 10000)) return fail("Amounts must be between ₹0 and ₹10,000.");
+  const { error } = await s.supabase
+    .from("referral_settings")
+    .update({ enabled: input.enabled, referred_discount: off, referrer_reward: reward, updated_at: new Date().toISOString() })
+    .eq("id", 1);
+  updateTag("referral-settings");
+  if (error && setupCoupons(error.message)) return fail("Run supabase/coupons-referrals.sql in Supabase first.");
+  return dbResult(error, "Referral settings saved. New referrals use these amounts.");
+}

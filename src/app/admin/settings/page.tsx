@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import ReferralSettingsForm from "@/components/admin/ReferralSettingsForm";
 import StatsManager from "@/components/admin/StatsManager";
 import { DashSkeleton } from "@/components/dashboard/ui";
 import { requireAdmin } from "@/lib/admin";
@@ -17,10 +18,24 @@ export default function SettingsPage() {
 
 async function Content() {
   const s = await requireAdmin("/admin/settings");
-  const { data, error } = await s.supabase.from("site_stats").select("id,label,value,suffix,sort_order").order("sort_order");
+  const [{ data, error }, ref] = await Promise.all([
+    s.supabase.from("site_stats").select("id,label,value,suffix,sort_order").order("sort_order"),
+    s.supabase.from("referral_settings").select("enabled,referred_discount,referrer_reward").eq("id", 1).maybeSingle(),
+  ]);
+  const referral = <ReferralSettingsForm initial={ref.error ? null : (ref.data as { enabled: boolean; referred_discount: number; referrer_reward: number } | null)} />;
   if (error) {
     const missing = error.code === "42P01" || error.code === "PGRST205";
-    return <p className="card p-6 text-red-600">{missing ? "Run supabase/stats-reviews.sql in Supabase → SQL Editor to turn on editable stats." : `Could not load settings: ${error.message}`}</p>;
+    return (
+      <>
+        {referral}
+        <p className="card p-6 text-red-600">{missing ? "Run supabase/stats-reviews.sql in Supabase → SQL Editor to turn on editable stats." : `Could not load settings: ${error.message}`}</p>
+      </>
+    );
   }
-  return <StatsManager stats={(data ?? []) as SiteStat[]} />;
+  return (
+    <>
+      {referral}
+      <StatsManager stats={(data ?? []) as SiteStat[]} />
+    </>
+  );
 }

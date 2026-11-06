@@ -11,6 +11,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { notifyBookingConfirmed } from "./email/notify";
+import { discountColumns, quote, recordCouponUse } from "./pricing";
 import { createRazorpayOrder, getOrderOutcome, isRazorpayConfigured } from "./razorpay";
 
 export const HOLD_MINUTES = 10;
@@ -58,7 +59,7 @@ export type StartResult =
   | { kind: "slot_taken" }
   | { kind: "error"; message: string; status: number };
 
-export async function startBooking(db: SupabaseClient, userId: string, input: BookingInput): Promise<StartResult> {
+export async function startBooking(db: SupabaseClient, userId: string, input: BookingInput, coupon?: unknown): Promise<StartResult> {
   const { data, error } = await db.rpc("hold_slot", {
     p_user: userId,
     p_slot: input.slotId,
@@ -87,8 +88,24 @@ export async function startBooking(db: SupabaseClient, userId: string, input: Bo
     await releaseHold(db, held.id, "error");
     return { kind: "error", status: 503, message: "Online payment is not available right now. Please try again later." };
   }
+  // The real price: coupon + referral discount + reward credit (src/lib/pricing.ts)
+  const q = await quote(db, userId, { kind: "slot", id: input.slotId, price: held.amount }, coupon);
+  if (q.couponError) {
+    await releaseHold(db, held.id, "error");
+    return { kind: "error", status: 400, message: q.couponError };
+  }
+  if (q.final !== held.amount) {
+    const { error: e1 } = await db.from("bookings").update({ amount: q.final, ...discountColumns(q) }).eq("id", held.id);
+    if (e1) {
+      console.warn("[booking] discount not saved:", e1.message);
+      await releaseHold(db, held.id, "error");
+      return { kind: "error", status: 500, message: "Could not apply the discount. Please try again." };
+    }
+    await recordCouponUse(db, userId, q, { bookingId: held.id });
+  }
+
   try {
-    const order = await createRazorpayOrder(held.amount, `b_${held.id.slice(0, 8)}_${Date.now()}`, { booking_id: held.id, user_id: userId, type: "counselling" });
+    const order = await createRazorpayOrder(q.final, `b_${held.id.slice(0, 8)}_${Date.now()}`, { booking_id: held.id, user_id: userId, type: "counselling" });
     const { error: e2 } = await db.from("bookings").update({ razorpay_order_id: order.id }).eq("id", held.id);
     if (e2) throw new Error(e2.message);
     return { kind: "order", bookingId: held.id, orderId: order.id, amountPaise: order.amount, currency: order.currency };

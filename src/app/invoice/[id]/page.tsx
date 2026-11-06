@@ -67,6 +67,22 @@ async function Invoice({ id }: { id: string }) {
   // Buyer details (their own profile; admins can read any)
   const { data: buyer } = await s.supabase.from("profiles").select("full_name,email,phone").eq("id", p.user_id).maybeSingle();
 
+  // Discounts (coupon / referral / reward credit) — columns from supabase/coupons-referrals.sql
+  const { data: disc } = await s.supabase
+    .from(p.products?.category === "counselling" ? "bookings" : "purchases")
+    .select("original_amount,coupon_code,coupon_discount,referral_discount,reward_used")
+    .eq("id", p.id)
+    .maybeSingle();
+  const d = disc as { original_amount: number | null; coupon_code: string | null; coupon_discount: number; referral_discount: number; reward_used: number } | null;
+  const subtotal = d?.original_amount && d.original_amount > p.amount ? d.original_amount : null;
+  const discountRows: [string, number][] = subtotal
+    ? ([
+        [`Coupon discount (${d!.coupon_code ?? "code"})`, d!.coupon_discount],
+        ["Referral discount (first payment)", d!.referral_discount],
+        ["Reward credit used", d!.reward_used],
+      ] as [string, number][]).filter(([, v]) => v > 0)
+    : [];
+
   return (
     <div className="mx-auto max-w-2xl">
       <div className="mb-4 flex items-center justify-between gap-3 print:hidden">
@@ -114,8 +130,14 @@ async function Invoice({ id }: { id: string }) {
           <tbody>
             <tr className="border-b border-slate-100">
               <td className="px-3 py-3 font-semibold text-slate-900">{p.products?.title ?? "Purchase"}</td>
-              <td className="px-3 py-3 text-right font-semibold text-slate-900">{formatPrice(p.amount).replace("Free", "₹0")}</td>
+              <td className="px-3 py-3 text-right font-semibold text-slate-900">{formatPrice(subtotal ?? p.amount).replace("Free", "₹0")}</td>
             </tr>
+            {discountRows.map(([k, v]) => (
+              <tr key={k} className="border-b border-slate-100 text-emerald-700">
+                <td className="px-3 py-2 text-sm">{k}</td>
+                <td className="px-3 py-2 text-right text-sm font-semibold">− ₹{v.toLocaleString("en-IN")}</td>
+              </tr>
+            ))}
           </tbody>
           <tfoot>
             <tr><td className="px-3 py-3 text-right font-bold text-slate-700">Total paid</td><td className="px-3 py-3 text-right text-lg font-extrabold text-brand-700">{formatPrice(p.amount).replace("Free", "₹0")}</td></tr>

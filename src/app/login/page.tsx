@@ -5,6 +5,7 @@ import { CheckIcon, HomeIcon } from "@/components/Icons";
 import BackButton from "@/components/BackButton";
 import LoginForm from "@/components/LoginForm";
 import { siteConfig } from "@/config/site";
+import { getReferralSettings } from "@/lib/referrals";
 import Logo from "@/components/Logo";
 
 export const metadata: Metadata = {
@@ -63,7 +64,19 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
 // /login?mode=signup opens the Sign Up tab
 async function FormWithMode({ searchParams }: { searchParams: PageProps<"/login">["searchParams"] }) {
   const sp = await searchParams;
-  return <LoginForm initialMode={sp.mode === "signup" ? "signup" : "signin"} />;
+  // Came from a friend's referral link (/r/<code>)
+  const ref = typeof sp.ref === "string" ? sp.ref : "";
+  const settings = ref ? await getReferralSettings() : null;
+  return (
+    <>
+      {settings?.enabled && settings.referred_discount > 0 && (
+        <p className="mb-4 rounded-2xl bg-emerald-50 px-4 py-3 text-center text-sm font-semibold text-emerald-800 ring-1 ring-emerald-200">
+          🎁 You&apos;ve been invited! Sign up and get <strong>₹{settings.referred_discount.toLocaleString("en-IN")} off</strong> your first payment.
+        </p>
+      )}
+      <LoginForm initialMode={sp.mode === "signup" || ref ? "signup" : "signin"} />
+    </>
+  );
 }
 
 // Shown after clicking Logout (/login?loggedOut=1)

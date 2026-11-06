@@ -6,7 +6,7 @@ import { useState } from "react";
 import Logo from "../Logo";
 import { useLogout } from "@/lib/useLogout";
 import { Spinner } from "../BuyButton";
-import { BookIcon, CalendarIcon, ClipboardIcon, CloseIcon, DotsIcon, GridIcon, HeadsetIcon, LogoutIcon, ReceiptIcon, StarIcon, TargetIcon, UserIcon } from "../Icons";
+import { BookIcon, CalendarIcon, ClipboardIcon, CloseIcon, DotsIcon, GiftIcon, GridIcon, HeadsetIcon, LogoutIcon, ReceiptIcon, StarIcon, TargetIcon, UserIcon } from "../Icons";
 import PredictorLockBadge from "../predictor/PredictorLockBadge";
 
 export const dashboardLinks = [
@@ -17,6 +17,7 @@ export const dashboardLinks = [
   { href: "/dashboard/bookings", label: "My Bookings", short: "Bookings", icon: CalendarIcon },
   { href: "/dashboard/payments", label: "Payment History", icon: ReceiptIcon },
   { href: "/dashboard/profile", label: "My Profile", icon: UserIcon },
+  { href: "/dashboard/refer", label: "Refer & Earn", icon: GiftIcon },
   { href: "/dashboard/review", label: "Write a Review", icon: StarIcon },
   { href: "/dashboard/help", label: "Help", icon: HeadsetIcon },
 ];
