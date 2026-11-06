@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { siteConfig } from "@/config/site";
-import PredictorLockBadge from "../predictor/PredictorLockBadge";
 import {
   ArrowRightIcon,
   BookIcon,
@@ -50,10 +49,10 @@ const slides: Slide[] = [
   },
   {
     visual: "predictor",
-    eyebrow: "Rank & college predictor · with counselling",
+    eyebrow: "Free rank predictor · college list with counselling",
     title: "Predict Your VITEEE Rank & College",
-    text: "Enter your expected marks and instantly see your predicted rank, the VIT campus and the branch you can get admission in.",
-    cta: { label: "Predict Now", href: "/predictor" },
+    text: "Enter your expected marks and see your predicted VITEEE rank range for free. Book counselling to see the VIT campus and branch you can get.",
+    cta: { label: "Predict My Rank — Free", href: "/predictor" },
     icon: TargetIcon,
     color: "from-accent-400 to-accent-600",
     points: [],
@@ -211,7 +210,6 @@ export default function HeroSlider() {
 
                   <div className="mt-7 flex flex-col gap-3 sm:mt-8 sm:flex-row">
                     <Link href={s.cta.href} className="btn-accent !px-6 !py-3.5 text-base" tabIndex={active ? 0 : -1}>
-                      {s.visual === "predictor" && <PredictorLockBadge className="h-4 w-4" />}
                       {s.cta.label} <ArrowRightIcon className="h-4 w-4" />
                     </Link>
                     <Link href="/book-a-slot" className="btn-outline !py-3.5" tabIndex={active ? 0 : -1}>

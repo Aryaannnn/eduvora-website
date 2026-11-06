@@ -2,9 +2,8 @@
 
 import { usePathname } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
-import { LockIcon } from "../Icons";
 
-// One shared check per page view: does this visitor have predictor access?
+// One shared check per page view: does this visitor have FULL predictor access?
 let last: { path: string; promise: Promise<boolean> } | null = null;
 function checkAccess(path: string) {
   if (!last || last.path !== path) {
@@ -19,10 +18,15 @@ function checkAccess(path: string) {
   return last.promise;
 }
 
-/** Small lock icon next to "Rank Predictor" links — hidden for students who have access. */
-export default function PredictorLockBadge({ className = "h-3.5 w-3.5" }: { className?: string }) {
+/**
+ * Small "Free" pill next to "Rank Predictor" links: the rank part is free for
+ * everyone. Hidden for students who already have the full college list
+ * (paid counselling) — they don't need the hint.
+ * (The file keeps its old name so existing imports keep working.)
+ */
+export default function PredictorLockBadge({ className = "" }: { className?: string }) {
   return (
-    <Suspense fallback={<Lock className={className} />}>
+    <Suspense fallback={<Free className={className} />}>
       <Badge className={className} />
     </Suspense>
   );
@@ -30,24 +34,26 @@ export default function PredictorLockBadge({ className = "h-3.5 w-3.5" }: { clas
 
 function Badge({ className }: { className: string }) {
   const pathname = usePathname();
-  const [allowed, setAllowed] = useState(false);
+  const [full, setFull] = useState(false);
 
   useEffect(() => {
     let alive = true;
-    checkAccess(pathname).then((ok) => alive && setAllowed(ok));
+    checkAccess(pathname).then((ok) => alive && setFull(ok));
     return () => {
       alive = false;
     };
   }, [pathname]);
 
-  return allowed ? null : <Lock className={className} />;
+  return full ? null : <Free className={className} />;
 }
 
-function Lock({ className }: { className: string }) {
+function Free({ className }: { className: string }) {
   return (
-    <span className="inline-flex align-middle" title="Unlocks with paid counselling">
-      <LockIcon className={className} />
-      <span className="sr-only"> (locked — unlocks with counselling)</span>
+    <span
+      className={`inline-flex items-center rounded-full bg-emerald-100 px-1.5 py-px align-middle text-[10px] font-extrabold uppercase leading-4 tracking-wide text-emerald-700 ring-1 ring-emerald-200 ${className}`}
+      title="Rank prediction is free — the full college list comes with counselling"
+    >
+      Free
     </span>
   );
 }

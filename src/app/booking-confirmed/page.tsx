@@ -165,9 +165,9 @@ async function Content({ searchParams }: { searchParams: PageProps<"/booking-con
       {access.allowed && (
         <div className="overflow-hidden rounded-3xl bg-brand-700 p-6 text-center text-white shadow-xl shadow-brand-900/30 ring-4 ring-accent-400/60 sm:p-8">
           <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-accent-400 text-brand-950"><TargetIcon className="h-7 w-7" /></span>
-          <h2 className="mt-4 text-xl font-extrabold sm:text-2xl">Your Rank &amp; College Predictor is now unlocked!</h2>
-          <p className="mt-2 text-slate-300">See your predicted rank, the VIT campus and branch you can get, and your chances — before you talk to {founderFirst} Sir.</p>
-          <Link href="/dashboard/predictor" className="btn-accent mt-5 !px-7 !py-3.5 text-base">Try Predictor</Link>
+          <h2 className="mt-4 text-xl font-extrabold sm:text-2xl">Your full college list is now unlocked!</h2>
+          <p className="mt-2 text-slate-300">The Rank &amp; College Predictor now shows every VIT campus and branch you can get, with your chances and fee categories — before you talk to {founderFirst} Sir.</p>
+          <Link href="/dashboard/predictor" className="btn-accent mt-5 !px-7 !py-3.5 text-base">See My Colleges</Link>
         </div>
       )}
 

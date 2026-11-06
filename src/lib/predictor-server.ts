@@ -1,11 +1,12 @@
 // =====================================================================
 //  RANK & COLLEGE PREDICTOR — SERVER ONLY
-//  • Who may use it: students with a PAID counselling booking (confirmed or
-//    completed), students an admin gave access to, and admins.
+//  • FREE (any logged-in student): predicted rank RANGE only.
+//  • FULL (paid counselling booking, students an admin gave access to, and
+//    admins): colleges, branches, chances, fee categories, filters, PDF.
 //    The rule lives in Supabase: has_predictor_access() (predictor-access.sql)
 //  • The real rank & cutoff data is read here with the server key and never
-//    sent to the browser. The browser only receives the RESULT, and only
-//    after the access check passes.
+//    sent to the browser. The browser only receives the RESULT — and college
+//    results only after the full-access check passes.
 // =====================================================================
 import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
@@ -25,6 +26,7 @@ import {
 } from "./predictor";
 import { getAdminSupabase } from "./supabase/admin";
 
+/** allowed = FULL access (college list). loggedIn = may use the free rank part. */
 export type PredictorAccess = { allowed: boolean; loggedIn: boolean };
 
 /** Checked on EVERY predictor request. Fails closed (no access) on any error. */
@@ -81,8 +83,12 @@ async function loadPredictorData(): Promise<PredictorData> {
   };
 }
 
-/** Only call AFTER getPredictorAccess() said allowed. */
-export async function getPredictorDataForAllowedUser() {
+/**
+ * Server use only. NEVER pass this object (or its cutoffs) to a browser
+ * component — send only optionsFrom(...) / runPrediction(...) results,
+ * and college results only to users with full access.
+ */
+export async function loadPredictorDataOnServer() {
   return loadPredictorData();
 }
 
@@ -96,6 +102,12 @@ export type PredictorOptions = {
   branchesByCampus: Record<string, string[]>;
 };
 
+/** Options for users WITHOUT full access: no campus or branch lists at all. */
+export function basicOptionsFrom(data: PredictorData): PredictorOptions {
+  return { activeYear: data.activeYear, disclaimer: data.disclaimer, isSample: data.isSample, hasData: data.bands.length > 0, campuses: [], branchesByCampus: {} };
+}
+
+/** Options for users WITH full access (campus & branch filter lists). */
 export function optionsFrom(data: PredictorData): PredictorOptions {
   const byCampus: Record<string, Set<string>> = {};
   for (const c of data.cutoffs) (byCampus[c.campus] ??= new Set()).add(c.branch);

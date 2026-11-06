@@ -105,7 +105,7 @@ ${
 <a href="${phone.whatsapp}?text=${encodeURIComponent(`Hi ${founderFirst} Sir, I have booked a counselling session (Booking ID ${bookingRef(b.id)}).`)}" style="color:#047857;font-weight:bold">Chat on WhatsApp →</a>`, "green")
     : ""
 }
-${paid ? note(`🎯 <strong>Your Rank &amp; College Predictor is now unlocked!</strong><br>See your predicted rank and the VIT campus &amp; branch you can get before the session.<br><br>${button("Try Predictor", url("/dashboard/predictor"))}`, "navy") : ""}
+${paid ? note(`🎯 <strong>Your full college list is now unlocked!</strong><br>The Rank &amp; College Predictor now shows every VIT campus &amp; branch you can get, with your chances, before the session.<br><br>${button("See My Colleges", url("/dashboard/predictor"))}`, "navy") : ""}
 <p style="font-size:13px;color:#64748b">${attachments.length ? "Your invoice (PDF) is attached. " : ""}Need to change the time? Just reply to this email or message us on WhatsApp.</p>`,
       }),
     };
@@ -168,7 +168,7 @@ ${details([["New date & time", slotLine(b)], ["Booking ID", bookingRef(b.id)]])}
         body: `<p>Your ${esc(siteConfig.businessName)} account is ready. Here's what you can do:</p>
 <ul style="padding-left:20px;margin:12px 0">
 <li>📞 <strong>Book a one-to-one counselling session</strong> with ${esc(founder)}</li>
-<li>🎯 Unlock the <strong>Rank &amp; College Predictor</strong> with your counselling booking</li>
+<li>🎯 Try the free <strong>Rank Predictor</strong> — your full college list unlocks with counselling</li>
 <li>📚 Crash courses, study material, previous year papers and mock tests</li>
 </ul>
 <p>${button("Book Counselling", url("/book-a-slot"))}${button("Open Dashboard", url("/dashboard"), "navy")}</p>`,

@@ -109,5 +109,5 @@ export async function getSiteStats(): Promise<SiteStat[]> {
   return ((data ?? []) as SiteStat[]).filter((s) => s.value !== null && s.label.trim());
 }
 
-// Rank & College Predictor data is PRIVATE now (paid counselling only) —
+// Rank & College Predictor data is PRIVATE (server only; the college list is for paid counselling) —
 // it is loaded on the server in src/lib/predictor-server.ts

@@ -46,7 +46,11 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
           <Suspense fallback={null}>
             <LoggedOutNotice searchParams={searchParams} />
           </Suspense>
-          <div className="mt-5"><LoginForm /></div>
+          <div className="mt-5">
+            <Suspense fallback={<LoginForm />}>
+              <FormWithMode searchParams={searchParams} />
+            </Suspense>
+          </div>
           <Link href="/" className="mt-6 flex items-center justify-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-brand-700">
             <HomeIcon className="h-4 w-4" /> Back to Home
           </Link>
@@ -54,6 +58,12 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
       </div>
     </section>
   );
+}
+
+// /login?mode=signup opens the Sign Up tab
+async function FormWithMode({ searchParams }: { searchParams: PageProps<"/login">["searchParams"] }) {
+  const sp = await searchParams;
+  return <LoginForm initialMode={sp.mode === "signup" ? "signup" : "signin"} />;
 }
 
 // Shown after clicking Logout (/login?loggedOut=1)

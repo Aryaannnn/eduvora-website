@@ -6,7 +6,7 @@ import { requireUser } from "@/lib/dashboard";
 
 export const metadata: Metadata = { title: "Rank & College Predictor" };
 
-// Locked unless the student has PAID for counselling (checked on the server)
+// Free: rank range only. Paid counselling: full college list (checked on the server)
 export default function DashboardPredictorPage() {
   return (
     <Suspense fallback={<DashSkeleton />}>
@@ -19,7 +19,7 @@ async function Content() {
   await requireUser("/dashboard/predictor");
   return (
     <>
-      <PageHeader title="Rank & College Predictor" subtitle="Your full result with every campus, branch and fee category. Each prediction is saved automatically." />
+      <PageHeader title="Rank & College Predictor" subtitle="Your predicted rank range — plus every campus, branch and fee category once you book counselling. Each prediction is saved automatically." />
       <PredictorGate mode="dashboard" returnTo="/dashboard/predictor" />
     </>
   );

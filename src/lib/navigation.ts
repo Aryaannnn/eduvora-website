@@ -9,7 +9,7 @@ export type NavLink = {
   label: string;
   /** small description shown in the Resources dropdown */
   hint?: string;
-  /** shows the predictor lock icon for users without access */
+  /** shows a small "Free" pill (hidden for students with the full college list) */
   predictorLock?: boolean;
   /** shows a "Coming Soon" badge (the link still works) */
   comingSoon?: boolean;

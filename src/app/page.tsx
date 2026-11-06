@@ -45,7 +45,7 @@ export default async function Home() {
       {/* Rank & College Predictor */}
       <section className="section" id="predictor">
         <div className="container-page">
-          <SectionHeader eyebrow="Rank & college predictor" title="What rank will your marks get you?" subtitle="Your likely VITEEE rank, the VIT campus and branch you can get, and your chances — included with counselling." href="/predictor" linkText="Open full predictor" />
+          <SectionHeader eyebrow="Rank & college predictor" title="What rank will your marks get you?" subtitle="See your likely VITEEE rank range for free. The VIT campus and branch you can get, with your chances, comes with counselling." href="/predictor" linkText="Open full predictor" />
           {/* Locked unless the visitor has paid for counselling (checked on the server) */}
           <Reveal className="mt-10"><PredictorGate mode="public" returnTo="/#predictor" /></Reveal>
         </div>

@@ -50,7 +50,7 @@ export default function DashboardNav() {
                     isActive(l.href) ? "bg-brand-600 text-white shadow-md shadow-brand-600/25" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                   }`}
                 >
-                  <l.icon className="h-5 w-5" /> {l.label}{l.href === "/dashboard/predictor" && <PredictorLockBadge className="ml-auto h-3.5 w-3.5 text-accent-500" />}
+                  <l.icon className="h-5 w-5" /> {l.label}{l.href === "/dashboard/predictor" && <PredictorLockBadge className="ml-auto" />}
                 </Link>
               </li>
             ))}

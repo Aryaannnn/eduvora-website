@@ -8,10 +8,11 @@ import SectionHeading from "@/components/SectionHeading";
 
 export const metadata: Metadata = {
   title: "VITEEE Rank & College Predictor",
-  description: "Estimate your VITEEE rank and see which VIT campuses and branches you could get. Included with EDUVORA counselling.",
+  description: "Free VITEEE rank predictor: enter your marks and see your likely rank range. The full VIT campus & branch list is included with EDUVORA counselling.",
 };
 
 const faqs = [
+  { q: "Is the predictor free?", a: "Yes — the rank part is free. Log in or sign up and you can see your predicted VITEEE rank range for any marks. The full college & branch list (with chances, fee categories, filters and PDF download) is included when you book a counselling session." },
   { q: "How is my rank calculated?", a: "We use marks-vs-rank data from the previous year. Your marks are placed between the nearest known points and the rank is calculated smoothly between them. We show a range (± 2 marks) because the real rank can vary a little." },
   { q: "What do High, Moderate and Low chance mean?", a: "High: even your worst-case predicted rank is comfortably inside last year's closing rank. Moderate: you are close to the closing rank — it could go either way. Low: your predicted rank is beyond last year's closing rank." },
   { q: "What are fee categories?", a: "VIT has different fee categories (1 to 5) for the same programme. Better ranks usually get lower-fee categories. Our counsellors explain the current fees in detail." },
@@ -21,9 +22,9 @@ const faqs = [
 export default function PredictorPage() {
   return (
     <>
-      <PageHero eyebrow="For counselling students" title="VITEEE Rank & College Predictor" subtitle="Move the slider to your expected marks and instantly see your likely rank and the colleges you could get." />
+      <PageHero eyebrow="Free rank predictor" title="VITEEE Rank & College Predictor" subtitle="Move the slider to your expected marks and see your likely rank range — free for every logged-in student. Your full college & branch list comes with counselling." />
       <section className="container-page py-10 sm:py-14">
-        {/* Locked screen unless the student paid for counselling (checked on the server) */}
+        {/* Guest: log in to see rank · Logged in: free rank range · Paid counselling: full college list (checked on the server) */}
         <PredictorGate mode="public" returnTo="/predictor" />
       </section>
       <section className="container-page max-w-3xl pb-16 sm:pb-24">

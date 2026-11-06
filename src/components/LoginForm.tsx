@@ -25,9 +25,10 @@ const RESEND_SECONDS = 30;
 const methods = siteConfig.loginMethods;
 
 // Sign In / Sign Up with email + password, phone OTP, or Google.
-export default function LoginForm() {
+/** initialMode "signup" opens the Sign Up tab (/login?mode=signup, used by the predictor) */
+export default function LoginForm({ initialMode = "signin" }: { initialMode?: Mode }) {
   const router = useRouter();
-  const [mode, setMode] = useState<Mode>("signin");
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [method, setMethod] = useState<Method>(methods.email ? "email" : "phone");
   const [step, setStep] = useState<Step>("details");
   const [name, setName] = useState("");

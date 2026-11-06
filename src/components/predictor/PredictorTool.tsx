@@ -4,15 +4,21 @@
 //  PREDICTOR SCREEN (browser part)
 //  It does NOT contain any rank or cutoff data. Every time the student
 //  changes their marks, it asks the server (/api/predictor), which checks
-//  predictor access and sends back only the result.
+//  access and sends back only the result:
+//    guest -> nothing (asked to log in / sign up)
+//    free  -> rank range only; the college list is a blurred FAKE sample
+//    full  -> everything (paid counselling students and admins)
 // =====================================================================
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { siteConfig } from "@/config/site";
 import { formatDateTime } from "@/lib/format";
 import { CHANCE_LABEL, MAX_MARKS, type Chance, type CollegeMatch, type Prediction } from "@/lib/predictor";
-import { CalendarIcon, DownloadIcon, TargetIcon } from "../Icons";
+import { CalendarIcon, DownloadIcon, LockIcon, TargetIcon, UserIcon } from "../Icons";
+import LockedColleges from "./PredictorLocked";
 import RankGauge, { tierFor } from "./RankGauge";
+
+export type PredictorAccessLevel = "guest" | "free" | "full";
 
 export type PastPrediction = {
   id: string; marks: number | null; entered_rank: number | null; predicted_min_rank: number; predicted_max_rank: number;
@@ -43,16 +49,21 @@ export type PredictorOptions = {
   campuses: string[];
   branchesByCampus: Record<string, string[]>;
 };
-type Result = { prediction: Prediction | null; percentile: number; counts: Record<Chance, number>; total: number; matches: CollegeMatch[] };
+// counts / total / matches are only sent by the server to users with FULL access
+type Result = { prediction: Prediction | null; percentile: number; full: boolean; counts?: Record<Chance, number>; total?: number; matches?: CollegeMatch[] };
 
 export default function PredictorTool({
   options,
   mode,
+  access,
+  returnTo = "/predictor",
   userName,
   initialHistory = [],
 }: {
   options: PredictorOptions;
   mode: "public" | "dashboard";
+  access: PredictorAccessLevel;
+  returnTo?: string;
   userName?: string;
   initialHistory?: PastPrediction[];
 }) {
@@ -71,13 +82,15 @@ export default function PredictorTool({
   const lastSaved = useRef("");
 
   const hasData = options.hasData;
+  const full = access === "full";
+  const guest = access === "guest";
   const branches = campus ? options.branchesByCampus[campus] ?? [] : [...new Set(Object.values(options.branchesByCampus).flat())].sort();
-  const key = JSON.stringify({ inputType, marks, rank: Number(rankInput), campus, branch, feeCategory, full: mode === "dashboard" });
+  const key = JSON.stringify({ inputType, marks, rank: Number(rankInput), campus, branch, feeCategory, full: full && mode === "dashboard" });
   const rankOk = inputType === "marks" || Number(rankInput) >= 1;
 
   // Ask the server for the result (a short pause first, so sliding stays smooth)
   useEffect(() => {
-    if (!hasData || !rankOk) return;
+    if (guest || !hasData || !rankOk) return;
     const ctrl = new AbortController();
     const id = setTimeout(async () => {
       setLoading(true);
@@ -97,11 +110,12 @@ export default function PredictorTool({
       clearTimeout(id);
       ctrl.abort();
     };
-  }, [key, hasData, rankOk]);
+  }, [key, hasData, rankOk, guest]);
 
-  // Dashboard: save the prediction a moment after the student stops changing it
+  // Logged-in students: save the prediction a moment after they stop changing it
+  // (shows in "My Past Predictions" and in Admin -> Predictor as a lead)
   useEffect(() => {
-    if (mode !== "dashboard" || !hasData || !rankOk || key === lastSaved.current) return;
+    if (guest || !hasData || !rankOk || key === lastSaved.current) return;
     const id = setTimeout(async () => {
       setSaveState("saving");
       try {
@@ -116,7 +130,7 @@ export default function PredictorTool({
       }
     }, 1800);
     return () => clearTimeout(id);
-  }, [mode, key, hasData, rankOk]);
+  }, [guest, key, hasData, rankOk]);
 
   const prediction = rankOk ? (result?.prediction ?? null) : null;
   const percentile = result?.percentile ?? 0;
@@ -204,7 +218,7 @@ export default function PredictorTool({
               </div>
             )}
 
-            {mode === "dashboard" && (
+            {mode === "dashboard" && full && (
               <div className="mt-6 grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
                 <select value={campus} onChange={(e) => { setCampus(e.target.value); setBranch(""); }} className="input" aria-label="Preferred campus">
                   <option value="">All campuses</option>
@@ -224,7 +238,19 @@ export default function PredictorTool({
 
           {/* ---------- Result ---------- */}
           <div className={`bg-gradient-to-br from-slate-50 to-white p-5 transition-opacity sm:p-7 ${loading ? "opacity-70" : ""}`} aria-busy={loading}>
-            {prediction ? (
+            {guest ? (
+              <div className="animate-fade-up py-8 text-center">
+                <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-brand-50 text-brand-600 ring-1 ring-brand-100">
+                  <LockIcon className="h-7 w-7" />
+                </span>
+                <p className="mt-4 text-lg font-extrabold text-slate-900">See your predicted VITEEE rank</p>
+                <p className="mx-auto mt-1 max-w-xs text-sm text-slate-600">Log in or sign up free to see your likely rank range for these {inputType === "marks" ? "marks" : "details"}.</p>
+                <div className="mt-5 flex flex-col justify-center gap-2 sm:flex-row">
+                  <Link href={`/login?mode=signup&next=${encodeURIComponent(returnTo)}`} className="btn-primary !px-5 !py-3">Sign Up Free</Link>
+                  <Link href={`/login?next=${encodeURIComponent(returnTo)}`} className="btn-light !px-5 !py-3"><UserIcon className="h-4 w-4" /> Log In</Link>
+                </div>
+              </div>
+            ) : prediction ? (
               <div key={`${prediction.minRank}-${prediction.maxRank}`} className="animate-fade-up text-center">
                 <RankGauge rank={prediction.rank} percentile={percentile} />
                 <p className="mt-3 text-sm text-slate-600">
@@ -237,14 +263,18 @@ export default function PredictorTool({
                 {prediction.coverage !== "ok" && (
                   <p className="mt-3 text-xs text-amber-700">Your marks are {prediction.coverage === "above" ? "above" : "below"} our data range, so this is the closest estimate.</p>
                 )}
-                <div className="mt-5 grid grid-cols-3 gap-2 text-center">
-                  {(["high", "moderate", "low"] as const).map((c) => (
-                    <div key={c} className={`rounded-xl p-2 ring-1 ${chanceStyle[c].badge}`}>
-                      <p className="text-xl font-extrabold">{counts[c]}</p>
-                      <p className="text-[11px] font-semibold">{CHANCE_LABEL[c].replace(" Chance", "")}</p>
-                    </div>
-                  ))}
-                </div>
+                {full ? (
+                  <div className="mt-5 grid grid-cols-3 gap-2 text-center">
+                    {(["high", "moderate", "low"] as const).map((c) => (
+                      <div key={c} className={`rounded-xl p-2 ring-1 ${chanceStyle[c].badge}`}>
+                        <p className="text-xl font-extrabold">{counts[c]}</p>
+                        <p className="text-[11px] font-semibold">{CHANCE_LABEL[c].replace(" Chance", "")}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  mode === "dashboard" && <SaveNote state={saveState} className="mt-4" />
+                )}
               </div>
             ) : (
               <p className="py-16 text-center text-slate-500">{problem || (loading ? "Calculating…" : `Enter your ${inputType === "marks" ? "marks" : "rank"} to see your prediction.`)}</p>
@@ -253,20 +283,20 @@ export default function PredictorTool({
         </div>
       </div>
 
-      {prediction && mode === "public" && (
+      {!full && <LockedColleges loggedIn={!guest} returnTo={returnTo} />}
+
+      {full && prediction && mode === "public" && (
         <PublicPreview preview={filtered} total={result?.total ?? 0} />
       )}
 
-      {prediction && mode === "dashboard" && (
+      {full && prediction && mode === "dashboard" && (
         <section className="card overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-5">
             <div>
               <h2 className="text-lg font-extrabold text-slate-900">Your campus &amp; branch options</h2>
               <p className="text-sm text-slate-500">{filtered.length} option(s) · best chances first</p>
             </div>
-            <p className="text-xs text-slate-500 print:hidden" aria-live="polite">
-              {saveState === "saving" ? "Saving…" : saveState === "saved" ? "✓ Saved to My Past Predictions" : saveState === "error" ? "Couldn't save — check your connection" : ""}
-            </p>
+            <SaveNote state={saveState} />
           </div>
           {filtered.length === 0 ? (
             <p className="p-8 text-center text-slate-500">No options match these filters.</p>
@@ -300,7 +330,7 @@ export default function PredictorTool({
 
       <div className="flex flex-col gap-3 sm:flex-row print:hidden">
         <Link href="/book-a-slot" className="btn-primary !py-3.5 text-base"><CalendarIcon className="h-5 w-5" /> Book Counselling with {founderFirst} Sir</Link>
-        {mode === "dashboard" && prediction && (
+        {full && mode === "dashboard" && prediction && (
           <button type="button" onClick={downloadPdf} className="btn-light !py-3.5"><DownloadIcon /> Download my result as PDF</button>
         )}
       </div>
@@ -329,6 +359,14 @@ export default function PredictorTool({
         </section>
       )}
     </div>
+  );
+}
+
+function SaveNote({ state, className = "" }: { state: "idle" | "saving" | "saved" | "error"; className?: string }) {
+  return (
+    <p className={`text-xs text-slate-500 print:hidden ${className}`} aria-live="polite">
+      {state === "saving" ? "Saving…" : state === "saved" ? "✓ Saved to My Past Predictions" : state === "error" ? "Couldn't save — check your connection" : ""}
+    </p>
   );
 }
 
