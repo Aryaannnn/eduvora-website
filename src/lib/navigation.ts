@@ -1,15 +1,42 @@
-// Menu links shown in the navbar and footer.
-export const navLinks = [
+// =====================================================================
+//  NAVBAR MENU  ✏️ edit the links here
+//  Desktop: Home | Courses | Rank Predictor | Resources ▾ | Reviews | Contact
+//  The same grouping is used in the phone slide-in menu.
+// =====================================================================
+
+export type NavLink = {
+  href: string;
+  label: string;
+  /** small description shown in the Resources dropdown */
+  hint?: string;
+  /** shows the predictor lock icon for users without access */
+  predictorLock?: boolean;
+  /** shows a "Coming Soon" badge (the link still works) */
+  comingSoon?: boolean;
+};
+export type NavGroup = { label: string; children: NavLink[] };
+export type NavItem = NavLink | NavGroup;
+export const isGroup = (i: NavItem): i is NavGroup => "children" in i;
+
+// Resources dropdown. Only pages that EXIST are listed.
+// When you add an "Important Dates" or "Blog" page, add it here, e.g.:
+//   { href: "/important-dates", label: "Important Dates", hint: "VITEEE & counselling dates" },
+//   { href: "/blog", label: "Blog", hint: "Tips and guides", comingSoon: true },
+const resources: NavLink[] = [
+  { href: "/study-material", label: "Study Material", hint: "Admission kits & notes" },
+  { href: "/mock-tests", label: "Mock Tests", hint: "Full mocks & MCQ practice" },
+  { href: "/previous-year-papers", label: "PYQ Papers", hint: "Previous year VITEEE papers" },
+];
+
+export const mainNav: NavItem[] = [
   { href: "/", label: "Home" },
   { href: "/courses", label: "Courses" },
-  { href: "/predictor", label: "Rank Predictor" },
-  { href: "/study-material", label: "Study Material" },
-  { href: "/mock-tests", label: "Mock Tests" },
-  { href: "/previous-year-papers", label: "PYQ Papers" },
+  { href: "/predictor", label: "Rank Predictor", predictorLock: true },
+  { label: "Resources", children: resources },
   { href: "/reviews", label: "Reviews" },
-  { href: "/about", label: "About" },
   { href: "/contact", label: "Contact" },
 ];
+// ("About" lives in the footer and the founder section.)
 
 export const legalLinks = [
   { href: "/privacy-policy", label: "Privacy Policy" },

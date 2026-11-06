@@ -36,6 +36,9 @@ export default function FounderSection() {
               <CalendarIcon className="h-5 w-5" /> Book a Direct Call
             </Link>
           </div>
+          <Link href="/about" className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-brand-700 hover:underline">
+            About EDUVORA <ArrowRightIcon className="h-4 w-4" />
+          </Link>
         </Reveal>
       </div>
     </section>
