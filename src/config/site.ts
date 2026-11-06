@@ -5,6 +5,7 @@
 // =====================================================================
 
 import { founder as founderContent } from "@/content/founder";
+import { SITE_URL } from "@/lib/site-url";
 
 // ✏️ Your business email — shown everywhere (footer, contact page, policies, invoices,
 //    dashboard Help) and used as the "Reply-To" of every email the website sends.
@@ -21,9 +22,9 @@ export const siteConfig = {
   description:
     "EDUVORA offers expert VITEEE counselling, crash courses, mock tests, a rank & college predictor and study material to help you get a better rank and the right VIT campus and branch.",
 
-  // Your website's address once it is live (used for WhatsApp/Facebook link previews).
-  // You can also set NEXT_PUBLIC_SITE_URL in .env.local instead.
-  siteUrl: process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
+  // Your website's address. Set NEXT_PUBLIC_SITE_URL (in .env.local and in Vercel).
+  // Used for link previews, email links, invoices and login redirects — see src/lib/site-url.ts
+  siteUrl: SITE_URL,
 
   // Name shown on invoices and on the Razorpay payment window (when payments are connected)
   billingName: "EDUVORA",

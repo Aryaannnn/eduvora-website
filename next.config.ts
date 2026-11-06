@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { PRE_LAUNCH } from "./src/config/launch";
 
 const nextConfig: NextConfig = {
   /* config options here */
@@ -13,6 +14,10 @@ const nextConfig: NextConfig = {
     "/booking-confirmed": ["./public/logo-email.png"],
     "/payment-failed": ["./public/logo-email.png"],
     "/dashboard/**": ["./public/logo-email.png"],
+  },
+  // Pre-launch: also tell search engines "noindex" in a header (covers PDFs and images too)
+  async headers() {
+    return PRE_LAUNCH ? [{ source: "/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] }] : [];
   },
   // The old "My Account" page now lives inside the student dashboard
   async redirects() {

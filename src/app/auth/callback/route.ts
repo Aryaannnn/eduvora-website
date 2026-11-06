@@ -1,10 +1,12 @@
 // Links from Supabase land here: Google sign-in, email confirmation and password reset.
 // We swap the one-time code for a login session, then go to the right page.
 import { NextResponse, type NextRequest } from "next/server";
+import { serverOrigin } from "@/lib/site-url";
 import { getServerSupabase } from "@/lib/supabase/server";
 
 export async function GET(request: NextRequest) {
-  const { searchParams, origin } = request.nextUrl;
+  const { searchParams } = request.nextUrl;
+  const origin = serverOrigin(request.nextUrl.origin); // NEXT_PUBLIC_SITE_URL when set
   const code = searchParams.get("code");
   const nextParam = searchParams.get("next") ?? "/dashboard";
   const next = nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : "/dashboard";

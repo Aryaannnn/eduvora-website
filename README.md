@@ -52,10 +52,14 @@ Courses, study material, tests, slots, bookings, reviews and student accounts li
 | Founder story (About page) | `src/app/about/page.tsx` (top of file) |
 | Colours | top of `src/app/globals.css` |
 
+## Putting it online (Vercel)
+
+👉 Follow **[DEPLOY.md](DEPLOY.md)**: environment variables, Supabase URLs, the Razorpay webhook,
+the automatic jobs (cron-job.org) and pre-launch mode (`src/config/launch.ts`).
+
 ## Before going live
 
-- Replace all placeholders (phone, WhatsApp, email, address, social links, results).
-- Replace the SAMPLE reviews in Supabase → `reviews` with real ones.
-- "Buy Now" / "Enroll Now" still open WhatsApp — Razorpay checkout is the next step.
+- Replace all placeholders (social links, results).
 - Get the policy pages reviewed by a legal professional.
+- Switch Razorpay to live keys and turn off pre-launch mode (see DEPLOY.md).
 - Check the production build works: `npm run build`

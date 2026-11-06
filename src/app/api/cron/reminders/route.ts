@@ -1,20 +1,16 @@
-// GET /api/cron/reminders — sends the 24-hour and 1-hour session reminders.
-// Call it every 15 minutes once the website is online, with the header:
-//   Authorization: Bearer <CRON_SECRET from .env.local>
-// (Vercel Cron sends this header automatically when CRON_SECRET is set.)
-import { timingSafeEqual } from "node:crypto";
+// GET /api/cron/reminders — sends the 24-hour and 1-hour session reminder emails.
+// Runs automatically:
+//   • Vercel Cron: once a day (see vercel.json — the free plan's limit)
+//   • cron-job.org: every 15 minutes (free) — needed for the 1-hour reminder.
+//     See README "Automatic jobs".
+// Each reminder is sent only once, so running it often is safe.
+// Protected by CRON_SECRET (src/lib/cron-auth.ts). Without it: 401.
 import { NextResponse, type NextRequest } from "next/server";
+import { cronHeaders, cronUnauthorised, isCronAuthorised } from "@/lib/cron-auth";
 import { sendDueReminders } from "@/lib/email/notify";
 
-function authorised(request: NextRequest) {
-  const secret = process.env.CRON_SECRET ?? "";
-  const got = request.headers.get("authorization") ?? "";
-  const want = `Bearer ${secret}`;
-  return secret.length >= 16 && got.length === want.length && timingSafeEqual(Buffer.from(got), Buffer.from(want));
-}
-
 export async function GET(request: NextRequest) {
-  if (!authorised(request)) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+  if (!isCronAuthorised(request)) return cronUnauthorised();
   const sent = await sendDueReminders();
-  return NextResponse.json({ ok: true, reminders24h: sent.r24, reminders1h: sent.r1 }, { headers: { "Cache-Control": "no-store" } });
+  return NextResponse.json({ ok: true, reminders24h: sent.r24, reminders1h: sent.r1 }, { headers: cronHeaders });
 }

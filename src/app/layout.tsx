@@ -6,6 +6,7 @@ import Footer from "@/components/Footer";
 import FloatingButtons from "@/components/FloatingButtons";
 import NavigationEffects from "@/components/NavigationEffects";
 import PrivatePageGuard from "@/components/auth/PrivatePageGuard";
+import { PRE_LAUNCH } from "@/config/launch";
 import { siteConfig } from "@/config/site";
 
 const jakarta = Plus_Jakarta_Sans({ variable: "--font-jakarta", subsets: ["latin"] });
@@ -13,8 +14,10 @@ const jakarta = Plus_Jakarta_Sans({ variable: "--font-jakarta", subsets: ["latin
 const homeTitle = `${siteConfig.businessName} | ${siteConfig.tagline}`;
 
 export const metadata: Metadata = {
-  // Needed so WhatsApp/Facebook get full links to the share image (set NEXT_PUBLIC_SITE_URL when live)
+  // Full links to the share image for WhatsApp/Facebook (comes from NEXT_PUBLIC_SITE_URL)
   metadataBase: new URL(siteConfig.siteUrl),
+  // Pre-launch: hide the whole site from Google (switch in src/config/launch.ts)
+  ...(PRE_LAUNCH ? { robots: { index: false, follow: false, googleBot: { index: false, follow: false } } } : {}),
   applicationName: siteConfig.businessName,
   title: {
     default: homeTitle,

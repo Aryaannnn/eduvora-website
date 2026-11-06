@@ -3,6 +3,7 @@
 //  Phone number + OTP and Google sign-in.
 //  If Supabase keys are not set in .env.local yet, it runs in DEMO mode.
 // =====================================================================
+import { appOrigin } from "./site-url";
 import { getBrowserSupabase } from "./supabase/client";
 import { isSupabaseConfigured } from "./supabase/env";
 
@@ -47,7 +48,7 @@ export async function signUpWithEmail(
     password,
     options: {
       data: { full_name: profile.fullName, role: profile.role }, // saved to the profile by the database trigger
-      emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+      emailRedirectTo: `${appOrigin()}/auth/callback?next=${encodeURIComponent(next)}`,
     },
   });
   if (error) return { ok: false, message: friendlyEmail(error.message) };
@@ -90,7 +91,7 @@ export async function requestPasswordReset(email: string): Promise<AuthResult> {
   const supabase = getBrowserSupabase();
   if (!supabase) return { ok: false, message: "Password reset will work once Supabase is connected." };
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
+    redirectTo: `${appOrigin()}/auth/callback?next=/reset-password`,
   });
   if (error) {
     const m = error.message.toLowerCase();
@@ -158,7 +159,7 @@ export async function signInWithGoogle(next: string): Promise<AuthResult> {
   }
   const { error } = await supabase.auth.signInWithOAuth({
     provider: "google",
-    options: { redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
+    options: { redirectTo: `${appOrigin()}/auth/callback?next=${encodeURIComponent(next)}` },
   });
   return error ? { ok: false, message: friendly(error.message) } : { ok: true };
 }

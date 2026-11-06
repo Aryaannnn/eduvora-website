@@ -8,6 +8,8 @@
 //  Now: the script is pre-loaded when the page opens, every request has a
 //  time limit, and openCheckout() ALWAYS finishes with a clear result.
 // =====================================================================
+import { appOrigin } from "./site-url";
+
 export type RazorpayResponse = { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string };
 type RazorpayInstance = { open: () => void; close: () => void; on: (event: string, cb: (r: { error?: { description?: string } }) => void) => void };
 declare global {
@@ -95,7 +97,7 @@ export async function openCheckout(
       currency: order.currency,
       name: "EDUVORA",
       description: order.title,
-      image: `${window.location.origin}/logo-compact.png`,
+      image: `${appOrigin()}/logo-compact.png`,
       prefill: order.prefill,
       theme: { color: "#0b2a5b" }, // EDUVORA navy
       ...(opts.timeoutSeconds ? { timeout: opts.timeoutSeconds } : {}),
