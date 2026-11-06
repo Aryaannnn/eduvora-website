@@ -5,6 +5,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import FloatingButtons from "@/components/FloatingButtons";
 import NavigationEffects from "@/components/NavigationEffects";
+import CompleteProfilePrompt from "@/components/auth/CompleteProfilePrompt";
 import PrivatePageGuard from "@/components/auth/PrivatePageGuard";
 import { PRE_LAUNCH } from "@/config/launch";
 import { siteConfig } from "@/config/site";
@@ -51,6 +52,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <FloatingButtons />
         <NavigationEffects />
         <PrivatePageGuard />
+        <CompleteProfilePrompt />
       </body>
     </html>
   );

@@ -53,6 +53,8 @@ function HeaderBar({ pathname }: { pathname: string }) {
   const [open, setOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const isActive = isActiveFor(pathname);
+  // After logging in, come back to this page (home / login pages → dashboard)
+  const loginHref = !pathname || pathname === "/" || pathname.startsWith("/login") || pathname.startsWith("/auth") ? "/login" : `/login?next=${encodeURIComponent(pathname)}`;
 
   // When signed in, show the user menu (Dashboard / Admin Panel / Logout) instead of "Login"
   useEffect(() => {
@@ -106,7 +108,7 @@ function HeaderBar({ pathname }: { pathname: string }) {
             <UserMenu user={user} />
           ) : (
             <Link
-              href="/login"
+              href={loginHref}
               className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-xl border border-slate-300 px-3 py-2 text-sm font-bold text-slate-800 transition-colors hover:border-brand-400 hover:text-brand-700"
             >
               <UserIcon className="h-4 w-4" /> Login
@@ -127,7 +129,7 @@ function HeaderBar({ pathname }: { pathname: string }) {
 
     </header>
     {/* Outside the <header>: its blur effect would trap a "fixed" panel inside the header bar */}
-    <MobileMenu open={open} onClose={() => setOpen(false)} isActive={isActive} user={user} />
+    <MobileMenu open={open} onClose={() => setOpen(false)} isActive={isActive} user={user} loginHref={loginHref} />
     </>
   );
 }
@@ -200,7 +202,7 @@ function Dropdown({ group, isActive }: { group: NavGroup; isActive: (href: strin
 }
 
 // ---------- Phone / tablet slide-in menu ----------
-function MobileMenu({ open, onClose, isActive, user }: { open: boolean; onClose: () => void; isActive: (href: string) => boolean; user: User | null }) {
+function MobileMenu({ open, onClose, isActive, user, loginHref }: { open: boolean; onClose: () => void; isActive: (href: string) => boolean; user: User | null; loginHref: string }) {
   const closeBtn = useRef<HTMLButtonElement>(null);
 
   // Lock page scrolling, close with Escape, focus the close button
@@ -285,7 +287,7 @@ function MobileMenu({ open, onClose, isActive, user }: { open: boolean; onClose:
           {user ? (
             <MobileLogout tabIndex={tab} />
           ) : (
-            <Link href="/login" onClick={onClose} tabIndex={tab} className="btn-light w-full !py-3.5">
+            <Link href={loginHref} onClick={onClose} tabIndex={tab} className="btn-light w-full !py-3.5">
               <UserIcon className="h-4 w-4" /> Login / Sign Up
             </Link>
           )}

@@ -159,7 +159,12 @@ export async function signInWithGoogle(next: string): Promise<AuthResult> {
   }
   const { error } = await supabase.auth.signInWithOAuth({
     provider: "google",
-    options: { redirectTo: `${appOrigin()}/auth/callback?next=${encodeURIComponent(next)}` },
+    options: {
+      // Comes back to /auth/callback on NEXT_PUBLIC_SITE_URL (or this browser's address on your computer),
+      // which then opens the page the student was on (or the dashboard).
+      redirectTo: `${appOrigin()}/auth/callback?next=${encodeURIComponent(next)}`,
+      queryParams: { prompt: "select_account" }, // lets students choose which Google account
+    },
   });
   return error ? { ok: false, message: friendly(error.message) } : { ok: true };
 }

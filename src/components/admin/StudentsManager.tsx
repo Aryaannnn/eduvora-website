@@ -10,7 +10,28 @@ import { AdminHeader, Notice, downloadCsv } from "./ui";
 export type AdminStudent = {
   id: string; full_name: string | null; email: string | null; phone: string | null; role: string; created_at: string; bought: string[];
   predictor: { access: boolean; reason: "admin" | "paid" | "given" | "removed" | "none"; override: boolean | null };
+  /** login providers from Supabase Auth, e.g. ["google"] or ["email"] */
+  signedUpWith: string[];
 };
+
+const PROVIDER: Record<string, { label: string; style: string }> = {
+  google: { label: "Google", style: "bg-sky-50 text-sky-700 ring-sky-200" },
+  email: { label: "Email", style: "bg-slate-100 text-slate-700 ring-slate-200" },
+  phone: { label: "Phone", style: "bg-violet-50 text-violet-700 ring-violet-200" },
+};
+const providerLabel = (p: string) => PROVIDER[p]?.label ?? p;
+
+function SignedUpWith({ providers }: { providers: string[] }) {
+  if (providers.length === 0) return null;
+  return (
+    <p className="mt-1 flex flex-wrap items-center gap-1 text-[11px] text-slate-500">
+      Signed up with
+      {providers.map((p) => (
+        <span key={p} className={`rounded-full px-2 py-0.5 font-bold ring-1 ${PROVIDER[p]?.style ?? PROVIDER.email.style}`}>{providerLabel(p)}</span>
+      ))}
+    </p>
+  );
+}
 
 const REASON: Record<AdminStudent["predictor"]["reason"], string> = {
   admin: "Admin",
@@ -59,7 +80,7 @@ export default function StudentsManager({ students, currentUserId, setupMissing 
       <AdminHeader title="Students" subtitle={`${students.length} registered user${students.length === 1 ? "" : "s"} · ${withAccess} with predictor access.`}>
         <button
           type="button"
-          onClick={() => downloadCsv("students.csv", ["Name", "Email", "Phone", "Role", "Joined", "Bought", "Predictor access"], shown.map((s) => [s.full_name, s.email, s.phone, s.role, csvDateTimeIST(s.created_at), s.bought.join("; "), `${s.predictor.access ? "Yes" : "No"} (${REASON[s.predictor.reason]})`]))}
+          onClick={() => downloadCsv("students.csv", ["Name", "Email", "Phone", "Role", "Signed up with", "Joined", "Bought", "Predictor access"], shown.map((s) => [s.full_name, s.email, s.phone, s.role, s.signedUpWith.map(providerLabel).join(" + "), csvDateTimeIST(s.created_at), s.bought.join("; "), `${s.predictor.access ? "Yes" : "No"} (${REASON[s.predictor.reason]})`]))}
           className="btn-light"
         >
           Export CSV
@@ -93,6 +114,7 @@ export default function StudentsManager({ students, currentUserId, setupMissing 
                 <td className="px-4 py-3">
                   <p className="font-semibold text-slate-900">{s.full_name || "—"}</p>
                   <p className="text-xs capitalize text-slate-500">{s.role}</p>
+                  <SignedUpWith providers={s.signedUpWith} />
                 </td>
                 <td className="px-4 py-3 text-slate-600">
                   <p className="break-all">{s.email || "—"}</p>

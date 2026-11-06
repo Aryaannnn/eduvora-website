@@ -192,21 +192,26 @@ export default function LoginForm({ initialMode = "signin" }: { initialMode?: Mo
 
       {step === "details" && (
         <div key={mode} className="animate-fade-up">
-          {/* Google (hidden until loginMethods.google = true) */}
+          {/* Google — the quickest way in (on/off: src/config/site.ts → loginMethods.google) */}
           {methods.google && (
             <>
               <button
                 type="button"
                 onClick={handleGoogle}
                 disabled={busy}
-                className="mt-5 flex w-full items-center justify-center gap-3 rounded-xl border border-slate-300 bg-white px-4 py-3.5 text-[15px] font-bold text-slate-800 transition hover:border-slate-400 hover:bg-slate-50 disabled:opacity-60"
+                className="mt-5 flex w-full items-center justify-center gap-3 rounded-2xl border-2 border-slate-200 bg-white px-4 py-4 text-base font-extrabold text-slate-800 shadow-sm transition hover:border-brand-300 hover:bg-slate-50 hover:shadow-md disabled:opacity-60"
               >
-                {loading === "google" ? <Spinner dark /> : <GoogleIcon />}
+                {loading === "google" ? <Spinner dark /> : <GoogleIcon className="h-6 w-6" />}
                 Continue with Google
               </button>
+              {mode === "signup" && (
+                <p className="mt-2 text-center text-[11px] text-slate-500">
+                  By continuing with Google you agree to our <Link href="/terms-and-conditions" className="underline">Terms</Link> &amp; <Link href="/privacy-policy" className="underline">Privacy Policy</Link>.
+                </p>
+              )}
               {(methods.email || methods.phone) && (
-                <div className="my-5 flex items-center gap-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
-                  <span className="h-px flex-1 bg-slate-200" /> or <span className="h-px flex-1 bg-slate-200" />
+                <div className="my-5 flex items-center gap-3 text-xs font-semibold text-slate-400">
+                  <span className="h-px flex-1 bg-slate-200" /> or continue with {methods.email ? "email" : "phone"} <span className="h-px flex-1 bg-slate-200" />
                 </div>
               )}
             </>

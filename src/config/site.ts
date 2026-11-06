@@ -118,7 +118,7 @@ export const siteConfig = {
   // Turn one on ONLY after switching it on in Supabase → Authentication → Sign In / Providers.
   loginMethods: {
     email: true, // email + password
-    google: false, // "Continue with Google" — set to true after Google setup (see SUPABASE_SETUP.md Part 5)
+    google: true, // "Continue with Google" (Google provider is set up in Supabase + Google Cloud)
     phone: false, // mobile number + OTP — set to true after SMS setup (see SUPABASE_SETUP.md Part 6)
   },
 };

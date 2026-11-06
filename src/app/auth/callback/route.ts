@@ -1,6 +1,7 @@
 // Links from Supabase land here: Google sign-in, email confirmation and password reset.
 // We swap the one-time code for a login session, then go to the right page.
 import { NextResponse, type NextRequest } from "next/server";
+import { welcomeIfNew } from "@/lib/email/notify";
 import { serverOrigin } from "@/lib/site-url";
 import { getServerSupabase } from "@/lib/supabase/server";
 
@@ -20,8 +21,12 @@ export async function GET(request: NextRequest) {
 
   if (code) {
     const supabase = await getServerSupabase();
-    const { error } = (await supabase?.auth.exchangeCodeForSession(code)) ?? { error: true };
-    if (!error) return NextResponse.redirect(`${origin}${next}`);
+    const res = supabase ? await supabase.auth.exchangeCodeForSession(code) : null;
+    if (res && !res.error) {
+      // New students get the welcome email once (the profile itself is made by the database trigger)
+      if (res.data.user) welcomeIfNew(res.data.user.id);
+      return NextResponse.redirect(`${origin}${next}`);
+    }
   }
   return failed();
 }
