@@ -15,9 +15,9 @@ export default function TermsPage() {
 
       <h2>1. About our services</h2>
       <p>
-        {site.businessName} is an independent coaching and counselling institute. We are not affiliated with, endorsed by or
-        connected to VIT (Vellore Institute of Technology). We do not guarantee any rank, score, seat or admission.
+        <strong>Disclaimer:</strong> {site.disclaimer}
       </p>
+      <p>We do not guarantee any rank, score, seat or admission.</p>
 
       <h2>2. Enrolment and fees</h2>
       <ul>

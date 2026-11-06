@@ -62,9 +62,10 @@ export default function Footer() {
       </div>
 
       <div className="border-t border-white/10">
-        <div className="container-page flex flex-col gap-2 py-6 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+        <div className="container-page space-y-2 py-6 text-xs text-slate-500">
           <p>© {siteConfig.businessName}. All rights reserved.</p>
-          <p>Independent counselling & coaching. Not affiliated with VIT (Vellore Institute of Technology).</p>
+          {/* ✏️ Text: src/config/site.ts → disclaimer */}
+          <p className="max-w-4xl leading-relaxed">{siteConfig.disclaimer}</p>
         </div>
       </div>
     </footer>

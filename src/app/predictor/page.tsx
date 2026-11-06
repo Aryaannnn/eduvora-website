@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Accordion from "@/components/Accordion";
+import Disclaimer from "@/components/Disclaimer";
 import PageHero from "@/components/PageHero";
 import PredictorGate from "@/components/predictor/PredictorGate";
 import Reveal from "@/components/Reveal";
@@ -28,6 +29,7 @@ export default function PredictorPage() {
       <section className="container-page max-w-3xl pb-16 sm:pb-24">
         <SectionHeading center eyebrow="FAQ" title="How the predictor works" />
         <Reveal className="mt-8"><Accordion items={faqs} /></Reveal>
+        <Disclaimer className="mt-8" />
       </section>
     </>
   );

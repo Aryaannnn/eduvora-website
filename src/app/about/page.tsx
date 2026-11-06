@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import CtaBanner from "@/components/CtaBanner";
+import Disclaimer from "@/components/Disclaimer";
 import FounderHighlights from "@/components/FounderHighlights";
 import FounderPhoto from "@/components/FounderPhoto";
 import ResultsSection from "@/components/home/ResultsSection";
@@ -77,7 +78,8 @@ export default function AboutPage() {
       </section>
 
       <ResultsSection />
-      <div className="pt-16 sm:pt-24"><CtaBanner /></div>
+      <div className="container-page max-w-4xl pt-10"><Disclaimer /></div>
+      <div className="pt-12 sm:pt-16"><CtaBanner /></div>
     </>
   );
 }

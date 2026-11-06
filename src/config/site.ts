@@ -66,6 +66,12 @@ export const siteConfig = {
     shortBio: founderContent.summary,
   },
 
+  // ---------- Disclaimer ----------
+  // ✏️ Shown in the footer of every page, on the About page, the Rank Predictor
+  //    page and in the Terms & Conditions.
+  disclaimer:
+    "EDUVORA is an independent counselling and coaching platform. We are not affiliated with, associated with, or endorsed by Vellore Institute of Technology (VIT). VIT and VITEEE are names of their respective owners, used only for informational purposes.",
+
   // ---------- Contact ----------
   // 🔒 Your FULL phone/WhatsApp number is NOT stored here (this file is public).
   //    It lives in .env.local as CONTACT_PHONE and is only shown to students who
