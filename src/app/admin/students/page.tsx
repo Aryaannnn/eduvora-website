@@ -40,19 +40,33 @@ export default function StudentsPage() {
 
 async function Content() {
   const s = await requireAdmin("/admin/students");
-  const [profiles, purchases, paidCounselling, overrides, signIn] = await Promise.all([
+  const [profiles, purchases, paidCounselling, overrides, signIn, freeAttempts] = await Promise.all([
     s.supabase.from("profiles").select("id,full_name,email,phone,role,created_at").order("created_at", { ascending: false }).limit(2000),
-    s.supabase.from("purchases").select("user_id,status,products(title)").eq("status", "paid").limit(10000),
+    s.supabase.from("purchases").select("user_id,amount,created_at,products(title,is_free)").eq("status", "paid").order("created_at", { ascending: false }).limit(10000),
     // Same rule as has_predictor_access() in supabase/predictor-access.sql
     s.supabase.from("bookings").select("user_id").eq("payment_status", "paid").in("status", ["confirmed", "completed"]).limit(10000),
     s.supabase.from("predictor_access_overrides").select("user_id,has_access").limit(10000),
     loadSignInMethods(),
+    // Free tests each student took (admins can read every attempt)
+    s.supabase.from("test_attempts").select("user_id,started_at,tests!inner(title,is_free)").eq("tests.is_free", true).order("started_at", { ascending: false }).limit(10000),
   ]);
   if (profiles.error) return <p className="card p-6 text-red-600">Could not load students: {profiles.error.message}</p>;
 
+  // Paid items vs FREE items (₹0 unlocks + free tests taken) — for follow-up calls
   const bought = new Map<string, string[]>();
-  for (const p of (purchases.data ?? []) as unknown as { user_id: string; products: { title: string } | null }[]) {
-    bought.set(p.user_id, [...(bought.get(p.user_id) ?? []), p.products?.title ?? "Product"]);
+  const freeItems = new Map<string, AdminStudent["freeItems"]>();
+  const addFree = (uid: string, item: AdminStudent["freeItems"][number]) => freeItems.set(uid, [...(freeItems.get(uid) ?? []), item]);
+  for (const p of (purchases.data ?? []) as unknown as { user_id: string; amount: number; created_at: string; products: { title: string; is_free: boolean } | null }[]) {
+    const title = p.products?.title ?? "Product";
+    if (p.amount === 0 || p.products?.is_free) addFree(p.user_id, { title, kind: "item", at: p.created_at });
+    else bought.set(p.user_id, [...(bought.get(p.user_id) ?? []), title]);
+  }
+  const seenTest = new Set<string>();
+  for (const a of (freeAttempts.data ?? []) as unknown as { user_id: string; started_at: string; tests: { title: string } | null }[]) {
+    const title = a.tests?.title ?? "Free test";
+    if (seenTest.has(`${a.user_id}|${title}`)) continue; // newest attempt only
+    seenTest.add(`${a.user_id}|${title}`);
+    addFree(a.user_id, { title, kind: "test", at: a.started_at });
   }
   const paid = new Set((paidCounselling.data ?? []).map((b) => b.user_id as string));
   const override = new Map((overrides.data ?? []).map((o) => [o.user_id as string, o.has_access as boolean]));
@@ -66,6 +80,7 @@ async function Content() {
   const students: AdminStudent[] = (profiles.data ?? []).map((p) => ({
     ...p,
     bought: bought.get(p.id) ?? [],
+    freeItems: freeItems.get(p.id as string) ?? [],
     predictor: predictorFor(p.id as string, p.role as string),
     signedUpWith: signIn.get(p.id as string) ?? [],
   })) as AdminStudent[];

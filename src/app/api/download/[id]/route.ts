@@ -8,7 +8,7 @@ import { getAdminSupabase } from "@/lib/supabase/admin";
 export async function GET(request: NextRequest, ctx: RouteContext<"/api/download/[id]">) {
   const { id } = await ctx.params;
   const session = await getSession();
-  if (!session) return NextResponse.redirect(new URL(`/login?next=${encodeURIComponent("/dashboard/courses")}`, request.url));
+  if (!session) return NextResponse.redirect(new URL(`/login?next=${encodeURIComponent(`/api/download/${id}`)}`, request.url));
   const db = getAdminSupabase();
   if (!db || !/^[0-9a-f-]{36}$/i.test(id)) return new NextResponse("File not found.", { status: 404 });
 

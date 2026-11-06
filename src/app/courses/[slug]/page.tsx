@@ -81,7 +81,7 @@ async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
               </ul>
             )}
             <div className="mt-5">
-              <BuyButton productId={course.id} label={course.price > 0 ? "Enroll Now" : "Enroll Free"} className="btn-primary w-full !py-3.5 text-base" trust={false} />
+              <BuyButton productId={course.id} label={course.price > 0 && !course.is_free ? "Enroll Now" : "Enroll Free"} className="btn-primary w-full !py-3.5 text-base" trust={false} free={course.is_free} />
             </div>
             <a href={phoneLink} className="btn-light mt-3 w-full">
               <PhoneIcon className="h-4 w-4" /> Call Us

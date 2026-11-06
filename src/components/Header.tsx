@@ -42,6 +42,9 @@ function Badges({ link, size = "sm" }: { link: NavLink; size?: "sm" | "lg" }) {
   return (
     <>
       {link.predictorLock && <PredictorLockBadge className={`-mt-0.5 ${size === "lg" ? "ml-2" : "ml-1"}`} />}
+      {link.free && (
+        <span className="ml-1.5 rounded-full bg-emerald-500 px-1.5 py-0.5 align-middle text-[10px] font-extrabold uppercase tracking-wide text-white">Free</span>
+      )}
       {link.comingSoon && (
         <span className="ml-1.5 rounded-full bg-accent-100 px-1.5 py-0.5 align-middle text-[10px] font-bold uppercase tracking-wide text-accent-800">Coming Soon</span>
       )}

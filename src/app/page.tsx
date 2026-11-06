@@ -4,6 +4,7 @@ import CourseCard from "@/components/cards/CourseCard";
 import MaterialCard from "@/components/cards/MaterialCard";
 import TestCard from "@/components/cards/TestCard";
 import EmptyState from "@/components/EmptyState";
+import { FreeProductCard, FreeTestCard } from "@/components/free/FreeResourceCard";
 import BookCallSection from "@/components/home/BookCallSection";
 import ContactSection from "@/components/home/ContactSection";
 import FounderSection from "@/components/home/FounderSection";
@@ -17,17 +18,24 @@ import SectionHeading from "@/components/SectionHeading";
 import { faqs } from "@/data/misc";
 import PredictorGate from "@/components/predictor/PredictorGate";
 import { getApprovedReviews, getProducts, getUpcomingSlots } from "@/lib/data";
+import { getFreeResources } from "@/lib/free-resources";
 
 export default async function Home() {
   // All of this comes from Supabase (cached for a few minutes)
-  const [materials, courses, mockTests, papers, reviews, slots] = await Promise.all([
+  const [materials, courses, mockTests, papers, reviews, slots, free] = await Promise.all([
     getProducts("study_material"),
     getProducts("crash_course"),
     getProducts("mock_test"),
     getProducts("previous_paper"),
     getApprovedReviews(),
     getUpcomingSlots(6),
+    getFreeResources(),
   ]);
+  // Up to 6 free items for the home page (tests first, then papers and guides)
+  const freeItems = [
+    ...free.tests.map((t) => ({ key: t.id, el: <FreeTestCard test={t} /> })),
+    ...free.products.map((p) => ({ key: p.id, el: <FreeProductCard product={p} /> })),
+  ].slice(0, 6);
   // A mix of tests for the home page: up to 4 mock/MCQ + 2 papers
   const homeTests = [...mockTests.slice(0, 4), ...papers.slice(0, 2)];
 
@@ -41,6 +49,18 @@ export default async function Home() {
 
       {/* 3. Book a call */}
       <BookCallSection slots={slots} />
+
+      {/* Free resources (hidden until at least one item is marked Free in the admin) */}
+      {freeItems.length > 0 && (
+        <section className="section bg-gradient-to-b from-emerald-50/70 to-white" id="free-resources">
+          <div className="container-page">
+            <SectionHeader eyebrow="Free resources" title="Start free — mock tests, papers & PDF guides" subtitle="Sign up free and unlock them instantly. Everything is saved in your dashboard." href="/free-resources" linkText="All free resources" />
+            <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {freeItems.map((it, i) => <Reveal key={it.key} delay={(i % 3) * 80}>{it.el}</Reveal>)}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Rank & College Predictor */}
       <section className="section" id="predictor">
@@ -78,7 +98,7 @@ export default async function Home() {
       {/* 6. Mock tests, MCQs & PYQs */}
       <section className="section">
         <div className="container-page">
-          <SectionHeader eyebrow="Practice" title="Mock Tests, MCQs & Previous Year Papers" subtitle="Practise in the real exam pattern. Start with a free test — no sign-up needed." href="/mock-tests" linkText="All tests" />
+          <SectionHeader eyebrow="Practice" title="Mock Tests, MCQs & Previous Year Papers" subtitle="Practise in the real exam pattern. Start with a free test — just sign up free." href="/mock-tests" linkText="All tests" />
           {homeTests.length ? (
             <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {homeTests.map((t, i) => <Reveal key={t.id} delay={(i % 3) * 80}><TestCard product={t} /></Reveal>)}

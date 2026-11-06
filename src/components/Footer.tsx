@@ -6,6 +6,7 @@ import { InstagramIcon, MailIcon, MapPinIcon, WhatsAppIcon, YouTubeIcon } from "
 import Logo from "./Logo";
 
 const explore = [
+  { href: "/free-resources", label: "Free Resources" },
   { href: "/courses", label: "Crash Courses" },
   { href: "/predictor", label: "Rank & College Predictor" },
   { href: "/study-material", label: "Study Material" },

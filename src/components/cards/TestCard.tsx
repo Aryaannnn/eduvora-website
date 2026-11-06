@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { formatPrice } from "@/lib/format";
 import type { Product } from "@/lib/types";
 import BuyButton, { SecurePaymentNote } from "../BuyButton";
+import FreeBadge from "../FreeBadge";
 import { ClipboardIcon, ClockIcon, FileIcon, TargetIcon } from "../Icons";
 
 const style = {
@@ -15,13 +15,13 @@ export default function TestCard({ product }: { product: Product }) {
   const d = product.details;
   const kind = product.category === "previous_paper" ? "pyq" : d.test_type === "mcq" ? "mcq" : "mock";
   const st = style[kind];
-  const freeTest = product.is_free ? product.tests?.find((t) => t.is_free) : undefined;
 
   return (
     <article className="card card-hover flex h-full flex-col p-5">
       <div className="flex items-start justify-between gap-3">
         <span className={`grid h-11 w-11 place-items-center rounded-xl text-white ${st.box}`}><st.icon className="h-5 w-5" /></span>
         <div className="flex flex-wrap justify-end gap-1.5">
+          {product.is_free && <FreeBadge className="!py-1" />}
           <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${st.chip}`}>{st.label}</span>
           {d.badge && <span className="rounded-full bg-slate-900 px-2.5 py-1 text-[11px] font-bold text-white">{d.badge}</span>}
         </div>
@@ -37,10 +37,9 @@ export default function TestCard({ product }: { product: Product }) {
           <span className={`text-xl font-extrabold ${product.is_free ? "text-green-600" : "text-slate-900"}`}>{formatPrice(product.price)}</span>
           {product.original_price && <span className="ml-1.5 text-xs text-slate-400 line-through">{formatPrice(product.original_price)}</span>}
         </div>
-        {freeTest ? (
-          <Link href={`/tests/${freeTest.id}`} className="btn-accent !px-4 !py-2.5">Start Test</Link>
-        ) : product.is_free && product.file_path ? (
-          <a href={`/api/download/${product.id}`} className="btn-accent !px-4 !py-2.5">Download</a>
+        {product.is_free ? (
+          // Free: log in → unlocked → opens in My Courses (tests & downloads are there)
+          <div className="shrink-0"><BuyButton productId={product.id} label="Get Free" className="btn-accent !px-5 !py-2.5" trust={false} free /></div>
         ) : (
           <div className="shrink-0"><BuyButton productId={product.id} label={product.price > 0 ? "Buy" : "Get Free"} className="btn-primary !px-5 !py-2.5" trust={false} /></div>
         )}

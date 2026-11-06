@@ -4,6 +4,7 @@
 // Only then it makes a 60-second link — students who haven't paid never get one.
 import { NextResponse, type NextRequest } from "next/server";
 import { getSession } from "@/lib/dashboard";
+import { unlockFreeProduct } from "@/lib/free-resources";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 
 const text = (msg: string, status: number) => new NextResponse(msg, { status, headers: { "Cache-Control": "private, no-store", "Content-Type": "text/plain; charset=utf-8" } });
@@ -27,7 +28,10 @@ export async function GET(request: NextRequest, ctx: RouteContext<"/api/files/[i
   const product = f.products as unknown as { is_free: boolean; is_active: boolean } | null;
 
   const isAdmin = session.profile?.role === "admin";
-  let allowed = isAdmin || (!!product?.is_active && !!product?.is_free);
+  const freeItem = !!product?.is_active && !!product?.is_free;
+  let allowed = isAdmin || freeItem;
+  // Free item opened from a direct link → also add it to My Courses (and Admin → Students)
+  if (freeItem && !isAdmin) await unlockFreeProduct(db, session.user.id, f.product_id as string);
   if (!allowed) {
     const { count } = await db
       .from("purchases")

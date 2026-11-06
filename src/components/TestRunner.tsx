@@ -21,6 +21,7 @@ export default function TestRunner({ testId }: { testId: string }) {
   const [test, setTest] = useState<TestData | null>(null);
   const [loadError, setLoadError] = useState(supabase ? "" : "Tests will work once Supabase is connected.");
   const [loggedIn, setLoggedIn] = useState(false);
+  const [needLogin, setNeedLogin] = useState(false);
   const [current, setCurrent] = useState(0);
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [secondsLeft, setSecondsLeft] = useState(0);
@@ -31,13 +32,20 @@ export default function TestRunner({ testId }: { testId: string }) {
   // Load the test
   useEffect(() => {
     if (!supabase) return;
-    supabase.auth.getSession().then(({ data }) => setLoggedIn(!!data.session));
-    supabase.rpc("get_test_for_attempt", { p_test_id: testId }).then(({ data, error }) => {
-      if (error) return setLoadError(error.message.includes("buy") ? "This is a paid test. Please buy it to start." : "Sorry, this test could not be found.");
+    supabase.auth.getSession().then(({ data: auth }) => {
+      // Every test (free ones too) needs a login — the server checks this as well
+      if (!auth.session) return setNeedLogin(true);
+      setLoggedIn(true);
+      supabase.rpc("get_test_for_attempt", { p_test_id: testId }).then(({ data, error }) => {
+      if (error) {
+        if (/log in/i.test(error.message)) return setNeedLogin(true);
+        return setLoadError(error.message.includes("buy") ? "This is a paid test. Please buy it to start." : "Sorry, this test could not be found.");
+      }
       const t = data as TestData;
       setTest(t);
       setSecondsLeft(t.duration_minutes * 60);
       startedAt.current = new Date().toISOString();
+      });
     });
   }, [supabase, testId]);
 
@@ -66,6 +74,20 @@ export default function TestRunner({ testId }: { testId: string }) {
     return () => clearTimeout(id);
   }, [secondsLeft, test, result, submit]);
 
+  if (needLogin) {
+    const back = `/tests/${testId}`;
+    return (
+      <div className="card p-8 text-center">
+        <span className="mx-auto inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-extrabold uppercase tracking-wide text-emerald-700 ring-1 ring-emerald-200">Free</span>
+        <p className="mt-4 text-xl font-extrabold text-slate-900">Log in to start this free test</p>
+        <p className="mx-auto mt-2 max-w-sm text-sm text-slate-600">Sign up free in a minute. Your score and answers are saved in your dashboard.</p>
+        <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+          <Link href={`/login?mode=signup&next=${encodeURIComponent(back)}`} className="btn-primary">Sign Up Free</Link>
+          <Link href={`/login?next=${encodeURIComponent(back)}`} className="btn-light">Log In</Link>
+        </div>
+      </div>
+    );
+  }
   if (loadError) {
     return (
       <div className="card p-8 text-center">

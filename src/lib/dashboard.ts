@@ -47,7 +47,7 @@ export type PurchaseRow = {
   invoice_number: string | null;
   razorpay_payment_id: string | null;
   created_at: string;
-  products: { id: string; title: string; slug: string; category: string; file_path: string | null; tests: TestInfo[] } | null;
+  products: { id: string; title: string; slug: string; category: string; is_free?: boolean; file_path: string | null; tests: TestInfo[] } | null;
 };
 export type BookingRow = {
   id: string;
@@ -63,7 +63,7 @@ export type AttemptRow = { id: string; test_id: string; score: number; submitted
 export async function getMyPurchases(s: Session): Promise<PurchaseRow[]> {
   const { data, error } = await s.supabase
     .from("purchases")
-    .select("id,amount,status,invoice_number,razorpay_payment_id,created_at,products(id,title,slug,category,file_path,tests(id,title,type,duration_minutes,total_marks,is_active))")
+    .select("id,amount,status,invoice_number,razorpay_payment_id,created_at,products(id,title,slug,category,is_free,file_path,tests(id,title,type,duration_minutes,total_marks,is_active))")
     .eq("user_id", s.user.id)
     .order("created_at", { ascending: false });
   if (error) console.warn("getMyPurchases:", error.message);

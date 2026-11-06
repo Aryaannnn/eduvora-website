@@ -12,6 +12,8 @@ export type AdminStudent = {
   predictor: { access: boolean; reason: "admin" | "paid" | "given" | "removed" | "none"; override: boolean | null };
   /** login providers from Supabase Auth, e.g. ["google"] or ["email"] */
   signedUpWith: string[];
+  /** free items this student unlocked (₹0) or free tests they took — newest first */
+  freeItems: { title: string; kind: "item" | "test"; at: string }[];
 };
 
 const PROVIDER: Record<string, { label: string; style: string }> = {
@@ -44,10 +46,14 @@ const REASON: Record<AdminStudent["predictor"]["reason"], string> = {
 export default function StudentsManager({ students, currentUserId, setupMissing = false }: { students: AdminStudent[]; currentUserId: string; setupMissing?: boolean }) {
   const router = useRouter();
   const [q, setQ] = useState("");
+  const [onlyFree, setOnlyFree] = useState(false);
   const [msg, setMsg] = useState<{ kind: "error" | "success"; text: string } | null>(null);
   const [pending, start] = useTransition();
 
-  const shown = students.filter((s) => !q || `${s.full_name ?? ""} ${s.email ?? ""} ${s.phone ?? ""}`.toLowerCase().includes(q.toLowerCase()));
+  const shown = students.filter(
+    (s) => (!onlyFree || s.freeItems.length > 0) && (!q || `${s.full_name ?? ""} ${s.email ?? ""} ${s.phone ?? ""}`.toLowerCase().includes(q.toLowerCase())),
+  );
+  const freeUsers = students.filter((s) => s.freeItems.length > 0).length;
 
   const changeRole = (s: AdminStudent, role: "admin" | "student") => {
     const who = s.full_name || s.email || "this user";
@@ -80,7 +86,7 @@ export default function StudentsManager({ students, currentUserId, setupMissing 
       <AdminHeader title="Students" subtitle={`${students.length} registered user${students.length === 1 ? "" : "s"} · ${withAccess} with predictor access.`}>
         <button
           type="button"
-          onClick={() => downloadCsv("students.csv", ["Name", "Email", "Phone", "Role", "Signed up with", "Joined", "Bought", "Predictor access"], shown.map((s) => [s.full_name, s.email, s.phone, s.role, s.signedUpWith.map(providerLabel).join(" + "), csvDateTimeIST(s.created_at), s.bought.join("; "), `${s.predictor.access ? "Yes" : "No"} (${REASON[s.predictor.reason]})`]))}
+          onClick={() => downloadCsv("students.csv", ["Name", "Email", "Phone", "Role", "Signed up with", "Joined", "Bought", "Free items", "Predictor access"], shown.map((s) => [s.full_name, s.email, s.phone, s.role, s.signedUpWith.map(providerLabel).join(" + "), csvDateTimeIST(s.created_at), s.bought.join("; "), s.freeItems.map((f) => `${f.title}${f.kind === "test" ? " (test)" : ""} — ${csvDateTimeIST(f.at)}`).join("; "), `${s.predictor.access ? "Yes" : "No"} (${REASON[s.predictor.reason]})`]))}
           className="btn-light"
         >
           Export CSV
@@ -91,24 +97,29 @@ export default function StudentsManager({ students, currentUserId, setupMissing 
           <SearchIcon className="pointer-events-none absolute left-3 h-4 w-4 top-1/2 -translate-y-1/2 text-slate-400" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by name, email or phone…" className="input !pl-9" aria-label="Search students" />
         </div>
+        <label className="mt-3 inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-slate-700">
+          <input type="checkbox" checked={onlyFree} onChange={(e) => setOnlyFree(e.target.checked)} className="h-4 w-4 accent-emerald-600" />
+          Only students who used free resources ({freeUsers}) — good for follow-up calls
+        </label>
       </div>
       {setupMissing && <div className="mb-4"><Notice kind="error">Predictor access switches need supabase/predictor-access.sql — run it in Supabase → SQL Editor.</Notice></div>}
       {msg && <div className="mb-4"><Notice kind={msg.kind}>{msg.text}</Notice></div>}
 
       <div className={`card overflow-x-auto ${pending ? "opacity-60" : ""}`}>
-        <table className="w-full min-w-[980px] text-left text-sm">
+        <table className="w-full min-w-[1140px] text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
             <tr>
               <th className="px-4 py-3">Name</th>
               <th className="px-4 py-3">Contact</th>
               <th className="px-4 py-3">Joined</th>
               <th className="px-4 py-3">Bought</th>
+              <th className="px-4 py-3">Free items</th>
               <th className="px-4 py-3">Predictor access</th>
               <th className="px-4 py-3 text-right">Role</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {shown.length === 0 && <tr><td colSpan={6} className="px-4 py-10 text-center text-slate-500">No users found.</td></tr>}
+            {shown.length === 0 && <tr><td colSpan={7} className="px-4 py-10 text-center text-slate-500">No users found.</td></tr>}
             {shown.map((s) => (
               <tr key={s.id}>
                 <td className="px-4 py-3">
@@ -123,6 +134,19 @@ export default function StudentsManager({ students, currentUserId, setupMissing 
                 <td className="whitespace-nowrap px-4 py-3 text-slate-600">{formatDateTime(s.created_at)}</td>
                 <td className="px-4 py-3 text-slate-600">
                   {s.bought.length ? <ul className="list-disc pl-4 text-xs">{s.bought.map((b, i) => <li key={i}>{b}</li>)}</ul> : <span className="text-xs text-slate-400">Nothing yet</span>}
+                </td>
+                <td className="px-4 py-3 text-slate-600">
+                  {s.freeItems.length ? (
+                    <ul className="space-y-1 text-xs">
+                      {s.freeItems.map((f, i) => (
+                        <li key={i}>
+                          <span className="mr-1 rounded bg-emerald-100 px-1 py-px text-[10px] font-extrabold uppercase text-emerald-700">{f.kind === "test" ? "Test" : "Free"}</span>
+                          {f.title}
+                          <span className="block text-[11px] text-slate-400">{formatDateTime(f.at)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : <span className="text-xs text-slate-400">—</span>}
                 </td>
                 <td className="px-4 py-3">
                   <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold ${s.predictor.access ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200" : "bg-slate-100 text-slate-600"}`}>

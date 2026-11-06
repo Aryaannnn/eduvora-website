@@ -5,7 +5,7 @@
 //  • Not logged in → login page, then back to this page (and the payment
 //    popup opens automatically)
 //  • Already bought → "Go to Dashboard"
-//  • Free item      → unlocked at once, no payment
+//  • Free item      → (log in first) unlocked at once, no payment, opens My Courses
 //  • Paid item      → Razorpay popup (navy EDUVORA theme, details pre-filled)
 //  The PRICE is decided by the server from the database, never by this file.
 // =====================================================================
@@ -31,12 +31,15 @@ export default function BuyButton({
   className = "btn-primary",
   trust = true,
   trustClassName = "",
+  free = false,
 }: {
   productId: string;
   label?: string;
   className?: string;
   trust?: boolean; // show "100% Secure Payments by Razorpay"
   trustClassName?: string;
+  /** free item: no payment wording, "log in to unlock" hint */
+  free?: boolean;
 }) {
   const router = useRouter();
   const [owned, setOwned] = useState(false);
@@ -114,8 +117,8 @@ export default function BuyButton({
   if (owned) {
     return (
       <div className="w-full">
-        <a href="/dashboard/courses" className={`${className} !bg-emerald-600 hover:!bg-emerald-700`}>Go to Dashboard</a>
-        {trust && <p className={`mt-2 text-center text-xs font-semibold text-emerald-700 ${trustClassName}`}>✓ You already own this</p>}
+        <a href={free ? `/dashboard/courses?unlocked=${productId}#item-${productId}` : "/dashboard/courses"} className={`${className} !bg-emerald-600 hover:!bg-emerald-700`}>{free ? "Open in My Courses" : "Go to Dashboard"}</a>
+        {(trust || free) && <p className={`mt-2 text-center text-xs font-semibold text-emerald-700 ${trustClassName}`}>✓ {free ? "Unlocked — it's in your dashboard" : "You already own this"}</p>}
       </div>
     );
   }
@@ -124,7 +127,7 @@ export default function BuyButton({
     <div className="w-full">
       <button type="button" onClick={buy} disabled={busy} className={`${className} disabled:cursor-wait disabled:opacity-70`}>
         {phase === "creating" ? (
-          <><Spinner /> Starting payment…</>
+          <><Spinner /> {free ? "Unlocking…" : "Starting payment…"}</>
         ) : phase === "paying" ? (
           "Complete payment in the Razorpay window"
         ) : phase === "verifying" ? (
@@ -133,7 +136,8 @@ export default function BuyButton({
           label
         )}
       </button>
-      {trust && (
+      {free && <p className={`mt-2 text-center text-[11px] font-semibold text-slate-500 ${trustClassName}`}>Free · just log in or sign up to unlock</p>}
+      {trust && !free && (
         <>
           <p className={`mt-2 flex items-center justify-center gap-1 text-[11px] font-semibold text-slate-500 ${trustClassName}`}>
             <ShieldIcon className="h-3.5 w-3.5 text-emerald-600" /> 100% Secure Payments by Razorpay

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { discountPercent, formatPrice } from "@/lib/format";
 import type { Product } from "@/lib/types";
 import BuyButton, { SecurePaymentNote } from "../BuyButton";
+import FreeBadge from "../FreeBadge";
 import { CalendarIcon, CheckIcon, ClockIcon, MonitorIcon } from "../Icons";
 
 export default function CourseCard({ course }: { course: Product }) {
@@ -18,6 +19,7 @@ export default function CourseCard({ course }: { course: Product }) {
       {d.badge && (
         <span className="absolute -top-3 right-5 rounded-full bg-accent-400 px-3 py-1 text-xs font-bold text-slate-900 shadow">{d.badge}</span>
       )}
+      {course.is_free && <FreeBadge className="mb-2 self-start" />}
       <h3 className="text-xl font-extrabold text-slate-900">
         <Link href={`/courses/${course.slug}`} className="hover:text-brand-700">{course.title}</Link>
       </h3>
@@ -47,7 +49,7 @@ export default function CourseCard({ course }: { course: Product }) {
         </div>
         <div className="mt-4 grid grid-cols-2 gap-2">
           <Link href={`/courses/${course.slug}`} className="btn-light !px-3">Details</Link>
-          <BuyButton productId={course.id} label={course.price > 0 ? "Enroll Now" : "Enroll Free"} className="btn-primary w-full !px-3" trust={false} />
+          <BuyButton productId={course.id} label={course.price > 0 && !course.is_free ? "Enroll Now" : "Enroll Free"} className="btn-primary w-full !px-3" trust={false} free={course.is_free} />
         </div>
         {course.price > 0 && <SecurePaymentNote className="mt-3" />}
       </div>

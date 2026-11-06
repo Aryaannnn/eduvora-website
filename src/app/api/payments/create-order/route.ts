@@ -6,6 +6,7 @@
 import { after, NextResponse, type NextRequest } from "next/server";
 import { getSession } from "@/lib/dashboard";
 import { welcomeIfNew } from "@/lib/email/notify";
+import { unlockFreeProduct } from "@/lib/free-resources";
 import { sweepStalePayments } from "@/lib/payments-server";
 import { createRazorpayOrder, isRazorpayConfigured } from "@/lib/razorpay";
 import { getAdminSupabase } from "@/lib/supabase/admin";
@@ -39,19 +40,14 @@ export async function POST(request: NextRequest) {
     .eq("status", "paid")
     .limit(1)
     .maybeSingle();
-  if (owned) return json({ owned: true, redirect: "/dashboard/courses" });
+  if (owned) return json({ owned: true, redirect: product.is_free ? `/dashboard/courses?unlocked=${product.id}#item-${product.id}` : "/dashboard/courses" });
 
   // FREE items unlock immediately (amount 0, no Razorpay)
   if (product.is_free || product.price <= 0) {
-    const row = { user_id: session.user.id, product_id: product.id, amount: 0, status: "paid" };
-    let { data: free, error } = await admin.from("purchases").insert({ ...row, paid_at: new Date().toISOString() }).select("id").single();
-    // paid_at only exists after supabase/payments.sql — still unlock without it
-    if (error && /paid_at/.test(error.message)) ({ data: free, error } = await admin.from("purchases").insert(row).select("id").single());
-    if (error) {
-      console.warn("[payments] free unlock failed:", error.message);
-      return json({ error: "Could not unlock this item. Please try again." }, 500);
-    }
-    return json({ free: true, redirect: `/payment-success?id=${free!.id}` });
+    const id = await unlockFreeProduct(admin, session.user.id, product.id);
+    if (!id) return json({ error: "Could not unlock this item. Please try again." }, 500);
+    // Straight to My Courses & Material, with this item highlighted
+    return json({ free: true, redirect: `/dashboard/courses?unlocked=${product.id}#item-${product.id}` });
   }
 
   if (!isRazorpayConfigured()) return json({ error: "Payments are not set up yet. Please try again later." }, 503);
