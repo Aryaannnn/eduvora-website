@@ -34,6 +34,8 @@ const TABLES: [string, string][] = [
   ["blog-posts", "blog_posts"],
   ["video-testimonials", "video_testimonials"],
   ["session-feedback", "session_feedback"],
+  ["leads", "leads"],
+  ["lead-notes", "lead_notes"],
   ["email-logs", "email_logs"],
 ];
 const PAGE = 1000;

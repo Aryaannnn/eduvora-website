@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { StatusBadge, DashSkeleton } from "@/components/dashboard/ui";
-import { CalendarIcon, ReceiptIcon, UsersIcon, VideoIcon, WhatsAppIcon, ZapIcon } from "@/components/Icons";
+import { CalendarIcon, PhoneIcon, ReceiptIcon, UsersIcon, VideoIcon, WhatsAppIcon, ZapIcon } from "@/components/Icons";
 import { requireAdmin } from "@/lib/admin";
 import { personLabel, profilesById } from "@/lib/admin-data";
 import { formatDate, formatDateTime, formatPrice, formatTime, todayInIndia } from "@/lib/format";
@@ -38,7 +38,7 @@ async function Overview() {
   const today = todayInIndia();
 
   const weekAgo = daysAgoISO(7);
-  const [paidRes, paidBookingsRes, studentsRes, recentP, recentB, upcomingRes, wcClicks, wcWeek, wcSetting, noMeet] = await Promise.all([
+  const [paidRes, paidBookingsRes, studentsRes, recentP, recentB, upcomingRes, wcClicks, wcWeek, wcSetting, noMeet, followUps] = await Promise.all([
     s.supabase.from("purchases").select("amount,created_at").eq("status", "paid").limit(10000),
     // Online counselling payments (Razorpay) also count as revenue
     s.supabase.from("bookings").select("amount,paid_at,created_at").eq("payment_status", "paid").not("amount", "is", null).limit(10000),
@@ -52,6 +52,8 @@ async function Overview() {
     s.supabase.from("community_settings").select("whatsapp_link").eq("id", 1).maybeSingle(),
     // Upcoming confirmed sessions with no Google Meet link (supabase/google-calendar.sql)
     s.supabase.from("bookings").select("id,slots!inner(date)", { count: "exact", head: true }).eq("status", "confirmed").is("meet_link", null).gte("slots.date", today),
+    // Lead follow-ups due today or overdue (supabase/leads.sql)
+    s.supabase.from("leads").select("id", { count: "exact", head: true }).lte("follow_up_on", today).not("status", "in", "(paid,not_interested)"),
   ]);
   const wcBySource = new Map<string, number>();
   for (const c of (wcClicks.data ?? []) as { source: string }[]) wcBySource.set(c.source, (wcBySource.get(c.source) ?? 0) + 1);
@@ -82,6 +84,15 @@ async function Overview() {
         <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">Overview</h1>
         <p className="mt-1 text-slate-600">Your business at a glance.</p>
       </div>
+
+      {!followUps.error && (followUps.count ?? 0) > 0 && (
+        <Link href="/admin/leads?f=due" className="flex items-center gap-3 rounded-2xl bg-brand-50 p-4 text-sm text-brand-900 ring-1 ring-brand-200 hover:bg-brand-100" role="alert">
+          <PhoneIcon className="h-5 w-5 shrink-0" />
+          <span>
+            <strong>{followUps.count} follow-up{followUps.count === 1 ? "" : "s"} due today</strong> (including overdue). Open Leads to call or WhatsApp them →
+          </span>
+        </Link>
+      )}
 
       {!noMeet.error && (noMeet.count ?? 0) > 0 && (
         <Link href="/admin/bookings" className="flex items-start gap-3 rounded-2xl bg-amber-50 p-4 text-sm text-amber-900 ring-1 ring-amber-200 hover:bg-amber-100" role="alert">

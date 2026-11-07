@@ -9,6 +9,7 @@ import { BookIcon, ChatIcon, CalendarIcon, ChartIcon, ClipboardIcon, ClockIcon, 
 
 const links = [
   { href: "/admin", label: "Overview", icon: ChartIcon },
+  { href: "/admin/leads", label: "Leads", icon: TargetIcon },
   { href: "/admin/products", label: "Products", icon: BookIcon },
   { href: "/admin/packages", label: "Packages", icon: StarIcon },
   { href: "/admin/slots", label: "Slots", icon: ClockIcon },

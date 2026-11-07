@@ -13,6 +13,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { cronHeaders, cronUnauthorised, isCronAuthorised } from "@/lib/cron-auth";
 import { completePastBookings, notifyMeetLinkReady, sendDueFeedbackRequests, sendDueReminders } from "@/lib/email/notify";
 import { retryMissingMeetLinks } from "@/lib/google-calendar";
+import { getAdminSupabase } from "@/lib/supabase/admin";
 
 export const maxDuration = 60;
 
@@ -30,5 +31,7 @@ export async function GET(request: NextRequest) {
   // After the session: mark finished sessions 'completed', then feedback emails (1 hour after the end)
   const completed = await completePastBookings();
   const feedbackEmails = await sendDueFeedbackRequests();
-  return NextResponse.json({ ok: true, reminders24h: sent.r24, reminders1h: sent.r1, meetLinksCreated: meetLinks, completed, feedbackEmails }, { headers: cronHeaders });
+  // CRM: collect new leads (signups, enquiries, predictor…) and mark payers as Paid
+  const leadRes = await getAdminSupabase()?.rpc("sync_leads").then((r) => r, () => null);
+  return NextResponse.json({ ok: true, reminders24h: sent.r24, reminders1h: sent.r1, meetLinksCreated: meetLinks, completed, feedbackEmails, leadsSynced: leadRes && !leadRes.error ? leadRes.data : 0 }, { headers: cronHeaders });
 }

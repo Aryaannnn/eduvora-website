@@ -40,6 +40,7 @@ export default function PrivacyPolicyPage() {
         <li>To provide what you asked for: counselling sessions, courses, study material, tests, the rank predictor and support.</li>
         <li>To process payments, send receipts and invoices, and handle refunds.</li>
         <li>To send important messages about your bookings and purchases (email, SMS, call or WhatsApp) and, if you join, community updates.</li>
+        <li>To follow up with you about counselling after you sign up, send an enquiry, use the predictor, get a free resource or start a payment (by call, WhatsApp or email). We keep short internal notes of these conversations. Tell us any time if you don&apos;t want to be contacted.</li>
         <li>To protect our study material (downloaded PDFs are personalised with your name, email and a download ID) and prevent misuse.</li>
         <li>To understand which pages help students and improve the website (analytics).</li>
         <li>To meet legal duties, such as keeping tax and accounting records.</li>

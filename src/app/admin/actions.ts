@@ -430,6 +430,45 @@ export async function setReviewApproved(id: string, approved: boolean): Promise<
   return dbResult(error);
 }
 
+// ---------------------------------------------------------------- LEADS (CRM)
+const LEAD_STATUSES = ["new", "contacted", "interested", "paid", "not_interested"] as const;
+export type LeadStatus = (typeof LEAD_STATUSES)[number];
+
+/** Change a lead's status and/or follow-up date ("" = no follow-up). */
+export async function updateLead(id: string, patch: { status?: LeadStatus; follow_up_on?: string | null }): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const row: Record<string, unknown> = {};
+  if (patch.status !== undefined) {
+    if (!LEAD_STATUSES.includes(patch.status)) return fail("Unknown status.");
+    row.status = patch.status;
+  }
+  if (patch.follow_up_on !== undefined) {
+    const d = patch.follow_up_on || null;
+    if (d && !/^\d{4}-\d{2}-\d{2}$/.test(d)) return fail("Please choose a valid date.");
+    row.follow_up_on = d;
+  }
+  const { error } = await s.supabase.from("leads").update(row).eq("id", id);
+  return dbResult(error, patch.follow_up_on !== undefined ? (patch.follow_up_on ? "Follow-up date saved." : "Follow-up removed.") : "Status updated.");
+}
+
+export async function addLeadNote(leadId: string, body: string): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const text = body.trim();
+  if (!text) return fail("Please write a note.");
+  if (text.length > 2000) return fail("Please keep the note under 2000 characters.");
+  const { error } = await s.supabase.from("lead_notes").insert({ lead_id: leadId, body: text });
+  return dbResult(error, "Note added.");
+}
+
+export async function deleteLeadNote(noteId: string): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const { error } = await s.supabase.from("lead_notes").delete().eq("id", noteId);
+  return dbResult(error, "Note deleted.");
+}
+
 // ---------------------------------------------------------------- SESSION FEEDBACK
 /** "Publish as review" — only works when the student ticked the permission box (checked in Supabase too). */
 export async function publishFeedbackAsReview(feedbackId: string, shownName?: string): Promise<ActionResult> {

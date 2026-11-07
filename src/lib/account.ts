@@ -20,11 +20,17 @@ export async function deleteAccount(userId: string, requestedBy: "student" | "ad
   if (!db) return { ok: false, error: "Account deletion is not available right now. Please email us." };
 
   // Remember where to send the confirmation before the details are gone
-  const { data: p } = await db.from("profiles").select("full_name,email,role").eq("id", userId).maybeSingle();
+  const { data: p } = await db.from("profiles").select("full_name,email,phone,role").eq("id", userId).maybeSingle();
   const { data: authUser } = await db.auth.admin.getUserById(userId);
   const email = (p?.email as string | null) || authUser?.user?.email || "";
   const name = ((p?.full_name as string | null) || "").split(" ")[0] || "there";
   if (p?.role === "admin") return { ok: false, error: "Admin accounts can't be deleted. Remove the admin role first." };
+
+  // CRM: their lead (matched by account, email or phone) and your notes about them
+  const phone10 = String(p?.phone ?? authUser?.user?.phone ?? "").replace(/\D/g, "").slice(-10);
+  await db.from("leads").delete().eq("user_id", userId);
+  if (email) await db.from("leads").delete().eq("email", email.toLowerCase());
+  if (phone10.length === 10) await db.from("leads").delete().eq("phone", phone10);
 
   // Reviews published from their session feedback (not linked to the account) → delete too
   const { data: pub } = await db.from("session_feedback").select("review_id").eq("user_id", userId).not("review_id", "is", null);
