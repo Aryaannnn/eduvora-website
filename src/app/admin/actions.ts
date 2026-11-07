@@ -1129,3 +1129,98 @@ export async function adminDeleteAccount(userId: string, confirmText: string): P
   await s.supabase.rpc("log_admin_event", { p_action: "account.delete", p_summary: `Deleted the account of ${who} (on request)`, p_details: {} }).then(() => undefined, () => undefined);
   return { ok: true, message: `Account of ${who} deleted. Payment records were kept without personal details. A confirmation email was sent.` };
 }
+
+// ---------------------------------------------------------------- FEES & CAMPUSES
+// (supabase/fees-campuses.sql — shown on the public /fee-calculator page)
+export type CampusInput = {
+  id?: string; name: string; location?: string; branches: string; hostel_fee_min?: string | number | null; hostel_fee_max?: string | number | null;
+  notes?: string; website?: string; sort_order?: string | number;
+};
+const feesSetup = (e: { message: string; code?: string } | null) =>
+  e && (e.code === "42P01" || e.code === "PGRST205" || /campus_fees|campuses/.test(e.message) && /exist|schema cache/.test(e.message)) ? fail("Run supabase/fees-campuses.sql in Supabase first.") : null;
+
+export async function saveCampus(c: CampusInput): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const name = c.name?.trim();
+  if (!name || name.length < 2) return fail("Please enter the campus name.");
+  const min = int(c.hostel_fee_min), max = int(c.hostel_fee_max);
+  if ((min !== null && (Number.isNaN(min) || min < 0)) || (max !== null && (Number.isNaN(max) || max < 0))) return fail("Hostel fees must be numbers in rupees.");
+  if (min !== null && max !== null && max < min) return fail("Hostel 'to' must be more than 'from'.");
+  const website = c.website?.trim() || null;
+  if (website && !/^https:\/\/\S+$/.test(website)) return fail("Website must start with https://");
+  const row = {
+    name,
+    location: c.location?.trim() || null,
+    branches: c.branches.split(/\n|,/).map((b) => b.trim()).filter(Boolean).slice(0, 60),
+    hostel_fee_min: min,
+    hostel_fee_max: max,
+    notes: c.notes?.trim() || null,
+    website,
+    sort_order: int(c.sort_order) ?? 0,
+    is_sample: false, // edited by the admin → real data
+  };
+  const { error } = c.id ? await s.supabase.from("campuses").update(row).eq("id", c.id) : await s.supabase.from("campuses").insert(row);
+  updateTag("fees");
+  if (error && /duplicate key/.test(error.message)) return fail("A campus with this name already exists.");
+  return feesSetup(error) ?? dbResult(error, c.id ? "Campus saved." : "Campus added.");
+}
+
+export async function deleteCampus(id: string): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const { error } = await s.supabase.from("campuses").delete().eq("id", id);
+  updateTag("fees");
+  return dbResult(error, "Campus and its fees deleted.");
+}
+
+export type FeeInput = { id?: string; year: string | number; campus: string; fee_category: string | number; rank_from: string | number; rank_to?: string | number | null; tuition_per_year: string | number; notes?: string };
+
+export async function saveFee(f: FeeInput): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const year = int(f.year), cat = int(f.fee_category), from = int(f.rank_from), to = int(f.rank_to), fee = int(f.tuition_per_year);
+  if (!year || year < 2000 || year > 2100) return fail("Please enter a valid year.");
+  if (!f.campus) return fail("Please choose a campus.");
+  if (!cat || cat < 1 || cat > 5) return fail("Fee category must be 1 to 5.");
+  if (!from || from < 1) return fail("'Rank from' must be 1 or more.");
+  if (to !== null && (Number.isNaN(to) || to < from)) return fail("'Rank to' must be more than 'Rank from' (or empty for 'and above').");
+  if (fee === null || Number.isNaN(fee) || fee < 0) return fail("Please enter the tuition per year in rupees.");
+  const row = { year, campus: f.campus, fee_category: cat, rank_from: from, rank_to: to, tuition_per_year: fee, notes: f.notes?.trim() || null, is_sample: false };
+  const { error } = f.id ? await s.supabase.from("campus_fees").update(row).eq("id", f.id) : await s.supabase.from("campus_fees").insert(row);
+  updateTag("fees");
+  if (error && /campus_fees_unique|duplicate key/.test(error.message)) return fail(`${f.campus} already has Category ${cat} for ${year}. Edit that row instead.`);
+  return feesSetup(error) ?? dbResult(error, f.id ? "Fee saved." : "Fee added.");
+}
+
+export async function deleteFee(id: string): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const { error } = await s.supabase.from("campus_fees").delete().eq("id", id);
+  updateTag("fees");
+  return dbResult(error, "Fee row deleted.");
+}
+
+/** Removes every SAMPLE fee row and SAMPLE campus (the ones still marked is_sample). */
+export async function deleteSampleFees(): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const a = await s.supabase.from("campus_fees").delete().eq("is_sample", true);
+  const b = await s.supabase.from("campuses").delete().eq("is_sample", true);
+  updateTag("fees");
+  return dbResult(a.error ?? b.error, "All sample fee data deleted. (Campuses and fees you edited were kept.)");
+}
+
+/** Start a new year from last year's rows (then edit the numbers). */
+export async function copyFeeYear(fromYear: number, toYear: number): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  if (!Number.isInteger(toYear) || toYear < 2000 || toYear > 2100 || toYear === fromYear) return fail("Please enter a different, valid year.");
+  const { data, error } = await s.supabase.from("campus_fees").select("campus,fee_category,rank_from,rank_to,tuition_per_year,notes").eq("year", fromYear);
+  if (error) return dbResult(error);
+  if (!data?.length) return fail(`No fee rows for ${fromYear}.`);
+  const { error: e2 } = await s.supabase.from("campus_fees").insert(data.map((r) => ({ ...r, year: toYear, is_sample: false, notes: `Copied from ${fromYear} — update the numbers` })));
+  updateTag("fees");
+  if (e2 && /campus_fees_unique|duplicate key/.test(e2.message)) return fail(`${toYear} already has fee rows. Delete them first or edit them.`);
+  return dbResult(e2, `${data.length} rows copied to ${toYear}. Now update the numbers.`);
+}

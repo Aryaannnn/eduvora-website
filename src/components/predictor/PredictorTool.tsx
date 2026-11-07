@@ -336,6 +336,9 @@ export default function PredictorTool({
 
       <div className="flex flex-col gap-3 sm:flex-row print:hidden">
         <Link href="/book-a-slot" className="btn-primary !py-3.5 text-base"><CalendarIcon className="h-5 w-5" /> Book Counselling with {founderFirst} Sir</Link>
+        {prediction && (
+          <Link href={`/fee-calculator?rank=${prediction.rank}`} className="btn-light !py-3.5 text-base">💰 Estimate my fees</Link>
+        )}
         {full && mode === "dashboard" && prediction && (
           <button type="button" onClick={downloadPdf} className="btn-light !py-3.5"><DownloadIcon /> Download my result as PDF</button>
         )}

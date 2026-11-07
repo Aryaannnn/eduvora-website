@@ -93,6 +93,19 @@ export default async function Home() {
           <SectionHeader eyebrow="Rank & college predictor" title="What rank will your marks get you?" subtitle="See your likely VITEEE rank range for free. The VIT campus and branch you can get, with your chances, comes with counselling." href="/predictor" linkText="Open full predictor" />
           {/* Locked unless the visitor has paid for counselling (checked on the server) */}
           <Reveal className="mt-10"><PredictorGate mode="public" returnTo="/#predictor" /></Reveal>
+          {/* Fee Calculator & Campus Comparison */}
+          <Reveal className="mt-6">
+            <Link href="/fee-calculator" className="card card-hover flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+              <span className="flex items-center gap-4">
+                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-accent-400 text-2xl" aria-hidden>💰</span>
+                <span>
+                  <span className="block text-lg font-extrabold text-slate-900">Fee Calculator &amp; Campus Comparison</span>
+                  <span className="block text-sm text-slate-600">Estimate your fee category and 4-year tuition from your rank, and compare VIT campuses side by side.</span>
+                </span>
+              </span>
+              <span className="btn-primary shrink-0">Calculate fees <ArrowRightIcon className="h-4 w-4" /></span>
+            </Link>
+          </Reveal>
         </div>
       </section>
 

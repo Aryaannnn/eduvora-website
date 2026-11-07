@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
 import CommunitySettingsForm from "@/components/admin/CommunitySettingsForm";
 import ExportDataCard from "@/components/admin/ExportDataCard";
@@ -29,7 +30,18 @@ async function Content() {
     s.supabase.from("community_settings").select("whatsapp_link").eq("id", 1).maybeSingle(),
     getCalendarConnection(),
   ]);
-  const calendar = <GoogleCalendarCard status={cal} expectedEmail={siteConfig.email} />;
+  const calendar = (
+    <>
+      <GoogleCalendarCard status={cal} expectedEmail={siteConfig.email} />
+      <Link href="/admin/settings/fees" className="card card-hover mb-8 flex items-center justify-between gap-4 p-5 sm:p-6">
+        <span>
+          <span className="block text-lg font-extrabold text-slate-900">💰 Fees &amp; Campuses</span>
+          <span className="block text-sm text-slate-500">Fee data by year, campus and fee category, and campus details for the public Fee Calculator &amp; Campus Comparison page.</span>
+        </span>
+        <span className="btn-light shrink-0">Open →</span>
+      </Link>
+    </>
+  );
   const community = <CommunitySettingsForm initial={(wc.data?.whatsapp_link as string | null) ?? ""} setupMissing={!!wc.error} />;
   const referral = <ReferralSettingsForm initial={ref.error ? null : (ref.data as { enabled: boolean; referred_discount: number; referrer_reward: number } | null)} />;
   if (error) {
