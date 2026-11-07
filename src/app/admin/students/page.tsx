@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import StaffStudents, { type StaffStudent } from "@/components/admin/StaffStudents";
 import StudentsManager, { type AdminStudent } from "@/components/admin/StudentsManager";
 import { DashSkeleton } from "@/components/dashboard/ui";
-import { requireAdmin } from "@/lib/admin";
+import { requireStaff } from "@/lib/admin";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 
 export const metadata: Metadata = { title: "Students" };
@@ -39,7 +40,13 @@ export default function StudentsPage() {
 }
 
 async function Content() {
-  const s = await requireAdmin("/admin/students");
+  const { s, role } = await requireStaff("/admin/students");
+  // Counsellors: view only, no payment information (staff_students view in supabase/counsellor.sql)
+  if (role === "counsellor") {
+    const { data, error } = await s.supabase.from("staff_students").select("id,full_name,email,phone,role,created_at,sessions_booked").order("created_at", { ascending: false }).limit(5000);
+    if (error) return <p className="card p-6 text-red-600">Students are not set up for counsellors yet (admin: run supabase/counsellor.sql).</p>;
+    return <StaffStudents students={(data ?? []) as StaffStudent[]} />;
+  }
   const [profiles, purchases, paidCounselling, overrides, signIn, freeAttempts, pkgPurchases, creditBookings, adjustments] = await Promise.all([
     s.supabase.from("profiles").select("id,full_name,email,phone,role,created_at").order("created_at", { ascending: false }).limit(2000),
     s.supabase.from("purchases").select("user_id,amount,created_at,products(title,is_free)").eq("status", "paid").order("created_at", { ascending: false }).limit(10000),

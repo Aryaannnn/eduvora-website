@@ -37,7 +37,7 @@ async function ProfileContent() {
           <ProfileForm userId={s.user.id} email={s.user.email ?? ""} fullName={s.profile?.full_name ?? ""} phone={phone} />
         </Panel>
       </div>
-      <div className="mt-6"><MyDataPanel isAdmin={s.profile?.role === "admin"} consentAt={(c?.consent_at as string | null | undefined) ?? null} /></div>
+      <div className="mt-6"><MyDataPanel isAdmin={s.profile?.role === "admin" || s.profile?.role === "counsellor"} consentAt={(c?.consent_at as string | null | undefined) ?? null} /></div>
     </>
   );
 }

@@ -26,7 +26,7 @@ export async function deleteMyAccount(confirm: string): Promise<Result> {
   if (confirm.trim() !== "DELETE") return { ok: false, error: "Please type DELETE (in capital letters) to confirm." };
   const s = await getSession();
   if (!s) return { ok: false, error: "Please log in again." };
-  if (s.profile?.role === "admin") return { ok: false, error: "Admin accounts can't be deleted here. Ask another admin to remove your admin role first." };
+  if (s.profile?.role === "admin" || s.profile?.role === "counsellor") return { ok: false, error: "Staff accounts can't be deleted here. Ask an admin to change your role to student first." };
   const res = await deleteAccount(s.user.id, "student");
   if (!res.ok) return res;
   // the login no longer exists; clear this browser's cookies

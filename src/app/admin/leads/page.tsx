@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import LeadsManager, { type AdminLead, type LeadNote } from "@/components/admin/LeadsManager";
 import { DashSkeleton } from "@/components/dashboard/ui";
 import { siteConfig } from "@/config/site";
-import { requireAdmin } from "@/lib/admin";
+import { requireStaff } from "@/lib/admin";
 import { todayInIndia } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Leads" };
@@ -17,28 +17,39 @@ export default function LeadsPage() {
 }
 
 async function Content() {
-  const s = await requireAdmin("/admin/leads");
+  const { s, role } = await requireStaff("/admin/leads");
   // Collect anything new since the last time (signups, enquiries, predictor, payments…)
   const sync = await s.supabase.rpc("sync_leads");
   if (sync.error && (sync.error.code === "PGRST202" || /sync_leads|function/i.test(sync.error.message))) {
     return <p className="card p-6 text-red-600">Run supabase/leads.sql in Supabase → SQL Editor to turn on Leads.</p>;
   }
-  const [{ data, error }, notesRes] = await Promise.all([
-    s.supabase
-      .from("leads_overview")
-      .select("id,user_id,email,phone,name,class_year,predicted_rank,sources,status,follow_up_on,first_seen_at,last_activity_at,status_changed_at,total_paid,notes_count")
-      .order("last_activity_at", { ascending: false })
-      .limit(5000),
-    s.supabase.from("lead_notes").select("id,lead_id,body,created_at").order("created_at", { ascending: false }).limit(5000),
+  const base = "id,user_id,email,phone,name,class_year,predicted_rank,sources,status,follow_up_on,first_seen_at,last_activity_at,status_changed_at";
+  const [first, notesRes, staffRes] = await Promise.all([
+    // Admins: with total paid. Counsellors: the leads table itself (no payment amounts).
+    role === "admin"
+      ? s.supabase.from("leads_overview").select(`${base},total_paid,notes_count,assigned_to`).order("last_activity_at", { ascending: false }).limit(5000)
+      : s.supabase.from("leads").select(`${base},assigned_to`).order("last_activity_at", { ascending: false }).limit(5000),
+    s.supabase.from("lead_notes").select("id,lead_id,body,created_at,created_by").order("created_at", { ascending: false }).limit(5000),
+    s.supabase.from("staff_members").select("id,full_name,email,role").order("full_name"),
   ]);
+  let { data, error } = first as { data: unknown[] | null; error: { code?: string; message: string } | null };
+  if (error?.code === "42703" && role === "admin") {
+    // before supabase/counsellor.sql (no assigned_to yet)
+    ({ data, error } = await s.supabase.from("leads_overview").select(`${base},total_paid,notes_count`).order("last_activity_at", { ascending: false }).limit(5000));
+  }
   if (error) return <p className="card p-6 text-red-600">Could not load leads: {error.message}</p>;
 
   const notes: Record<string, LeadNote[]> = {};
   for (const n of (notesRes.data ?? []) as (LeadNote & { lead_id: string })[]) (notes[n.lead_id] ??= []).push(n);
+  const staff = staffRes.error ? null : ((staffRes.data ?? []) as { id: string; full_name: string | null; email: string | null; role: string }[]);
+  const leads = ((data ?? []) as AdminLead[]).map((l) => ({ ...l, total_paid: role === "admin" ? Number(l.total_paid) || 0 : 0, notes_count: l.notes_count ?? notes[l.id]?.length ?? 0 }));
 
   return (
     <LeadsManager
-      leads={(data ?? []) as AdminLead[]}
+      leads={leads}
+      role={role}
+      me={s.user.id}
+      staff={staff}
       notes={notes}
       today={todayInIndia()}
       founderFirst={siteConfig.founder.name.split(" ")[0]}

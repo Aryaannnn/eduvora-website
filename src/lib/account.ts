@@ -24,7 +24,7 @@ export async function deleteAccount(userId: string, requestedBy: "student" | "ad
   const { data: authUser } = await db.auth.admin.getUserById(userId);
   const email = (p?.email as string | null) || authUser?.user?.email || "";
   const name = ((p?.full_name as string | null) || "").split(" ")[0] || "there";
-  if (p?.role === "admin") return { ok: false, error: "Admin accounts can't be deleted. Remove the admin role first." };
+  if (p?.role === "admin" || p?.role === "counsellor") return { ok: false, error: "Staff accounts can't be deleted. Change the role to student first." };
 
   // CRM: their lead (matched by account, email or phone) and your notes about them
   const phone10 = String(p?.phone ?? authUser?.user?.phone ?? "").replace(/\D/g, "").slice(-10);

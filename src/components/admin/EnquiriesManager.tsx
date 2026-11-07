@@ -25,7 +25,7 @@ const intlPhone = (p: string) => {
   return d.length === 10 ? `91${d}` : d;
 };
 
-export default function EnquiriesManager({ enquiries }: { enquiries: AdminEnquiry[] }) {
+export default function EnquiriesManager({ enquiries, canDelete = true }: { enquiries: AdminEnquiry[]; canDelete?: boolean }) {
   const router = useRouter();
   const [filter, setFilter] = useState<"all" | AdminEnquiry["status"]>("all");
   const [q, setQ] = useState("");
@@ -117,14 +117,16 @@ export default function EnquiriesManager({ enquiries }: { enquiries: AdminEnquir
                       >
                         {STATUS.map((s) => <option key={s} value={s}>{s}</option>)}
                       </select>
-                      <button
-                        type="button"
-                        onClick={() => confirm(`Delete the enquiry from ${e.name}? This cannot be undone.`) && run(() => deleteEnquiry(e.id))}
-                        className="grid h-10 w-10 place-items-center rounded-xl text-slate-400 ring-1 ring-slate-200 hover:bg-red-50 hover:text-red-600"
-                        aria-label={`Delete enquiry from ${e.name}`}
-                      >
-                        <TrashIcon />
-                      </button>
+                      {canDelete && (
+                        <button
+                          type="button"
+                          onClick={() => confirm(`Delete the enquiry from ${e.name}? This cannot be undone.`) && run(() => deleteEnquiry(e.id))}
+                          className="grid h-10 w-10 place-items-center rounded-xl text-slate-400 ring-1 ring-slate-200 hover:bg-red-50 hover:text-red-600"
+                          aria-label={`Delete enquiry from ${e.name}`}
+                        >
+                          <TrashIcon />
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>

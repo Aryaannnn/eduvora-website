@@ -43,6 +43,9 @@ async function HomeContent() {
           {s.profile?.role === "admin" && (
             <Link href="/admin" className="mt-4 inline-flex rounded-full bg-accent-400 px-3 py-1 text-xs font-bold text-slate-900">Admin · Open Admin Panel →</Link>
           )}
+          {s.profile?.role === "counsellor" && (
+            <Link href="/admin/bookings" className="mt-4 inline-flex rounded-full bg-accent-400 px-3 py-1 text-xs font-bold text-slate-900">Counsellor · Open Staff Panel →</Link>
+          )}
         </div>
       </section>
 

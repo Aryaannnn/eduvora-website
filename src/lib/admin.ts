@@ -7,6 +7,12 @@
 //   3. Supabase Row Level Security: is_admin() is only true for role 'admin'
 //      WITH a 2FA login (supabase/admin-security.sql) — even if someone
 //      skipped layers 1–2, the database says no.
+//
+//  COUNSELLORS (role 'counsellor', supabase/counsellor.sql) also need 2FA and
+//  may open ONLY: Bookings, Leads, Students (no payment info) and Enquiries
+//  → requireStaff() / staffOrError(). Every other admin page and action uses
+//  requireAdmin() / adminOrError(), which a counsellor never passes; the
+//  database (is_admin() / is_staff()) checks again.
 // =====================================================================
 import { redirect } from "next/navigation";
 import { getSession, type Session } from "./dashboard";
@@ -17,13 +23,27 @@ export async function hasAdmin2fa(s: Session): Promise<boolean> {
   return (data?.claims as { aal?: string } | undefined)?.aal === "aal2";
 }
 
-/** For admin PAGES: not logged in → login page; not admin → student dashboard; no 2FA yet → /admin-verify. */
+export type StaffRole = "admin" | "counsellor";
+export const isStaffRole = (r: unknown): r is StaffRole => r === "admin" || r === "counsellor";
+
+/** For admin-only PAGES: not logged in → login page; counsellor → their pages; others → student dashboard; no 2FA yet → /admin-verify. */
 export async function requireAdmin(path = "/admin"): Promise<Session> {
   const s = await getSession();
   if (!s) redirect(`/login?next=${encodeURIComponent(path)}`);
+  if (s.profile?.role === "counsellor") redirect("/admin/bookings?notAllowed=1");
   if (s.profile?.role !== "admin") redirect("/dashboard");
   if (!(await hasAdmin2fa(s))) redirect(`/admin-verify?next=${encodeURIComponent(path)}`);
   return s;
+}
+
+/** For pages counsellors may open too (Bookings, Leads, Students, Enquiries). */
+export async function requireStaff(path: string): Promise<{ s: Session; role: StaffRole }> {
+  const s = await getSession();
+  if (!s) redirect(`/login?next=${encodeURIComponent(path)}`);
+  const role = s.profile?.role;
+  if (!isStaffRole(role)) redirect("/dashboard");
+  if (!(await hasAdmin2fa(s))) redirect(`/admin-verify?next=${encodeURIComponent(path)}`);
+  return { s, role };
 }
 
 export type ActionResult<T = undefined> = { ok: true; data?: T; message?: string } | { ok: false; error: string };
@@ -35,6 +55,16 @@ export async function adminOrError(): Promise<Session | { ok: false; error: stri
   if (s.profile?.role !== "admin") return { ok: false, error: "Only admins can do this." };
   if (!(await hasAdmin2fa(s))) return { ok: false, error: "Please confirm it's you with your authenticator app first — reload the page." };
   return s;
+}
+
+/** For actions counsellors may use too (lead status/notes, booking notes, mark completed, enquiry status). */
+export async function staffOrError(): Promise<(Session & { role: StaffRole }) | { ok: false; error: string }> {
+  const s = await getSession();
+  if (!s) return { ok: false, error: "Please sign in again." };
+  const role = s.profile?.role;
+  if (!isStaffRole(role)) return { ok: false, error: "Only staff can do this." };
+  if (!(await hasAdmin2fa(s))) return { ok: false, error: "Please confirm it's you with your authenticator app first — reload the page." };
+  return Object.assign(s, { role });
 }
 
 export const isError = (x: unknown): x is { ok: false; error: string } =>

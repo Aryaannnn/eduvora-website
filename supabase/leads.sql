@@ -12,7 +12,8 @@
 --    and merges duplicates. Run automatically when you open Admin → Leads
 --    and by the 15-minute cron. Students who pay → status 'paid'.
 --  • leads_overview — leads + total paid (for the admin page).
---  Only admins (with 2-step login) and the server can see any of this.
+--  Only admins (with 2-step login) and the server can see any of this
+--  (and counsellors, after supabase/counsellor.sql — without amounts).
 -- =====================================================================
 
 -- ---------------------------------------------------------------------
@@ -109,6 +110,15 @@ create trigger before_lead_note_insert before insert on public.lead_notes
 -- ---------------------------------------------------------------------
 -- 3. Helpers
 -- ---------------------------------------------------------------------
+-- Admin or counsellor with a 2-step login (same as in counsellor.sql)
+create or replace function public.is_staff()
+returns boolean
+language sql stable security definer set search_path = public
+as $$
+  select exists (select 1 from public.profiles where id = auth.uid() and role in ('admin', 'counsellor'))
+     and coalesce(auth.jwt() ->> 'aal', 'aal1') = 'aal2';
+$$;
+
 create or replace function public.lead_email(e text) returns text
 language sql immutable as $$
   select case when e ~ '^[^@\s]+@[^@\s]+\.[^@\s]+$' then lower(btrim(e)) end
@@ -138,8 +148,8 @@ declare
   other   public.leads;
   n       integer := 0;
 begin
-  -- Only admins (2-step) and the server
-  if not (public.is_admin() or coalesce(auth.jwt() ->> 'role', '') in ('service_role', '')) then
+  -- Only staff (admins / counsellors with 2-step login) and the server
+  if not (public.is_staff() or coalesce(auth.jwt() ->> 'role', '') in ('service_role', '')) then
     raise exception 'Only admins can sync leads.';
   end if;
   -- one sync at a time
@@ -152,7 +162,7 @@ begin
       -- new signups (not admins)
       select p.id as user_id, p.email, p.phone, p.full_name as name, null::text as class_year, null::text as rank,
              'signup'::text as source, p.created_at as at
-        from public.profiles p where p.role <> 'admin'
+        from public.profiles p where p.role not in ('admin', 'counsellor')
       union all
       -- contact / unlock enquiries
       select e.user_id, e.email, e.phone, e.name, e.class_year, null, 'enquiry', e.created_at
@@ -164,28 +174,28 @@ begin
                   else to_char(pr.predicted_min_rank, 'FM999,999,999') || ' – ' || to_char(pr.predicted_max_rank, 'FM999,999,999') end,
              'predictor', pr.created_at
         from public.predictions pr join public.profiles p on p.id = pr.user_id
-       where p.role <> 'admin'
+       where p.role not in ('admin', 'counsellor')
       union all
       -- free resources: free products (₹0 unlock) and free tests
       select pu.user_id, p.email, p.phone, p.full_name, null, null, 'free_resource', pu.created_at
         from public.purchases pu join public.profiles p on p.id = pu.user_id
-       where pu.status = 'paid' and pu.amount = 0 and p.role <> 'admin'
+       where pu.status = 'paid' and pu.amount = 0 and p.role not in ('admin', 'counsellor')
       union all
       select ta.user_id, p.email, p.phone, p.full_name, null, null, 'free_resource', ta.started_at
         from public.test_attempts ta join public.tests t on t.id = ta.test_id join public.profiles p on p.id = ta.user_id
-       where t.is_free and p.role <> 'admin'
+       where t.is_free and p.role not in ('admin', 'counsellor')
       union all
       -- abandoned / failed payments (products)
       select pu.user_id, p.email, p.phone, p.full_name, null, null, 'abandoned_payment', pu.created_at
         from public.purchases pu join public.profiles p on p.id = pu.user_id
-       where pu.status in ('created', 'pending', 'failed', 'abandoned') and p.role <> 'admin'
+       where pu.status in ('created', 'pending', 'failed', 'abandoned') and p.role not in ('admin', 'counsellor')
       union all
       -- counselling: unpaid attempts → abandoned; real bookings → booking
       select b.user_id, coalesce(b.email, p.email), b.phone, b.name, b.class_year, null,
              case when b.status = 'expired' or b.payment_status = 'failed' then 'abandoned_payment' else 'booking' end,
              coalesce(b.paid_at, b.created_at)
         from public.bookings b left join public.profiles p on p.id = b.user_id
-       where b.status <> 'awaiting_payment' and coalesce(p.role, 'student') <> 'admin'   -- deleted accounts: no user, email or phone left → skipped below
+       where b.status <> 'awaiting_payment' and coalesce(p.role, 'student') not in ('admin', 'counsellor')   -- deleted accounts: no user, email or phone left → skipped below
     )
     select user_id, public.lead_email(email) as email, public.lead_phone(phone) as phone,
            nullif(btrim(name), '') as name, nullif(btrim(class_year), '') as class_year, rank, source, at
@@ -258,7 +268,8 @@ grant execute on function public.sync_leads(boolean) to authenticated, service_r
 -- ---------------------------------------------------------------------
 -- 5. Leads + total paid (₹) for the admin page (reads with the admin's rights)
 -- ---------------------------------------------------------------------
-create or replace view public.leads_overview with (security_invoker = true) as
+drop view if exists public.leads_overview;  -- recreated (columns may have been added, e.g. assigned_to)
+create view public.leads_overview with (security_invoker = true) as
 select l.*,
        coalesce((select sum(pu.amount) from public.purchases pu
                   where l.user_id is not null and pu.user_id = l.user_id and pu.status = 'paid'), 0)

@@ -27,7 +27,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/admin-verif
   const raw = typeof sp.next === "string" ? sp.next : "/admin";
   const next = raw.startsWith("/admin") && !raw.startsWith("//") ? raw : "/admin";
   const s = await requireUser(`/admin-verify?next=${encodeURIComponent(next)}`);
-  if (s.profile?.role !== "admin") redirect("/dashboard");
+  if (s.profile?.role !== "admin" && s.profile?.role !== "counsellor") redirect("/dashboard"); // staff only
   if (await hasAdmin2fa(s)) redirect(next);
   return <AdminTwoFactor next={next} email={s.user.email ?? ""} />;
 }

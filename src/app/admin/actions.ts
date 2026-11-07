@@ -2,12 +2,13 @@
 
 // =====================================================================
 //  ADMIN ACTIONS — every add / edit / delete in the admin panel.
-//  Each action: (1) checks role = 'admin' on the server,
+//  Each action: (1) checks the role on the server — adminOrError() = admins only;
+//               staffOrError() = admins AND counsellors (only the few staff actions),
 //               (2) runs with the admin's own login, so Supabase RLS checks it again,
 //               (3) refreshes the public website cache (updateTag) so changes show at once.
 // =====================================================================
 import { updateTag } from "next/cache";
-import { adminOrError, friendlyDbError, isError, type ActionResult } from "@/lib/admin";
+import { adminOrError, friendlyDbError, isError, staffOrError, type ActionResult } from "@/lib/admin";
 import { yearInIndia } from "@/lib/format";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import { notifyBookingChanged, notifyBookingConfirmed, notifyMeetLinkReady, notifyPurchasePaid, sendKind } from "@/lib/email/notify";
@@ -301,7 +302,7 @@ export async function resendEmail(logId: string): Promise<ActionResult> {
 // ---------------------------------------------------------------- ENQUIRIES
 export async function updateEnquiryStatus(id: string, status: "new" | "contacted" | "converted"): Promise<ActionResult> {
   if (!["new", "contacted", "converted"].includes(status)) return fail("Unknown status.");
-  const s = await adminOrError();
+  const s = await staffOrError(); // counsellors too (status only — checked in Supabase)
   if (isError(s)) return s;
   const { error } = await s.supabase.from("enquiries").update({ status }).eq("id", id);
   return dbResult(error, `Marked as ${status}.`);
@@ -436,7 +437,7 @@ export type LeadStatus = (typeof LEAD_STATUSES)[number];
 
 /** Change a lead's status and/or follow-up date ("" = no follow-up). */
 export async function updateLead(id: string, patch: { status?: LeadStatus; follow_up_on?: string | null }): Promise<ActionResult> {
-  const s = await adminOrError();
+  const s = await staffOrError(); // counsellors too
   if (isError(s)) return s;
   const row: Record<string, unknown> = {};
   if (patch.status !== undefined) {
@@ -453,7 +454,7 @@ export async function updateLead(id: string, patch: { status?: LeadStatus; follo
 }
 
 export async function addLeadNote(leadId: string, body: string): Promise<ActionResult> {
-  const s = await adminOrError();
+  const s = await staffOrError(); // counsellors too
   if (isError(s)) return s;
   const text = body.trim();
   if (!text) return fail("Please write a note.");
@@ -463,9 +464,58 @@ export async function addLeadNote(leadId: string, body: string): Promise<ActionR
 }
 
 export async function deleteLeadNote(noteId: string): Promise<ActionResult> {
+  const s = await staffOrError(); // counsellors: only their own notes (Supabase rule)
+  if (isError(s)) return s;
+  const { data, error } = await s.supabase.from("lead_notes").delete().eq("id", noteId).select("id");
+  if (!error && !data?.length) return fail("You can only delete your own notes.");
+  return dbResult(error, "Note deleted.");
+}
+
+/** Admins only: give a lead to a counsellor (null = nobody). */
+export async function assignLead(id: string, staffId: string | null): Promise<ActionResult> {
   const s = await adminOrError();
   if (isError(s)) return s;
-  const { error } = await s.supabase.from("lead_notes").delete().eq("id", noteId);
+  const { error } = await s.supabase.from("leads").update({ assigned_to: staffId || null }).eq("id", id);
+  if (error && /assigned_to/.test(error.message) && /column/.test(error.message)) return fail("Run supabase/counsellor.sql in Supabase first.");
+  return dbResult(error, staffId ? "Lead assigned." : "Lead unassigned.");
+}
+
+// ---------------------------------------------------------------- STAFF: BOOKINGS
+/** Admins only: give a booking to a counsellor (null = nobody). */
+export async function assignBooking(id: string, staffId: string | null): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const { error } = await s.supabase.from("bookings").update({ assigned_to: staffId || null }).eq("id", id);
+  if (error && /assigned_to/.test(error.message) && /column/.test(error.message)) return fail("Run supabase/counsellor.sql in Supabase first.");
+  return dbResult(error, staffId ? "Booking assigned." : "Booking unassigned.");
+}
+
+/** Admins + counsellors: the session took place. */
+export async function staffCompleteBooking(id: string): Promise<ActionResult> {
+  const s = await staffOrError();
+  if (isError(s)) return s;
+  const { error } = await s.supabase.rpc("staff_complete_booking", { p_booking: id });
+  updateTag("slots");
+  if (error) return fail(/function/i.test(error.message) && /find/i.test(error.message) ? "Run supabase/counsellor.sql in Supabase first." : error.message);
+  return { ok: true, message: "Marked as completed — the student gets the feedback email 1 hour after the session ends." };
+}
+
+export async function addBookingNote(bookingId: string, body: string): Promise<ActionResult> {
+  const s = await staffOrError();
+  if (isError(s)) return s;
+  const text = body.trim();
+  if (!text) return fail("Please write a note.");
+  if (text.length > 2000) return fail("Please keep the note under 2000 characters.");
+  const { error } = await s.supabase.from("booking_notes").insert({ booking_id: bookingId, body: text });
+  if (error && /booking_notes/.test(error.message)) return fail("Run supabase/counsellor.sql in Supabase first.");
+  return dbResult(error, "Note added.");
+}
+
+export async function deleteBookingNote(noteId: string): Promise<ActionResult> {
+  const s = await staffOrError();
+  if (isError(s)) return s;
+  const { data, error } = await s.supabase.from("booking_notes").delete().eq("id", noteId).select("id");
+  if (!error && !data?.length) return fail("You can only delete your own notes.");
   return dbResult(error, "Note deleted.");
 }
 
@@ -523,12 +573,26 @@ export async function saveSiteStats(rows: { id?: string; label: string; value: s
 }
 
 // ---------------------------------------------------------------- STUDENTS
-export async function setUserRole(userId: string, role: "admin" | "student"): Promise<ActionResult> {
+export async function setUserRole(userId: string, role: "admin" | "counsellor" | "student" | "parent"): Promise<ActionResult> {
   const s = await adminOrError();
   if (isError(s)) return s;
+  if (!["admin", "counsellor", "student", "parent"].includes(role)) return fail("Unknown role.");
   if (userId === s.user.id) return fail("You can't change your own role (so you don't lock yourself out).");
   const { error } = await s.supabase.from("profiles").update({ role }).eq("id", userId);
-  return dbResult(error, role === "admin" ? "User is now an admin." : "Admin access removed.");
+  if (error && /profiles_role_check/.test(error.message)) return fail("Run supabase/counsellor.sql in Supabase first.");
+  if (!error) {
+    // Staff accounts aren't leads; un-assign work from someone who is no longer staff
+    const db = getAdminSupabase();
+    if (db && (role === "admin" || role === "counsellor")) await db.from("leads").delete().eq("user_id", userId);
+    if (db && role !== "admin" && role !== "counsellor") {
+      await db.from("leads").update({ assigned_to: null }).eq("assigned_to", userId);
+      await db.from("bookings").update({ assigned_to: null }).eq("assigned_to", userId);
+    }
+  }
+  return dbResult(
+    error,
+    role === "admin" ? "User is now an admin." : role === "counsellor" ? "User is now a counsellor. They must set up 2-step login when they open the staff panel." : `Role changed to ${role}.`,
+  );
 }
 
 /** Predictor access by hand: "give" / "remove" override, or "auto" (paid counselling decides). */

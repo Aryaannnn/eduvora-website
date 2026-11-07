@@ -7,6 +7,8 @@ import { csvDateTimeIST, formatDateTime } from "@/lib/format";
 import { LockIcon, SearchIcon, ShieldIcon, TargetIcon } from "../Icons";
 import { AdminHeader, Notice, downloadCsv } from "./ui";
 
+type UserRole = "student" | "parent" | "counsellor" | "admin";
+
 export type AdminStudent = {
   id: string; full_name: string | null; email: string | null; phone: string | null; role: string; created_at: string; bought: string[];
   predictor: { access: boolean; reason: "admin" | "paid" | "given" | "removed" | "none"; override: boolean | null };
@@ -72,9 +74,13 @@ export default function StudentsManager({ students, currentUserId, setupMissing 
     });
   };
 
-  const changeRole = (s: AdminStudent, role: "admin" | "student") => {
+  const changeRole = (s: AdminStudent, role: UserRole) => {
+    if (role === s.role) return;
     const who = s.full_name || s.email || "this user";
-    const text = role === "admin" ? `Make ${who} an ADMIN? They will be able to change products, prices, payments and other users.` : `Remove admin access from ${who}?`;
+    const text =
+      role === "admin" ? `Make ${who} an ADMIN? They will be able to change products, prices, payments, settings and other users.`
+      : role === "counsellor" ? `Make ${who} a COUNSELLOR?\n\nThey can open: Bookings (no amounts), Leads, Students (no payments) and Enquiries.\nThey can NOT see revenue, payments, prices, coupons, settings or exports.\nThey must set up 2-step login (authenticator app) the first time.`
+      : `Change ${who} to ${role}? They lose any staff access.`;
     if (!confirm(text)) return;
     start(async () => {
       const res = await setUserRole(s.id, role);
@@ -213,12 +219,24 @@ export default function StudentsManager({ students, currentUserId, setupMissing 
                 <td className="px-4 py-3 text-right">
                   {s.id === currentUserId ? (
                     <span className="inline-flex items-center gap-1 text-xs font-bold text-slate-500"><ShieldIcon className="h-4 w-4" /> You</span>
-                  ) : s.role === "admin" ? (
-                    <button type="button" onClick={() => changeRole(s, "student")} className="btn-light !px-3 !py-1.5 text-xs !text-red-600">Remove admin</button>
                   ) : (
                     <div className="flex flex-col items-end gap-1.5">
-                      <button type="button" onClick={() => changeRole(s, "admin")} className="btn-light !px-3 !py-1.5 text-xs"><ShieldIcon className="h-4 w-4" /> Make admin</button>
-                      <button type="button" onClick={() => deleteAccount(s)} className="text-xs font-semibold text-red-600 underline">Delete account</button>
+                      <label className="sr-only" htmlFor={`role-${s.id}`}>Role of {s.full_name || s.email || "user"}</label>
+                      <select
+                        id={`role-${s.id}`}
+                        value={s.role}
+                        onChange={(e) => changeRole(s, e.target.value as UserRole)}
+                        disabled={pending}
+                        className={`rounded-lg border-0 px-2 py-1.5 text-xs font-bold ring-1 ${s.role === "admin" ? "bg-red-50 text-red-700 ring-red-200" : s.role === "counsellor" ? "bg-indigo-50 text-indigo-700 ring-indigo-200" : "bg-white text-slate-700 ring-slate-200"}`}
+                      >
+                        <option value="student">Student</option>
+                        <option value="parent">Parent</option>
+                        <option value="counsellor">Counsellor (staff)</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                      {s.role !== "admin" && s.role !== "counsellor" && (
+                        <button type="button" onClick={() => deleteAccount(s)} className="text-xs font-semibold text-red-600 underline">Delete account</button>
+                      )}
                     </div>
                   )}
                 </td>

@@ -7,7 +7,7 @@ import { Spinner } from "../BuyButton";
 import Logo from "../Logo";
 import { BookIcon, ChatIcon, CalendarIcon, ChartIcon, ClipboardIcon, ClockIcon, GiftIcon, GridIcon, LogoutIcon, MailIcon, ReceiptIcon, ShieldIcon, StarIcon, TagIcon, TargetIcon, UsersIcon } from "../Icons";
 
-const links = [
+const allLinks = [
   { href: "/admin", label: "Overview", icon: ChartIcon },
   { href: "/admin/leads", label: "Leads", icon: TargetIcon },
   { href: "/admin/products", label: "Products", icon: BookIcon },
@@ -30,8 +30,12 @@ const links = [
   { href: "/admin/settings", label: "Settings", icon: GridIcon },
 ];
 
-export default function AdminNav() {
+// Pages a COUNSELLOR may open (the server checks this again on every page and action)
+const STAFF_PAGES = ["/admin/bookings", "/admin/leads", "/admin/students", "/admin/enquiries"];
+
+export default function AdminNav({ role }: { role: "admin" | "counsellor" }) {
   const pathname = usePathname();
+  const links = role === "admin" ? allLinks : allLinks.filter((l) => STAFF_PAGES.includes(l.href));
   const { logout, loggingOut } = useLogout();
   const active = (href: string) => (href === "/admin" ? pathname === href : pathname.startsWith(href));
 
@@ -41,7 +45,7 @@ export default function AdminNav() {
       <aside className="hidden w-60 shrink-0 lg:block">
         <nav aria-label="Admin" className="sticky top-24 rounded-[1.25rem] bg-slate-900 p-3 text-slate-300 shadow-xl">
           <div className="mb-3 flex justify-center rounded-xl bg-white p-2"><Logo size="sidebar" /></div>
-          <p className="px-3 pb-2 pt-1 text-xs font-bold uppercase tracking-wider text-accent-300">Admin panel</p>
+          <p className="px-3 pb-2 pt-1 text-xs font-bold uppercase tracking-wider text-accent-300">{role === "admin" ? "Admin panel" : "Counsellor panel"}</p>
           <ul className="space-y-1">
             {links.map((l) => (
               <li key={l.href}>

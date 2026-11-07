@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { rescheduleBooking, retryBookingCalendar, setMeetLink, updateBooking } from "@/app/admin/actions";
+import { assignBooking, rescheduleBooking, retryBookingCalendar, setMeetLink, updateBooking } from "@/app/admin/actions";
+import BookingNotes, { type BookingNote } from "./BookingNotes";
 import { formatDate, formatDateTime, formatPrice, formatTime } from "@/lib/format";
 import { MailIcon, PhoneIcon, SearchIcon, VideoIcon, WhatsAppIcon } from "../Icons";
 import { AdminHeader, Notice } from "./ui";
@@ -14,8 +15,9 @@ export type AdminBooking = {
   class_year?: string | null; expected_marks?: number | null; amount?: number | null; invoice_number?: string | null; paid_at?: string | null;
   status: "pending" | "confirmed" | "cancelled" | "completed"; payment_status: "unpaid" | "pending" | "paid" | "failed" | "refunded"; created_at: string;
   slots: { date: string; start_time: string; end_time: string; price: number } | null;
-  meet_link?: string | null; calendar_status?: string | null; calendar_error?: string | null;
+  meet_link?: string | null; calendar_status?: string | null; calendar_error?: string | null; assigned_to?: string | null;
 };
+export type StaffMember = { id: string; full_name: string | null; email: string | null; role: string };
 
 const STATUS = ["pending", "confirmed", "completed", "cancelled"] as const;
 const PAYMENT = ["unpaid", "pending", "paid", "failed", "refunded"] as const;
@@ -27,10 +29,17 @@ const intlPhone = (p: string) => {
   return d.length === 10 ? `91${d}` : d;
 };
 
-export default function BookingsManager({ bookings, today, freeSlots = [], meetReady = true }: { bookings: AdminBooking[]; today: string; freeSlots?: FreeSlot[]; meetReady?: boolean }) {
+export default function BookingsManager({
+  bookings, today, freeSlots = [], meetReady = true, staff = null, staffNames = {}, notes = {}, me = "",
+}: {
+  bookings: AdminBooking[]; today: string; freeSlots?: FreeSlot[]; meetReady?: boolean;
+  /** admins + counsellors for "Assigned to" (null before supabase/counsellor.sql) */
+  staff?: StaffMember[] | null; staffNames?: Record<string, string>; notes?: Record<string, BookingNote[]>; me?: string;
+}) {
   const router = useRouter();
   const [filter, setFilter] = useState<"upcoming" | "all" | (typeof STATUS)[number]>("upcoming");
   const [q, setQ] = useState("");
+  const [assignedFilter, setAssignedFilter] = useState("all");
   const [msg, setMsg] = useState<{ kind: "error" | "success"; text: string } | null>(null);
   const [pending, start] = useTransition();
 
@@ -38,7 +47,8 @@ export default function BookingsManager({ bookings, today, freeSlots = [], meetR
     const matchesFilter =
       filter === "all" ? true : filter === "upcoming" ? !!b.slots && b.slots.date >= today && ["pending", "confirmed"].includes(b.status) : b.status === filter;
     const text = `${b.name} ${b.phone} ${b.email ?? ""}`.toLowerCase();
-    return matchesFilter && (!q || text.includes(q.toLowerCase()));
+    const matchesAssigned = assignedFilter === "all" ? true : assignedFilter === "none" ? !b.assigned_to : b.assigned_to === assignedFilter;
+    return matchesFilter && matchesAssigned && (!q || text.includes(q.toLowerCase()));
   });
 
   const reschedule = (b: AdminBooking, slotId: string) => {
@@ -67,6 +77,13 @@ export default function BookingsManager({ bookings, today, freeSlots = [], meetR
       router.refresh();
     });
 
+  const change2 = (fn: () => Promise<{ ok: boolean; error?: string; message?: string }>) =>
+    start(async () => {
+      const res = await fn();
+      setMsg(res.ok ? { kind: "success", text: res.message ?? "Saved." } : { kind: "error", text: res.error ?? "Something went wrong." });
+      if (res.ok) router.refresh();
+    });
+
   const change = (id: string, patch: Parameters<typeof updateBooking>[1]) =>
     start(async () => {
       const res = await updateBooking(id, patch);
@@ -87,6 +104,14 @@ export default function BookingsManager({ bookings, today, freeSlots = [], meetR
           <option value="all">All bookings</option>
           {STATUS.map((s) => <option key={s} value={s} className="capitalize">{s}</option>)}
         </select>
+        {staff && staff.length > 0 && (
+          <select value={assignedFilter} onChange={(e) => setAssignedFilter(e.target.value)} className="input sm:!w-52" aria-label="Assigned to">
+            <option value="all">Anyone</option>
+            <option value={me}>Assigned to me</option>
+            <option value="none">Not assigned</option>
+            {staff.filter((m) => m.id !== me).map((m) => <option key={m.id} value={m.id}>{m.full_name || m.email}</option>)}
+          </select>
+        )}
       </div>
       {missingMeet.length > 0 && (
         <div className="mb-4 rounded-2xl bg-amber-50 p-4 text-sm text-amber-900 ring-1 ring-amber-200" role="alert">
@@ -135,6 +160,7 @@ export default function BookingsManager({ bookings, today, freeSlots = [], meetR
                         {b.status === "pending" && <strong className="ml-1 text-amber-700">· Paid late — time was taken: reschedule or refund</strong>}
                       </p>
                     )}
+                    {staff && <BookingNotes bookingId={b.id} notes={notes[b.id] ?? []} me={me} isAdmin staffNames={staffNames} />}
                     {meetReady && isUpcoming(b) && <MeetRow b={b} disabled={pending} onSave={(l) => saveMeet(b, l)} onRetry={() => retryMeet(b)} />}
                     <p className="text-xs text-slate-400">Booked {formatDateTime(b.created_at)}</p>
                   </div>
@@ -154,6 +180,17 @@ export default function BookingsManager({ bookings, today, freeSlots = [], meetR
                         {PAYMENT.map((s) => <option key={s} value={s}>Payment: {s}</option>)}
                       </select>
                     </div>
+                    {staff && staff.length > 0 && (
+                      <select
+                        value={b.assigned_to ?? ""}
+                        onChange={(e) => change2(() => assignBooking(b.id, e.target.value || null))}
+                        className="rounded-xl border-0 bg-white px-3 py-2 text-sm font-semibold text-slate-700 ring-1 ring-slate-200"
+                        aria-label={`Assign ${b.name} to a counsellor`}
+                      >
+                        <option value="">Not assigned</option>
+                        {staff.map((m) => <option key={m.id} value={m.id}>Assigned: {m.full_name || m.email}{m.role === "admin" ? " (admin)" : ""}</option>)}
+                      </select>
+                    )}
                     {["pending", "confirmed"].includes(b.status) && freeSlots.length > 0 && (
                       <select
                         value=""

@@ -4,16 +4,17 @@
 // email or phone), with a status pipeline, follow-ups, notes and quick contact.
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
-import { addLeadNote, deleteLeadNote, updateLead, type LeadStatus } from "@/app/admin/actions";
+import { addLeadNote, assignLead, deleteLeadNote, updateLead, type LeadStatus } from "@/app/admin/actions";
 import { formatDate, formatDateTime, formatPrice } from "@/lib/format";
 import { CalendarIcon, ChevronDownIcon, DownloadIcon, MailIcon, PhoneIcon, SearchIcon, TrashIcon, WhatsAppIcon } from "../Icons";
 import { AdminHeader, downloadCsv, Notice } from "./ui";
 
-export type LeadNote = { id: string; body: string; created_at: string };
+export type LeadNote = { id: string; body: string; created_at: string; created_by?: string | null };
+type Staff = { id: string; full_name: string | null; email: string | null; role: string };
 export type AdminLead = {
   id: string; user_id: string | null; email: string | null; phone: string | null; name: string | null; class_year: string | null;
   predicted_rank: string | null; sources: string[]; status: LeadStatus; follow_up_on: string | null; first_seen_at: string;
-  last_activity_at: string; status_changed_at: string | null; total_paid: number; notes_count: number;
+  last_activity_at: string; status_changed_at: string | null; total_paid: number; notes_count: number; assigned_to?: string | null;
 };
 
 const STATUSES: { v: LeadStatus; label: string; cls: string }[] = [
@@ -55,7 +56,15 @@ function whatsappText(l: AdminLead, founderFirst: string, business: string) {
   return `Hi ${first}, this is ${founderFirst} from ${business}. ${why}`;
 }
 
-export default function LeadsManager({ leads, notes, today, founderFirst, business }: { leads: AdminLead[]; notes: Record<string, LeadNote[]>; today: string; founderFirst: string; business: string }) {
+export default function LeadsManager({
+  leads, notes, today, founderFirst, business, role = "admin", me = "", staff = null,
+}: {
+  leads: AdminLead[]; notes: Record<string, LeadNote[]>; today: string; founderFirst: string; business: string;
+  /** counsellors: no total paid, no CSV, can't assign */
+  role?: "admin" | "counsellor"; me?: string; staff?: Staff[] | null;
+}) {
+  const isAdmin = role === "admin";
+  const staffName = (id: string | null | undefined) => (id ? (staff ?? []).find((m) => m.id === id) : null);
   const router = useRouter();
   const params = useSearchParams();
   const [q, setQ] = useState("");
@@ -63,6 +72,7 @@ export default function LeadsManager({ leads, notes, today, founderFirst, busine
   const [source, setSource] = useState("all");
   const [added, setAdded] = useState<Added>("all");
   const [follow, setFollow] = useState<Follow>(params.get("f") === "due" ? "due" : "all");
+  const [assigned, setAssigned] = useState("all");
   const [open, setOpen] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ kind: "error" | "success"; text: string } | null>(null);
   const [pending, start] = useTransition();
@@ -81,6 +91,7 @@ export default function LeadsManager({ leads, notes, today, founderFirst, busine
       if (follow === "due" && !isDue(l)) return false;
       if (follow === "upcoming" && !(l.follow_up_on && l.follow_up_on > today)) return false;
       if (follow === "none" && l.follow_up_on) return false;
+      if (assigned === "none" ? !!l.assigned_to : assigned !== "all" && l.assigned_to !== assigned) return false;
       if (term) {
         const text = `${l.name ?? ""} ${l.email ?? ""} ${l.class_year ?? ""}`.toLowerCase();
         if (!text.includes(term) && !(digits.length >= 3 && (l.phone ?? "").includes(digits))) return false;
@@ -88,7 +99,7 @@ export default function LeadsManager({ leads, notes, today, founderFirst, busine
       return true;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [leads, q, status, source, added, follow, today]);
+  }, [leads, q, status, source, added, follow, assigned, today]);
 
   // Conversion summary
   const summary = useMemo(() => {
@@ -123,12 +134,20 @@ export default function LeadsManager({ leads, notes, today, founderFirst, busine
       ]),
     );
 
-  const resetFilters = () => { setQ(""); setStatus("all"); setSource("all"); setAdded("all"); setFollow("all"); };
+  const resetFilters = () => { setQ(""); setStatus("all"); setSource("all"); setAdded("all"); setFollow("all"); setAssigned("all"); };
 
   return (
     <>
       <AdminHeader title="Leads" subtitle="Everyone who showed interest — signups, enquiries, predictor users, free resources and unfinished payments. Duplicates are merged by email or phone.">
-        <button type="button" onClick={exportCsv} disabled={!shown.length} className="btn-light disabled:opacity-50"><DownloadIcon className="h-4 w-4" /> CSV ({shown.length})</button>
+        {staff && staff.length > 0 && (
+          <select value={assigned} onChange={(e) => setAssigned(e.target.value)} className="input !w-auto" aria-label="Assigned to">
+            <option value="all">Assigned: anyone</option>
+            <option value={me}>Assigned to me ({leads.filter((l) => l.assigned_to === me).length})</option>
+            <option value="none">Not assigned</option>
+            {isAdmin && staff.filter((m) => m.id !== me).map((m) => <option key={m.id} value={m.id}>{m.full_name || m.email}</option>)}
+          </select>
+        )}
+        {isAdmin && <button type="button" onClick={exportCsv} disabled={!shown.length} className="btn-light disabled:opacity-50"><DownloadIcon className="h-4 w-4" /> CSV ({shown.length})</button>}
       </AdminHeader>
 
       {/* Conversion summary */}
@@ -208,6 +227,11 @@ export default function LeadsManager({ leads, notes, today, founderFirst, busine
               onFollow={(d) => run(() => updateLead(l.id, { follow_up_on: d }))}
               onNote={(body, done) => run(() => addLeadNote(l.id, body), done)}
               onDeleteNote={(id) => confirm("Delete this note?") && run(() => deleteLeadNote(id))}
+              isAdmin={isAdmin}
+              me={me}
+              staff={staff}
+              assignedName={staffName(l.assigned_to)?.full_name || staffName(l.assigned_to)?.email || null}
+              onAssign={(id) => run(() => assignLead(l.id, id))}
             />
           ))}
           {shown.length > 300 && <li className="p-3 text-center text-sm text-slate-500">Showing the 300 most recent — use search or filters (CSV has all {shown.length}).</li>}
@@ -218,10 +242,11 @@ export default function LeadsManager({ leads, notes, today, founderFirst, busine
 }
 
 function LeadRow({
-  l, notes, open, due, today, toggle, wa, business, disabled, onStatus, onFollow, onNote, onDeleteNote,
+  l, notes, open, due, today, toggle, wa, business, disabled, onStatus, onFollow, onNote, onDeleteNote, isAdmin, me, staff, assignedName, onAssign,
 }: {
   l: AdminLead; notes: LeadNote[]; open: boolean; due: boolean; today: string; toggle: () => void; wa: string; business: string; disabled: boolean;
   onStatus: (v: LeadStatus) => void; onFollow: (d: string | null) => void; onNote: (body: string, done: () => void) => void; onDeleteNote: (id: string) => void;
+  isAdmin: boolean; me: string; staff: Staff[] | null; assignedName: string | null; onAssign: (id: string | null) => void;
 }) {
   const [note, setNote] = useState("");
   const st = statusOf(l.status);
@@ -237,7 +262,8 @@ function LeadRow({
             <p className="flex flex-wrap items-center gap-2">
               <span className="font-bold text-slate-900">{l.name || l.email || l.phone || "Unknown"}</span>
               <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ring-1 ${st.cls}`}>{st.label}</span>
-              {Number(l.total_paid) > 0 && <span className="text-xs font-bold text-emerald-700">{formatPrice(Number(l.total_paid))} paid</span>}
+              {isAdmin && Number(l.total_paid) > 0 && <span className="text-xs font-bold text-emerald-700">{formatPrice(Number(l.total_paid))} paid</span>}
+              {l.assigned_to && <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-semibold text-indigo-700">{l.assigned_to === me ? "Assigned to you" : `Assigned: ${assignedName ?? "staff"}`}</span>}
               {due && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-800">Follow up {l.follow_up_on! < today ? `(was ${formatDate(l.follow_up_on!)})` : "today"}</span>}
             </p>
             <p className="mt-0.5 truncate text-sm text-slate-600">
@@ -285,10 +311,19 @@ function LeadRow({
             <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
               <dt className="text-slate-500">First seen</dt><dd className="text-slate-800">{formatDateTime(l.first_seen_at)}</dd>
               <dt className="text-slate-500">Last activity</dt><dd className="text-slate-800">{formatDateTime(l.last_activity_at)}</dd>
-              <dt className="text-slate-500">Total paid</dt><dd className="text-slate-800">{Number(l.total_paid) > 0 ? formatPrice(Number(l.total_paid)) : "₹0"}</dd>
+              {isAdmin && (<><dt className="text-slate-500">Total paid</dt><dd className="text-slate-800">{Number(l.total_paid) > 0 ? formatPrice(Number(l.total_paid)) : "₹0"}</dd></>)}
               <dt className="text-slate-500">Account</dt><dd className="text-slate-800">{l.user_id ? "Signed up" : "No account yet"}</dd>
               {l.status_changed_at && (<><dt className="text-slate-500">Status changed</dt><dd className="text-slate-800">{formatDateTime(l.status_changed_at)}</dd></>)}
             </dl>
+            {isAdmin && staff && staff.length > 0 && (
+              <label className="mt-4 block text-sm">
+                <span className="font-bold text-slate-800">Assigned to</span>
+                <select value={l.assigned_to ?? ""} onChange={(e) => onAssign(e.target.value || null)} disabled={disabled} className="input mt-1 !py-1.5 text-sm">
+                  <option value="">Not assigned</option>
+                  {staff.map((m) => <option key={m.id} value={m.id}>{m.full_name || m.email}{m.role === "admin" ? " (admin)" : ""}</option>)}
+                </select>
+              </label>
+            )}
           </div>
           <div>
             <p className="text-sm font-bold text-slate-800">Notes</p>
@@ -312,7 +347,9 @@ function LeadRow({
                       <p className="whitespace-pre-line text-slate-800">{n.body}</p>
                       <p className="mt-0.5 text-xs text-slate-400">{formatDateTime(n.created_at)}</p>
                     </div>
-                    <button type="button" onClick={() => onDeleteNote(n.id)} className="rounded p-1 text-slate-300 hover:text-red-600" aria-label="Delete note"><TrashIcon className="h-3.5 w-3.5" /></button>
+                    {(isAdmin || n.created_by === me) && (
+                      <button type="button" onClick={() => onDeleteNote(n.id)} className="rounded p-1 text-slate-300 hover:text-red-600" aria-label="Delete note"><TrashIcon className="h-3.5 w-3.5" /></button>
+                    )}
                   </li>
                 ))}
               </ul>

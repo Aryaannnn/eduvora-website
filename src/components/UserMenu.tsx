@@ -55,9 +55,9 @@ export default function UserMenu({ user }: { user: MenuUser }) {
           <Link role="menuitem" href="/dashboard" className={`${item} mt-1 text-slate-700 hover:bg-slate-100`}>
             <GridIcon /> Dashboard
           </Link>
-          {user.role === "admin" && (
-            <Link role="menuitem" href="/admin" className={`${item} text-slate-700 hover:bg-slate-100`}>
-              <ShieldIcon className="h-5 w-5" /> Admin Panel
+          {(user.role === "admin" || user.role === "counsellor") && (
+            <Link role="menuitem" href={user.role === "admin" ? "/admin" : "/admin/bookings"} className={`${item} text-slate-700 hover:bg-slate-100`}>
+              <ShieldIcon className="h-5 w-5" /> {user.role === "admin" ? "Admin Panel" : "Staff Panel"}
             </Link>
           )}
           <button role="menuitem" type="button" onClick={logout} disabled={loggingOut} aria-busy={loggingOut} className={`${item} text-red-600 hover:bg-red-50 disabled:cursor-wait disabled:opacity-70`}>

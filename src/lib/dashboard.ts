@@ -10,7 +10,7 @@ import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { todayInIndia } from "./format";
 import { getServerSupabase } from "./supabase/server";
 
-export type Profile = { full_name: string | null; phone: string | null; email: string | null; role: "student" | "parent" | "admin" };
+export type Profile = { full_name: string | null; phone: string | null; email: string | null; role: "student" | "parent" | "counsellor" | "admin" };
 
 export type Session = { supabase: SupabaseClient; user: User; profile: Profile | null };
 

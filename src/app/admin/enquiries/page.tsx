@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import EnquiriesManager, { type AdminEnquiry } from "@/components/admin/EnquiriesManager";
 import { DashSkeleton } from "@/components/dashboard/ui";
-import { requireAdmin } from "@/lib/admin";
+import { requireStaff } from "@/lib/admin";
 
 export const metadata: Metadata = { title: "Enquiries" };
 
@@ -15,7 +15,7 @@ export default function EnquiriesPage() {
 }
 
 async function Content() {
-  const s = await requireAdmin("/admin/enquiries");
+  const { s, role } = await requireStaff("/admin/enquiries"); // counsellors: view + status (no delete)
   const { data, error } = await s.supabase
     .from("enquiries")
     .select("id,name,phone,email,class_year,message,source,status,created_at")
@@ -29,5 +29,5 @@ async function Content() {
       </p>
     );
   }
-  return <EnquiriesManager enquiries={(data ?? []) as AdminEnquiry[]} />;
+  return <EnquiriesManager enquiries={(data ?? []) as AdminEnquiry[]} canDelete={role === "admin"} />;
 }
