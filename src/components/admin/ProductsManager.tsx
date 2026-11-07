@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { deleteProduct, loadProductLinks, saveProduct, setProductFlag, type ProductInput } from "@/app/admin/actions";
@@ -55,6 +56,7 @@ export default function ProductsManager({ products, storage }: { products: Admin
   return (
     <>
       <AdminHeader title="Products" subtitle="Crash courses, study material, previous papers and mock tests. Changes show on the website immediately.">
+        <Link href="/admin/products/downloads" className="btn-light">Downloads</Link>
         <button type="button" onClick={() => setEditing("new")} className="btn-primary"><PlusIcon /> Add product</button>
       </AdminHeader>
 

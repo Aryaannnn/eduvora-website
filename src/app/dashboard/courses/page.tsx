@@ -68,7 +68,7 @@ async function CoursesContent({ searchParams }: { searchParams: PageProps<"/dash
         </p>
       )}
       <p className="mb-6 flex items-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm text-slate-600 ring-1 ring-slate-200">
-        <LockIcon className="h-4 w-4 shrink-0 text-emerald-600" /> Items you have paid for or unlocked for free appear here. Downloads use private links that expire in 60 seconds.
+        <LockIcon className="h-4 w-4 shrink-0 text-emerald-600" /> Items you have paid for or unlocked for free appear here. PDFs are personalised with your name for your own use — please don’t share them.
       </p>
 
       {free.tests.length > 0 && (

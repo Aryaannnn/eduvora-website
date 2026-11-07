@@ -198,6 +198,10 @@ export default function FilesManager({ productId }: { productId: string }) {
         <input ref={chooser} type="file" multiple accept=".pdf,.zip,application/pdf,application/zip" className="sr-only" onChange={(e) => { if (e.target.files) addFiles(e.target.files); e.target.value = ""; }} />
         <input ref={replacer} type="file" accept=".pdf,.zip,application/pdf,application/zip" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; if (f) void replace(f); e.target.value = ""; }} />
       </div>
+      <p className="mt-3 rounded-xl bg-amber-50 p-3 text-xs text-amber-900 ring-1 ring-amber-200">
+        🔒 <strong>Use PDF for important material.</strong> Every PDF a student downloads is watermarked with their name, email and a Download ID.
+        ZIP files can&apos;t be watermarked, so anyone could share them freely. Also avoid password-protected PDFs — they can&apos;t be watermarked and students would see &ldquo;Please try again&rdquo;.
+      </p>
 
       {errors.length > 0 && (
         <div role="alert" className="space-y-1 rounded-xl bg-red-50 p-3 text-sm text-red-700 ring-1 ring-red-200">
