@@ -6,13 +6,14 @@ import { useState } from "react";
 import Logo from "../Logo";
 import { useLogout } from "@/lib/useLogout";
 import { Spinner } from "../BuyButton";
-import { BookIcon, CalendarIcon, ClipboardIcon, CloseIcon, DotsIcon, GiftIcon, GridIcon, HeadsetIcon, LogoutIcon, ReceiptIcon, StarIcon, TargetIcon, UserIcon } from "../Icons";
+import { BookIcon, CalendarIcon, ClipboardIcon, CloseIcon, DotsIcon, GiftIcon, GridIcon, HeadsetIcon, LogoutIcon, ReceiptIcon, StarIcon, TargetIcon, UserIcon, ChartIcon } from "../Icons";
 import PredictorLockBadge from "../predictor/PredictorLockBadge";
 
 export const dashboardLinks = [
   { href: "/dashboard", label: "Home", icon: GridIcon },
   { href: "/dashboard/courses", label: "My Courses & Material", short: "Courses", icon: BookIcon },
   { href: "/dashboard/tests", label: "My Tests", short: "Tests", icon: ClipboardIcon },
+  { href: "/dashboard/progress", label: "My Progress", short: "Progress", icon: ChartIcon },
   { href: "/dashboard/predictor", label: "Rank & College Predictor", short: "Predictor", icon: TargetIcon },
   { href: "/dashboard/bookings", label: "My Bookings", short: "Bookings", icon: CalendarIcon },
   { href: "/dashboard/payments", label: "Payment History", icon: ReceiptIcon },

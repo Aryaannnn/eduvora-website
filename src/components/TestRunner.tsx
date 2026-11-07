@@ -4,10 +4,11 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 import { CheckIcon, ClockIcon, CloseIcon } from "./Icons";
+import AttemptReport, { type Report } from "./tests/AttemptReport";
 
 type Question = { id: string; question: string; options: string[]; marks: number };
 type TestData = { id: string; title: string; duration_minutes: number; total_marks: number; questions: Question[] };
-type Result = {
+type Result = Partial<Report> & {
   attempt_id: string | null;
   score: number;
   total_marks: number;
@@ -28,6 +29,22 @@ export default function TestRunner({ testId }: { testId: string }) {
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
   const startedAt = useRef<string>("");
+  // Seconds spent on each question (for "time per question" in the result)
+  const times = useRef<Record<string, number>>({});
+  const shownSince = useRef<number>(0);
+
+  /** Add the time since the current question was shown to that question. */
+  const accrue = useCallback(() => {
+    if (!test || !shownSince.current) return;
+    const q = test.questions[current];
+    const secs = (Date.now() - shownSince.current) / 1000;
+    if (q) times.current[q.id] = (times.current[q.id] ?? 0) + secs;
+    shownSince.current = Date.now();
+  }, [test, current]);
+  const goTo = (i: number) => {
+    accrue();
+    setCurrent(i);
+  };
 
   // Load the test
   useEffect(() => {
@@ -45,6 +62,7 @@ export default function TestRunner({ testId }: { testId: string }) {
       setTest(t);
       setSecondsLeft(t.duration_minutes * 60);
       startedAt.current = new Date().toISOString();
+      shownSince.current = Date.now();
       });
     });
   }, [supabase, testId]);
@@ -52,16 +70,23 @@ export default function TestRunner({ testId }: { testId: string }) {
   const submit = useCallback(async () => {
     if (!supabase || !test || submitting) return;
     setSubmitting(true);
-    const { data, error } = await supabase.rpc("submit_test", {
+    accrue();
+    const p_times = Object.fromEntries(Object.entries(times.current).map(([k, v]) => [k, Math.round(v)]));
+    let { data, error } = await supabase.rpc("submit_test", {
       p_test_id: test.id,
       p_answers: answers,
       p_started_at: startedAt.current || null,
+      p_times,
     });
+    // Before supabase/test-analytics.sql: the older submit_test has no p_times
+    if (error && /p_times|function|schema cache/i.test(error.message) && !/log in|buy/i.test(error.message)) {
+      ({ data, error } = await supabase.rpc("submit_test", { p_test_id: test.id, p_answers: answers, p_started_at: startedAt.current || null }));
+    }
     setSubmitting(false);
     if (error) return alert("Could not submit: " + error.message);
     setResult(data as Result);
     window.scrollTo({ top: 0, behavior: "smooth" });
-  }, [supabase, test, answers, submitting]);
+  }, [supabase, test, answers, submitting, accrue]);
 
   // Countdown timer — auto-submits when time is up
   useEffect(() => {
@@ -100,6 +125,7 @@ export default function TestRunner({ testId }: { testId: string }) {
   if (test.questions.length === 0) return <p className="card p-8 text-center">This test has no questions yet.</p>;
 
   // ---------- Results ----------
+  if (result?.questions && result.attempt_id) return <div className="animate-fade-up"><AttemptReport r={result as Report} /></div>;
   if (result) {
     const pct = result.total_marks ? Math.round((result.score / result.total_marks) * 100) : 0;
     return (
@@ -186,9 +212,9 @@ export default function TestRunner({ testId }: { testId: string }) {
       </div>
 
       <div className="mt-8 flex justify-between gap-3">
-        <button type="button" onClick={() => setCurrent((c) => c - 1)} disabled={current === 0} className="btn-light disabled:opacity-40">Previous</button>
+        <button type="button" onClick={() => goTo(current - 1)} disabled={current === 0} className="btn-light disabled:opacity-40">Previous</button>
         {current < test.questions.length - 1 ? (
-          <button type="button" onClick={() => setCurrent((c) => c + 1)} className="btn-primary">Next</button>
+          <button type="button" onClick={() => goTo(current + 1)} className="btn-primary">Next</button>
         ) : (
           <button type="button" onClick={submit} disabled={submitting} className="btn-accent disabled:opacity-60">
             {submitting ? "Submitting…" : `Submit Test (${answered}/${test.questions.length})`}

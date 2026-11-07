@@ -10,6 +10,7 @@
 import { updateTag } from "next/cache";
 import { adminOrError, friendlyDbError, isError, staffOrError, type ActionResult } from "@/lib/admin";
 import { yearInIndia } from "@/lib/format";
+import { SUBJECTS } from "@/lib/subjects";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import { notifyBookingChanged, notifyBookingConfirmed, notifyMeetLinkReady, notifyPurchasePaid, sendKind } from "@/lib/email/notify";
 import { disconnectCalendar, syncBookingCalendar } from "@/lib/google-calendar";
@@ -347,7 +348,11 @@ export async function deleteTest(id: string): Promise<ActionResult> {
   return dbResult(error, "Test deleted (with its questions and attempts).");
 }
 
-export type QuestionInput = { id?: string; test_id: string; question: string; options: string[]; correct_option: number; explanation?: string; marks: number | string; sort_order?: number };
+export type QuestionInput = {
+  id?: string; test_id: string; question: string; options: string[]; correct_option: number; explanation?: string; marks: number | string; sort_order?: number;
+  /** Physics, Chemistry, Mathematics, Biology, English, Aptitude (or empty) */
+  subject?: string; topic?: string;
+};
 
 function validateQuestion(q: QuestionInput): string | null {
   if (!q.question?.trim()) return "Question text is empty.";
@@ -355,6 +360,8 @@ function validateQuestion(q: QuestionInput): string | null {
   if (![0, 1, 2, 3].includes(Number(q.correct_option))) return "Correct answer must be A, B, C or D.";
   const marks = int(q.marks);
   if (!marks || marks < 1) return "Marks must be 1 or more.";
+  if (q.subject && !(SUBJECTS as readonly string[]).includes(q.subject)) return `Subject must be one of: ${SUBJECTS.join(", ")} (or empty).`;
+  if ((q.topic ?? "").trim().length > 100) return "Topic must be under 100 characters.";
   return null;
 }
 
@@ -366,7 +373,12 @@ const questionRow = (q: QuestionInput) => ({
   explanation: q.explanation?.trim() || null,
   marks: int(q.marks) ?? 1,
   sort_order: q.sort_order ?? 0,
+  // only sent when given, so saving still works before supabase/test-analytics.sql is run
+  ...(q.subject !== undefined ? { subject: q.subject || null } : {}),
+  ...(q.topic !== undefined ? { topic: q.topic.trim() || null } : {}),
 });
+const subjectSetup = (e: { message: string } | null) =>
+  e && /subject|topic/.test(e.message) && /column|schema/.test(e.message) ? fail("Run supabase/test-analytics.sql in Supabase first (adds subject and topic).") : null;
 
 export async function saveQuestion(q: QuestionInput): Promise<ActionResult> {
   const s = await adminOrError();
@@ -378,7 +390,7 @@ export async function saveQuestion(q: QuestionInput): Promise<ActionResult> {
     ? await s.supabase.from("questions").update(row).eq("id", q.id)
     : await s.supabase.from("questions").insert(row);
   updateTag("products");
-  return dbResult(error, q.id ? "Question saved." : "Question added.");
+  return subjectSetup(error) ?? dbResult(error, q.id ? "Question saved." : "Question added.");
 }
 
 export async function deleteQuestion(id: string): Promise<ActionResult> {
@@ -402,7 +414,7 @@ export async function bulkAddQuestions(testId: string, rows: QuestionInput[]): P
   const start = (last?.sort_order ?? 0) + 1;
   const { error } = await s.supabase.from("questions").insert(rows.map((r, i) => questionRow({ ...r, test_id: testId, sort_order: start + i })));
   updateTag("products");
-  return dbResult(error, `${rows.length} question(s) added.`);
+  return subjectSetup(error) ?? dbResult(error, `${rows.length} question(s) added.`);
 }
 
 // ---------------------------------------------------------------- REVIEWS

@@ -70,3 +70,12 @@ export function csvDateTimeIST(iso: string | Date) {
 export function yearInIndia() {
   return Number(new Intl.DateTimeFormat("en-CA", { year: "numeric", timeZone: IST }).format(new Date()));
 }
+
+/** 754 → "12 min 34 s", 45 → "45 s", 3720 → "1 h 2 min" */
+export function formatDuration(totalSeconds: number | null | undefined): string {
+  const t = Math.max(0, Math.round(Number(totalSeconds) || 0));
+  const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), sec = t % 60;
+  if (h) return `${h} h${m ? ` ${m} min` : ""}`;
+  if (m) return `${m} min${sec ? ` ${sec} s` : ""}`;
+  return `${sec} s`;
+}

@@ -4,17 +4,23 @@ import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { bulkAddQuestions, deleteQuestion, deleteTest, saveQuestion, saveTest, type QuestionInput } from "@/app/admin/actions";
 import { parseCsv } from "@/lib/csv";
+import { formatDuration } from "@/lib/format";
+import { normaliseSubject, SUBJECTS } from "@/lib/subjects";
 import { DownloadIcon, EditIcon, PlusIcon, TrashIcon, UploadIcon } from "../Icons";
 import { AdminHeader, Label, Modal, Notice, Pill, Toggle } from "./ui";
 
 export type AdminTest = { id: string; title: string; type: "mock" | "mcq"; duration_minutes: number; total_marks: number; is_free: boolean; is_active: boolean; product_id: string | null; created_at: string };
-export type AdminQuestion = { id: string; test_id: string; question: string; options: string[]; correct_option: number; explanation: string | null; marks: number; sort_order: number };
+export type AdminQuestion = { id: string; test_id: string; question: string; options: string[]; correct_option: number; explanation: string | null; marks: number; sort_order: number; subject?: string | null; topic?: string | null };
+export type TestStats = {
+  test_id: string; attempts: number; students: number; avg_score: number; avg_percent: number; avg_seconds: number;
+  missed: { question_id: string; question: string; subject: string | null; topic: string | null; wrong: number; skipped: number; wrong_percent: number }[];
+};
 type Product = { id: string; title: string; category: string };
 type Msg = { kind: "error" | "success"; text: string } | null;
 
 const LETTERS = ["A", "B", "C", "D"];
 
-export default function TestsManager({ tests, questions, products }: { tests: AdminTest[]; questions: AdminQuestion[]; products: Product[] }) {
+export default function TestsManager({ tests, questions, products, stats = [], subjectsReady = true }: { tests: AdminTest[]; questions: AdminQuestion[]; products: Product[]; stats?: TestStats[]; subjectsReady?: boolean }) {
   const router = useRouter();
   const [selectedId, setSelectedId] = useState<string | null>(tests[0]?.id ?? null);
   const [testForm, setTestForm] = useState<AdminTest | "new" | null>(null);
@@ -23,6 +29,7 @@ export default function TestsManager({ tests, questions, products }: { tests: Ad
   const [pending, start] = useTransition();
 
   const selected = tests.find((t) => t.id === selectedId) ?? null;
+  const stat = stats.find((x) => x.test_id === selectedId) ?? null;
   const qs = questions.filter((q) => q.test_id === selectedId);
   const countFor = (id: string) => questions.filter((q) => q.test_id === id).length;
   const productTitle = (id: string | null) => products.find((p) => p.id === id)?.title;
@@ -59,6 +66,7 @@ export default function TestsManager({ tests, questions, products }: { tests: Ad
                     <span className="block font-semibold text-slate-900">{t.title}</span>
                     <span className="block text-xs text-slate-500">
                       {t.type === "mcq" ? "MCQ" : "Mock"} · {countFor(t.id)} questions · {t.is_free ? "Free" : "Paid"}{t.is_active ? "" : " · Hidden"}
+                      {stats.find((x) => x.test_id === t.id) && ` · ${stats.find((x) => x.test_id === t.id)!.attempts} attempts`}
                     </span>
                   </button>
                 </li>
@@ -89,6 +97,8 @@ export default function TestsManager({ tests, questions, products }: { tests: Ad
               </div>
             </div>
 
+            <StatsCard stat={stat} total={selected.total_marks} />
+
             <CsvUpload testId={selected.id} onDone={(m) => { setMsg(m); if (m?.kind === "success") router.refresh(); }} />
 
             <div className="card p-5">
@@ -114,7 +124,10 @@ export default function TestsManager({ tests, questions, products }: { tests: Ad
                           <li key={j} className={j === q.correct_option ? "font-bold text-green-700" : "text-slate-600"}>{LETTERS[j]}. {o}{j === q.correct_option && " ✓"}</li>
                         ))}
                       </ul>
-                      <p className="mt-2 text-xs text-slate-500">{q.marks} mark{q.marks > 1 ? "s" : ""}{q.explanation && ` · ${q.explanation}`}</p>
+                      <p className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
+                        {q.subject ? <span className="rounded-full bg-brand-50 px-2 py-0.5 font-semibold text-brand-700">{q.subject}{q.topic ? ` · ${q.topic}` : ""}</span> : subjectsReady && <span className="rounded-full bg-amber-50 px-2 py-0.5 font-semibold text-amber-700">No subject</span>}
+                        <span>{q.marks} mark{q.marks > 1 ? "s" : ""}{q.explanation && ` · ${q.explanation}`}</span>
+                      </p>
                     </li>
                   ))}
                 </ol>
@@ -152,6 +165,7 @@ export default function TestsManager({ tests, questions, products }: { tests: Ad
           pending={pending}
           onClose={() => setQForm(null)}
           onSubmit={(v) => run(() => saveQuestion(v), () => setQForm(null))}
+          subjectsReady={subjectsReady}
         />
       )}
     </>
@@ -199,17 +213,21 @@ function TestForm({ test, products, pending, onClose, onSubmit }: {
   );
 }
 
-function QuestionForm({ question, testId, nextOrder, pending, onClose, onSubmit }: {
-  question: AdminQuestion | null; testId: string; nextOrder: number; pending: boolean; onClose: () => void; onSubmit: (v: QuestionInput) => void;
+function QuestionForm({ question, testId, nextOrder, pending, onClose, onSubmit, subjectsReady }: {
+  question: AdminQuestion | null; testId: string; nextOrder: number; pending: boolean; onClose: () => void; onSubmit: (v: QuestionInput) => void; subjectsReady: boolean;
 }) {
   const [v, setV] = useState({
     question: question?.question ?? "", options: question?.options ?? ["", "", "", ""], correct_option: question?.correct_option ?? 0,
-    explanation: question?.explanation ?? "", marks: String(question?.marks ?? 1),
+    explanation: question?.explanation ?? "", marks: String(question?.marks ?? 1), subject: question?.subject ?? "", topic: question?.topic ?? "",
   });
   return (
     <Modal title={question ? "Edit question" : "Add question"} onClose={onClose} wide>
       <form
-        onSubmit={(e) => { e.preventDefault(); onSubmit({ ...v, id: question?.id, test_id: testId, sort_order: question?.sort_order ?? nextOrder }); }}
+        onSubmit={(e) => {
+          e.preventDefault();
+          const { subject, topic, ...rest } = v;
+          onSubmit({ ...rest, ...(subjectsReady ? { subject, topic } : {}), id: question?.id, test_id: testId, sort_order: question?.sort_order ?? nextOrder });
+        }}
         className="space-y-4"
       >
         <div><Label htmlFor="qf-q">Question *</Label><textarea id="qf-q" rows={3} value={v.question} onChange={(e) => setV({ ...v, question: e.target.value })} className="input" required /></div>
@@ -229,6 +247,20 @@ function QuestionForm({ question, testId, nextOrder, pending, onClose, onSubmit 
           <div><Label htmlFor="qf-exp">Explanation (shown after submitting)</Label><input id="qf-exp" value={v.explanation} onChange={(e) => setV({ ...v, explanation: e.target.value })} className="input" /></div>
           <div><Label htmlFor="qf-marks">Marks</Label><input id="qf-marks" type="number" min={1} value={v.marks} onChange={(e) => setV({ ...v, marks: e.target.value })} className="input" required /></div>
         </div>
+        {subjectsReady ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="qf-subject">Subject (for the student&apos;s subject-wise analysis)</Label>
+              <select id="qf-subject" value={v.subject} onChange={(e) => setV({ ...v, subject: e.target.value })} className="input">
+                <option value="">— Not set —</option>
+                {SUBJECTS.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            <div><Label htmlFor="qf-topic">Topic (optional)</Label><input id="qf-topic" value={v.topic} maxLength={100} onChange={(e) => setV({ ...v, topic: e.target.value })} className="input" placeholder="e.g. Kinematics, Organic chemistry" /></div>
+          </div>
+        ) : (
+          <p className="text-xs text-amber-700">Run supabase/test-analytics.sql in Supabase to add Subject and Topic.</p>
+        )}
         <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
           <button type="button" onClick={onClose} className="btn-light">Cancel</button>
           <button type="submit" disabled={pending} className="btn-primary disabled:opacity-60">Save question</button>
@@ -264,7 +296,8 @@ function CsvUpload({ testId, onDone }: { testId: string; onDone: (m: Msg) => voi
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="font-bold text-slate-900">Bulk upload questions (CSV)</p>
-          <p className="text-xs text-slate-500">Columns: question, option_a, option_b, option_c, option_d, correct_option (A–D), explanation, marks</p>
+          <p className="text-xs text-slate-500">Columns: question, option_a, option_b, option_c, option_d, correct_option (A–D), explanation, marks, subject, topic</p>
+          <p className="text-xs text-slate-400">subject = {SUBJECTS.join(" / ")} (optional) · topic = any short text (optional)</p>
         </div>
         <button type="button" onClick={() => input.current?.click()} className="btn-light !px-4 !py-2 text-sm"><UploadIcon /> Choose CSV file</button>
       </div>
@@ -312,6 +345,52 @@ function csvToQuestions(text: string, testId: string): QuestionInput[] {
       correct_option: correct,
       explanation: header.includes("explanation") ? col(r, "explanation") : "",
       marks: header.includes("marks") && col(r, "marks") ? col(r, "marks") : 1,
+      ...(header.includes("subject") ? { subject: normaliseSubject(col(r, "subject")) || (col(r, "subject") ? `?${col(r, "subject")}` : "") } : {}),
+      ...(header.includes("topic") ? { topic: col(r, "topic").slice(0, 100) } : {}),
     };
   });
+}
+
+// ---------- How students do on this test ----------
+function StatsCard({ stat, total }: { stat: TestStats | null; total: number }) {
+  const [all, setAll] = useState(false);
+  if (!stat) return <div className="card p-5 text-sm text-slate-500">No attempts yet — statistics appear after students take this test.</div>;
+  const missed = all ? stat.missed : stat.missed.slice(0, 5);
+  return (
+    <div className="card p-5">
+      <h3 className="font-extrabold text-slate-900">How students are doing</h3>
+      <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {[
+          ["Attempts", String(stat.attempts)],
+          ["Students", String(stat.students)],
+          ["Average score", `${stat.avg_score}/${total} (${stat.avg_percent}%)`],
+          ["Average time", formatDuration(stat.avg_seconds)],
+        ].map(([k, v]) => (
+          <div key={k} className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-200">
+            <p className="text-xs font-semibold text-slate-500">{k}</p>
+            <p className="mt-0.5 text-lg font-extrabold text-slate-900">{v}</p>
+          </div>
+        ))}
+      </div>
+      <p className="mt-5 text-sm font-bold text-slate-800">Most-missed questions</p>
+      {stat.missed.length === 0 ? (
+        <p className="mt-1 text-sm text-slate-500">Nobody has missed a question yet.</p>
+      ) : (
+        <ol className="mt-2 space-y-2">
+          {missed.map((m) => (
+            <li key={m.question_id} className="flex items-center gap-3 text-sm">
+              <span className={`w-14 shrink-0 rounded-lg px-2 py-1 text-center text-xs font-extrabold ${m.wrong_percent >= 70 ? "bg-red-50 text-red-700" : m.wrong_percent >= 40 ? "bg-amber-50 text-amber-800" : "bg-slate-100 text-slate-700"}`}>{m.wrong_percent}%</span>
+              <span className="min-w-0 flex-1">
+                <span className="line-clamp-1 text-slate-800">{m.question}</span>
+                <span className="text-xs text-slate-500">{m.wrong} of {stat.attempts} got it wrong{m.skipped ? ` (${m.skipped} skipped)` : ""}{m.subject ? ` · ${m.subject}${m.topic ? ` · ${m.topic}` : ""}` : ""}</span>
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
+      {stat.missed.length > 5 && (
+        <button type="button" onClick={() => setAll(!all)} className="mt-2 text-xs font-semibold text-brand-700 underline">{all ? "Show top 5" : `Show all ${stat.missed.length}`}</button>
+      )}
+    </div>
+  );
 }

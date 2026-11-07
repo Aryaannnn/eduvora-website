@@ -38,7 +38,9 @@ async function TestsContent() {
 
   return (
     <>
-      <PageHeader title="My Tests" subtitle="Practise, track your scores and improve every week." />
+      <PageHeader title="My Tests" subtitle="Practise, track your scores and improve every week.">
+        <Link href="/dashboard/progress" className="btn-light">📈 My Progress</Link>
+      </PageHeader>
       <div className="space-y-6">
         <Panel title="Your tests">
           {free.length + bought.length === 0 ? (
@@ -88,6 +90,7 @@ async function TestsContent() {
                         <div className={`h-full rounded-full ${pct >= 70 ? "bg-green-500" : pct >= 40 ? "bg-amber-500" : "bg-red-500"}`} style={{ width: `${pct}%` }} />
                       </div>
                       <p className="w-16 text-right text-lg font-extrabold text-slate-900">{a.score}<span className="text-sm text-slate-400">/{total}</span></p>
+                      <Link href={`/dashboard/tests/review?attempt=${a.id}`} className="text-sm font-semibold text-brand-700 underline">Review</Link>
                     </div>
                   </li>
                 );
