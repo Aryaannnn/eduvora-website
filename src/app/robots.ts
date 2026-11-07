@@ -10,6 +10,6 @@ export default function robots(): MetadataRoute.Robots {
   const privatePaths = ["/admin", "/dashboard", "/api/", "/auth/", "/invoice/", "/booking-confirmed", "/payment-success", "/payment-failed"];
   return {
     rules: { userAgent: "*", allow: "/", disallow: PRE_LAUNCH ? [] : privatePaths },
-    ...(PRE_LAUNCH ? {} : { host: SITE_URL }),
+    ...(PRE_LAUNCH ? {} : { host: SITE_URL, sitemap: `${SITE_URL}/sitemap.xml` }),
   };
 }

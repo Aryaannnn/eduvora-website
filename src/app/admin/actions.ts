@@ -853,3 +853,69 @@ export async function saveCommunityLink(link: string): Promise<ActionResult> {
   if (error && /community_settings/.test(error.message)) return fail("Run supabase/whatsapp-community.sql in Supabase first.");
   return dbResult(error, v ? "Saved — the WhatsApp community banner is now shown." : "Link removed — the banner is hidden everywhere.");
 }
+
+// ---------------------------------------------------------------- BLOG (supabase/blog.sql)
+export type BlogPostInput = {
+  id?: string; title: string; slug: string; excerpt?: string; category: string; cover_image_url?: string;
+  content_html: string; seo_title?: string; seo_description?: string; status: "draft" | "published"; published_on?: string;
+};
+
+export async function saveBlogPost(input: BlogPostInput): Promise<ActionResult<{ id: string; slug: string }>> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const { BLOG_CATEGORIES, readingMinutes, slugify: blogSlug } = await import("@/lib/blog-shared");
+  const { cleanArticleHtml } = await import("@/lib/blog");
+
+  const title = input.title.trim();
+  if (title.length < 3) return fail("Please enter a title.");
+  const slug = blogSlug(input.slug || title);
+  if (!slug) return fail("Please enter a web address (slug) with letters or numbers.");
+  if (!(BLOG_CATEGORIES as readonly string[]).includes(input.category)) return fail("Please choose a category.");
+  const cover = input.cover_image_url?.trim() || null;
+  if (cover && !/^https:\/\//.test(cover)) return fail("The cover image must be a https:// link (upload one with the button).");
+  const html = cleanArticleHtml(input.content_html ?? ""); // allow-list cleaning on the server
+  if (input.status === "published" && html.replace(/<[^>]+>/g, "").trim().length < 20) return fail("Write a little more before publishing.");
+
+  // first time published → published now (or on the chosen date)
+  let publishedAt: string | null = null;
+  if (input.status === "published") {
+    if (input.published_on && /^\d{4}-\d{2}-\d{2}$/.test(input.published_on)) publishedAt = new Date(`${input.published_on}T09:00:00+05:30`).toISOString();
+    else if (input.id) {
+      const { data: old } = await s.supabase.from("blog_posts").select("published_at").eq("id", input.id).maybeSingle();
+      publishedAt = (old?.published_at as string | null) ?? null;
+    }
+    publishedAt ??= new Date().toISOString();
+  }
+
+  const row = {
+    title: title.slice(0, 160),
+    slug,
+    excerpt: input.excerpt?.trim().slice(0, 300) || null,
+    category: input.category,
+    cover_image_url: cover,
+    content_html: html,
+    seo_title: input.seo_title?.trim().slice(0, 70) || null,
+    seo_description: input.seo_description?.trim().slice(0, 170) || null,
+    reading_minutes: readingMinutes(html),
+    status: input.status,
+    published_at: publishedAt,
+    is_sample: false, // anything saved by the admin is a real post
+    updated_at: new Date().toISOString(),
+  };
+  const res = input.id
+    ? await s.supabase.from("blog_posts").update(row).eq("id", input.id).select("id,slug").single()
+    : await s.supabase.from("blog_posts").insert(row).select("id,slug").single();
+  updateTag("blog");
+  if (res.error && /blog_posts/.test(res.error.message) && /does not exist|schema cache|relation/.test(res.error.message)) return fail("Run supabase/blog.sql in Supabase first.");
+  if (res.error && /duplicate|unique/i.test(res.error.message)) return fail(`Another post already uses the address /blog/${slug}. Change the slug.`);
+  if (res.error) return fail(friendlyDbError(res.error.message));
+  return { ok: true, data: { id: res.data.id as string, slug: res.data.slug as string }, message: input.status === "published" ? "Published! 🎉" : "Draft saved." };
+}
+
+export async function deleteBlogPost(id: string): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const { error } = await s.supabase.from("blog_posts").delete().eq("id", id);
+  updateTag("blog");
+  return dbResult(error, "Post deleted.");
+}

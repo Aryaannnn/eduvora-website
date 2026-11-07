@@ -1,6 +1,15 @@
 import type { NextConfig } from "next";
 import { PRE_LAUNCH } from "./src/config/launch";
 
+// Supabase address (for blog pictures stored in the public 'blog-images' bucket)
+const supabaseHost = (() => {
+  try {
+    return new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").hostname;
+  } catch {
+    return "";
+  }
+})();
+
 const nextConfig: NextConfig = {
   /* config options here */
   cacheComponents: true,
@@ -9,7 +18,10 @@ const nextConfig: NextConfig = {
   images: {
     qualities: [75, 90],
     // YouTube thumbnails for video testimonials
-    remotePatterns: [{ protocol: "https", hostname: "i.ytimg.com", pathname: "/vi/**" }],
+    remotePatterns: [
+      { protocol: "https", hostname: "i.ytimg.com", pathname: "/vi/**" },
+      ...(supabaseHost ? [{ protocol: "https" as const, hostname: supabaseHost, pathname: "/storage/v1/object/public/blog-images/**" }] : []),
+    ],
   },
   // The small logo is read from disk when building PDF invoices (server routes)
   outputFileTracingIncludes: {
