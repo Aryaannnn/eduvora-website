@@ -45,3 +45,4 @@ next-env.d.ts
 # local tool settings and key files — never push
 .claude/settings.local.json
 *.key
+.env.sentry-build-plugin

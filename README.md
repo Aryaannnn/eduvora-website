@@ -62,6 +62,11 @@ the automatic jobs (cron-job.org) and pre-launch mode (`src/config/launch.ts`).
 👉 **[GOOGLE_CALENDAR.md](GOOGLE_CALENDAR.md)**: confirmed counselling bookings get a Google Calendar
 event with a Google Meet link automatically (one-time setup).
 
+## Error monitoring (Sentry)
+
+👉 **[SENTRY.md](SENTRY.md)**: free Sentry account, the 4 environment variables and email alerts
+for failed payments, bookings, emails and logins. No personal data is ever sent.
+
 ## Backups
 
 👉 **[BACKUPS.md](BACKUPS.md)**: the nightly encrypted database backup (GitHub Actions), the

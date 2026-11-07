@@ -22,6 +22,7 @@ import { createCipheriv, createDecipheriv, hkdfSync, randomBytes } from "node:cr
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { siteConfig } from "@/config/site";
 import { getAdminSupabase } from "./supabase/admin";
+import { reportFailure } from "./monitor";
 
 export const CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar.events";
 const API = "https://www.googleapis.com/calendar/v3/calendars/primary/events";
@@ -314,7 +315,7 @@ export async function syncBookingCalendar(bookingId: string): Promise<SyncResult
   } catch (e) {
     const notConnected = e instanceof NotConnected;
     const msg = (e as Error).message.slice(0, 300);
-    if (!notConnected) console.warn("[calendar] sync failed:", msg);
+    if (!notConnected) reportFailure("calendar", "Google Calendar sync failed (booking has no Meet link)", msg, { booking: b.id.slice(0, 8) });
     if (["cancelled", "expired"].includes(b.status)) {
       await save({ calendar_error: `Could not cancel the calendar event: ${msg}` });
     } else if (b.calendar_status !== "manual") {

@@ -7,6 +7,7 @@ import { getSession } from "@/lib/dashboard";
 import { markPurchasePaid } from "@/lib/payments-server";
 import { verifyPaymentSignature } from "@/lib/razorpay";
 import { getAdminSupabase } from "@/lib/supabase/admin";
+import { reportFailure } from "@/lib/monitor";
 
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: { "Cache-Control": "private, no-store" } });
 
@@ -28,7 +29,7 @@ export async function POST(request: NextRequest) {
   if (!verifyPaymentSignature(orderId, paymentId, signature)) {
     // Not marked 'failed' here: only Razorpay decides that. The automatic
     // check asks Razorpay what really happened to this order.
-    console.warn(`[payments] signature check failed for ${orderId}`);
+    reportFailure("payment", "Payment signature check failed", undefined, { purchase: purchase.id.slice(0, 8) });
     return json({ error: "We could not verify this payment." }, 400);
   }
 
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
   if (saved.error) {
     // The money IS with Razorpay. Don't show "failed" — send the student to the
     // status page, where "Check payment status" (or the webhook) completes it.
-    console.warn("[payments] mark paid failed:", saved.error);
+    reportFailure("payment", "Could not mark a PAID purchase as paid (student sees 'checking')", saved.error, { purchase: purchase.id.slice(0, 8) });
     return json({ ok: false, pending: true, redirect: `/payment-success?id=${purchase.id}` }, 202);
   }
   return json({ ok: true, redirect: `/payment-success?id=${saved.id ?? purchase.id}` });

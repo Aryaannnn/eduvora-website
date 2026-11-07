@@ -6,6 +6,7 @@ import { getSession } from "@/lib/dashboard";
 import { markBookingPaid } from "@/lib/bookings-server";
 import { verifyPaymentSignature } from "@/lib/razorpay";
 import { getAdminSupabase } from "@/lib/supabase/admin";
+import { reportFailure } from "@/lib/monitor";
 
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: { "Cache-Control": "private, no-store" } });
 
@@ -25,14 +26,14 @@ export async function POST(request: NextRequest) {
 
   if (!verifyPaymentSignature(orderId, paymentId, signature)) {
     // Not trusted. The hold stays until Razorpay itself tells us what happened.
-    console.warn(`[booking] signature check failed for ${orderId}`);
+    reportFailure("payment", "Booking payment signature check failed", undefined, { booking: booking.id.slice(0, 8) });
     return json({ error: "We could not verify this payment.", bookingId: booking.id }, 400);
   }
 
   const { error } = await markBookingPaid(admin, orderId, paymentId);
   if (error) {
     // The money IS with Razorpay → greeting page shows "Checking your payment" + a check button
-    console.warn("[booking] mark booking paid failed:", error);
+    reportFailure("booking", "Could not mark a PAID booking as paid (student sees 'checking')", error, { booking: booking.id.slice(0, 8) });
     return json({ ok: false, redirect: `/booking-confirmed?id=${booking.id}` }, 202);
   }
   return json({ ok: true, redirect: `/booking-confirmed?id=${booking.id}` });

@@ -13,6 +13,7 @@ import { claimReferralFromCookie, discountColumns, quote, recordCouponUse } from
 import { sweepStalePayments } from "@/lib/payments-server";
 import { createRazorpayOrder, isRazorpayConfigured } from "@/lib/razorpay";
 import { getAdminSupabase } from "@/lib/supabase/admin";
+import { reportFailure } from "@/lib/monitor";
 
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: { "Cache-Control": "private, no-store" } });
 
@@ -71,7 +72,7 @@ export async function POST(request: NextRequest) {
       user_id: session.user.id,
     });
   } catch (e) {
-    console.warn("[payments]", (e as Error).message);
+    reportFailure("payment", "Razorpay order could not be created", e);
     return json({ error: "Could not start the payment. Please try again in a minute." }, 502);
   }
 
@@ -82,7 +83,7 @@ export async function POST(request: NextRequest) {
   // Older database without the 'created' status (payment-statuses.sql not run yet)
   if (error && /status_check/.test(error.message)) ({ data: saved, error } = await admin.from("purchases").insert({ ...attempt, status: "pending" }).select("id").single());
   if (error) {
-    console.warn("[payments] could not save pending purchase:", error.message);
+    reportFailure("payment", "Could not save the payment attempt", error.message);
     return json({ error: "Could not start the payment. Please try again." }, 500);
   }
 

@@ -7,6 +7,7 @@ import { siteConfig } from "@/config/site";
 import { appOrigin } from "./site-url";
 import { getBrowserSupabase } from "./supabase/client";
 import { isSupabaseConfigured } from "./supabase/env";
+import { reportFailure } from "./monitor";
 
 export const AUTH_DEMO_MODE = !isSupabaseConfigured;
 
@@ -16,6 +17,19 @@ const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const toE164 = (phone: string) => `+91${phone}`;
 
 // Turns Supabase's technical errors into simple English
+/**
+ * Reports SYSTEM problems with logins to Sentry (not wrong passwords): Supabase
+ * down, email/SMS sending failing, rate limits, Google sign-in set up wrong.
+ */
+function watch(action: string, error: { message: string; status?: number } | null) {
+  if (!error) return;
+  const m = error.message.toLowerCase();
+  const status = error.status ?? 0;
+  if (status >= 500 || /failed to fetch|network|database error|unexpected|rate limit|smtp|error sending|sms|provider|not enabled|unsupported/.test(m)) {
+    reportFailure("login", `${action} failed`, error.message, { status });
+  }
+}
+
 function friendly(message: string, mode?: "signin" | "signup"): string {
   const m = message.toLowerCase();
   if (m.includes("signups not allowed") || m.includes("user not found"))
@@ -53,6 +67,7 @@ export async function signUpWithEmail(
       emailRedirectTo: `${appOrigin()}/auth/callback?next=${encodeURIComponent(next)}`,
     },
   });
+  watch("Email sign-up", error);
   if (error) return { ok: false, message: friendlyEmail(error.message) };
   // Supabase returns a user with no identities when the email is already registered
   if (data.user && data.user.identities?.length === 0)
@@ -67,6 +82,7 @@ export async function signInWithEmail(email: string, password: string): Promise<
   const supabase = getBrowserSupabase();
   if (!supabase) return { ok: false, message: "Login will work once Supabase is connected." };
   const { error } = await supabase.auth.signInWithPassword({ email, password });
+  watch("Email login", error);
   return error ? { ok: false, message: friendlyEmail(error.message) } : { ok: true };
 }
 
@@ -95,6 +111,7 @@ export async function requestPasswordReset(email: string): Promise<AuthResult> {
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${appOrigin()}/auth/callback?next=/reset-password`,
   });
+  watch("Password reset email", error);
   if (error) {
     const m = error.message.toLowerCase();
     if (m.includes("rate limit") || m.includes("security purposes") || m.includes("too many"))
@@ -137,6 +154,7 @@ export async function sendOtp(
       data: mode === "signup" && profile ? { full_name: profile.fullName, role: profile.role } : undefined,
     },
   });
+  watch("Phone OTP send", error);
   return error ? { ok: false, message: friendly(error.message, mode) } : { ok: true };
 }
 
@@ -168,6 +186,7 @@ export async function signInWithGoogle(next: string): Promise<AuthResult> {
       queryParams: { prompt: "select_account" }, // lets students choose which Google account
     },
   });
+  watch("Google sign-in", error);
   return error ? { ok: false, message: friendly(error.message) } : { ok: true };
 }
 

@@ -10,6 +10,7 @@ import "server-only";
 import { after } from "next/server";
 import { siteConfig } from "@/config/site";
 import { getAdminSupabase } from "../supabase/admin";
+import { reportFailure } from "../monitor";
 
 export type Attachment = { filename: string; content: Uint8Array };
 export type Email = { to: string; subject: string; html: string; attachments?: Attachment[] };
@@ -77,13 +78,13 @@ export async function sendAndLog(kind: string, refId: string | null, mail: Email
     }
     if (error) console.warn("[email] could not write the email log (run supabase/emails-invoices.sql?):", error.message);
   }
-  if (res.error) console.warn(`[email] ${kind} to ${mail.to} failed:`, res.error);
+  if (res.error) reportFailure("email", `Email "${kind}" could not be sent`, res.error); // (address is never sent to Sentry)
   return !res.error;
 }
 
 /** Run email work after the response is sent (never blocks or breaks the request). */
 export function inBackground(task: () => Promise<unknown>) {
-  const safe = () => task().catch((e) => console.warn("[email] background task failed:", (e as Error).message));
+  const safe = () => task().catch((e) => reportFailure("email", "Background email task failed", e));
   try {
     after(safe);
   } catch {

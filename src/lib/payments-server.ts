@@ -18,6 +18,7 @@ import { yearInIndia } from "./format";
 import { releaseStaleHolds } from "./bookings-server";
 import { notifyPurchasePaid } from "./email/notify";
 import { getOrderOutcome } from "./razorpay";
+import { reportFailure } from "./monitor";
 
 export const HIDDEN_STATUSES = ["created", "pending", "abandoned"] as const;
 export const OPEN_ATTEMPT_STATUSES = ["created", "pending"] as const; // not decided yet
@@ -46,7 +47,7 @@ export async function markPurchasePaid(db: SupabaseClient, orderId: string, paym
   if (!missingFunction(error)) return { id: null, error: error.message };
 
   // ---- Fallback: direct update with the service role key ----
-  console.warn("[payments] mark_purchase_paid() missing — run supabase/payments.sql. Using fallback update.");
+  reportFailure("payment", "mark_purchase_paid() missing — run supabase/payments.sql (using fallback)");
   const { data: p } = await db.from("purchases").select("id,status,invoice_number").eq("razorpay_order_id", orderId).maybeSingle();
   if (!p) return { id: null, error: "Order not found" };
   if (p.status === "paid") return { id: p.id, error: null };

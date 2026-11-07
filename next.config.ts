@@ -1,3 +1,4 @@
+import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
 import { PRE_LAUNCH } from "./src/config/launch";
 
@@ -59,4 +60,20 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// Error monitoring (Sentry) — only when NEXT_PUBLIC_SENTRY_DSN is set (see SENTRY.md).
+// With SENTRY_AUTH_TOKEN + SENTRY_ORG + SENTRY_PROJECT, readable code maps are uploaded
+// to Sentry during the Vercel build and then deleted, so they are never public.
+const sentryOn = !!(process.env.NEXT_PUBLIC_SENTRY_DSN ?? "").trim();
+const uploadMaps = !!(process.env.SENTRY_AUTH_TOKEN && process.env.SENTRY_ORG && process.env.SENTRY_PROJECT);
+
+export default sentryOn
+  ? withSentryConfig(nextConfig, {
+      org: process.env.SENTRY_ORG,
+      project: process.env.SENTRY_PROJECT,
+      authToken: process.env.SENTRY_AUTH_TOKEN,
+      silent: !process.env.CI,
+      telemetry: false,
+      widenClientFileUpload: true,
+      sourcemaps: { disable: !uploadMaps, deleteSourcemapsAfterUpload: true },
+    })
+  : nextConfig;

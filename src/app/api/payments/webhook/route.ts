@@ -9,6 +9,7 @@ import { markBookingPaid } from "@/lib/bookings-server";
 import { markPurchasePaid } from "@/lib/payments-server";
 import { isWebhookConfigured, verifyWebhookSignature } from "@/lib/razorpay";
 import { getAdminSupabase } from "@/lib/supabase/admin";
+import { reportFailure } from "@/lib/monitor";
 
 type PaymentEntity = { id: string; order_id: string | null; amount: number; status: string; error_description?: string | null };
 
@@ -17,6 +18,7 @@ export async function POST(request: NextRequest) {
 
   const raw = await request.text(); // the exact raw body is needed for the signature check
   if (!verifyWebhookSignature(raw, request.headers.get("x-razorpay-signature"))) {
+    reportFailure("payment", "Webhook signature check failed (check RAZORPAY_WEBHOOK_SECRET)");
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
@@ -38,9 +40,15 @@ export async function POST(request: NextRequest) {
     const { data: booking } = await admin.from("bookings").select("id,amount,payment_status").eq("razorpay_order_id", payment.order_id).maybeSingle();
     if (!booking) return NextResponse.json({ ok: true, ignored: "unknown order" });
     if (event.event === "payment.captured") {
-      if (payment.amount !== Number(booking.amount) * 100) return NextResponse.json({ ok: true, ignored: "amount mismatch" });
+      if (payment.amount !== Number(booking.amount) * 100) {
+        reportFailure("payment", "Webhook: booking amount mismatch", undefined, { booking: booking.id.slice(0, 8) });
+        return NextResponse.json({ ok: true, ignored: "amount mismatch" });
+      }
       const { error } = await markBookingPaid(admin, payment.order_id, payment.id);
-      if (error) return NextResponse.json({ error: "Could not save" }, { status: 500 });
+      if (error) {
+        reportFailure("booking", "Webhook: could not mark a PAID booking as paid", error, { booking: booking.id.slice(0, 8) });
+        return NextResponse.json({ error: "Could not save" }, { status: 500 });
+      }
     } else if (event.event === "payment.failed" && booking.payment_status === "pending") {
       // Failed → release the held slot (hidden 'expired'); a later success still confirms it
       await admin
@@ -54,11 +62,14 @@ export async function POST(request: NextRequest) {
 
   if (event.event === "payment.captured") {
     if (payment.amount !== purchase.amount * 100) {
-      console.warn(`[webhook] amount mismatch for ${payment.order_id}`);
+      reportFailure("payment", "Webhook: purchase amount mismatch", undefined, { purchase: purchase.id.slice(0, 8) });
       return NextResponse.json({ ok: true, ignored: "amount mismatch" });
     }
     const { error } = await markPurchasePaid(admin, payment.order_id, payment.id);
-    if (error) return NextResponse.json({ error: "Could not save" }, { status: 500 }); // Razorpay retries later
+    if (error) {
+      reportFailure("payment", "Webhook: could not mark a PAID purchase as paid", error, { purchase: purchase.id.slice(0, 8) });
+      return NextResponse.json({ error: "Could not save" }, { status: 500 }); // Razorpay retries later
+    }
   } else if (event.event === "payment.failed" && purchase.status !== "paid") {
     // Razorpay itself reports the failure → now it shows in the lists as 'failed'
     await admin

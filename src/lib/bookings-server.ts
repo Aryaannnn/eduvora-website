@@ -13,13 +13,17 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { notifyBookingConfirmed } from "./email/notify";
 import { discountColumns, quote, recordCouponUse } from "./pricing";
 import { createRazorpayOrder, getOrderOutcome, isRazorpayConfigured } from "./razorpay";
+import { reportFailure } from "./monitor";
 
 export const HOLD_MINUTES = 10;
 
 /** Payment verified → booking confirmed (+ invoice number) → confirmation emails (sent once). */
 export async function markBookingPaid(db: SupabaseClient, orderId: string, paymentId: string | null): Promise<{ id: string | null; error: string | null }> {
   const { data, error } = await db.rpc("mark_booking_paid", { p_order_id: orderId, p_payment_id: paymentId });
-  if (error) return { id: null, error: error.message };
+  if (error) {
+    reportFailure("booking", "mark_booking_paid() failed", error.message);
+    return { id: null, error: error.message };
+  }
   const row = (Array.isArray(data) ? data[0] : data) as { id: string; payment_status: string } | undefined;
   if (row?.id && row.payment_status === "paid") notifyBookingConfirmed(row.id);
   return { id: row?.id ?? null, error: null };
@@ -75,7 +79,7 @@ export async function startBooking(db: SupabaseClient, userId: string, input: Bo
     if (error.code === "PGRST202" || /could not find the function/i.test(error.message)) {
       return { kind: "error", status: 503, message: "Booking is being set up. (Admin: run supabase/booking-payment-first.sql in Supabase.)" };
     }
-    console.warn("[booking] hold failed:", error.message);
+    reportFailure("booking", "Could not hold the slot", error.message);
     return { kind: "error", status: 500, message: "Could not start the booking. Please try again." };
   }
   const held = (Array.isArray(data) ? data[0] : data) as Held;
@@ -97,7 +101,7 @@ export async function startBooking(db: SupabaseClient, userId: string, input: Bo
   if (q.final !== held.amount) {
     const { error: e1 } = await db.from("bookings").update({ amount: q.final, ...discountColumns(q) }).eq("id", held.id);
     if (e1) {
-      console.warn("[booking] discount not saved:", e1.message);
+      reportFailure("booking", "Discount could not be saved on the booking", e1.message);
       await releaseHold(db, held.id, "error");
       return { kind: "error", status: 500, message: "Could not apply the discount. Please try again." };
     }
@@ -110,7 +114,7 @@ export async function startBooking(db: SupabaseClient, userId: string, input: Bo
     if (e2) throw new Error(e2.message);
     return { kind: "order", bookingId: held.id, orderId: order.id, amountPaise: order.amount, currency: order.currency };
   } catch (e) {
-    console.warn("[booking] order failed:", (e as Error).message);
+    reportFailure("booking", "Razorpay order for a booking could not be created", e);
     await releaseHold(db, held.id, "error");
     return { kind: "error", status: 502, message: "Could not start the payment. Please try again in a minute." };
   }
@@ -194,7 +198,7 @@ export async function bookWithCredit(db: SupabaseClient, userId: string, input: 
     if (error.code === "PGRST202" || /could not find the function/i.test(error.message)) {
       return { kind: "error", status: 503, message: "Packages are being set up. (Admin: run supabase/packages.sql in Supabase.)" };
     }
-    console.warn("[booking] credit booking failed:", error.message);
+    reportFailure("booking", "Booking with a package credit failed", error.message);
     return { kind: "error", status: 500, message: "Could not book the slot. Please try again." };
   }
   const b = (Array.isArray(data) ? data[0] : data) as { id: string };
