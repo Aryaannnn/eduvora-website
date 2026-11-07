@@ -5,6 +5,7 @@
 // "Not now" closes it (and it won't show again for this item in this visit).
 import Link from "next/link";
 import { useState } from "react";
+import { track } from "@/lib/analytics";
 import { formatPrice } from "@/lib/format";
 import type { Suggestion } from "@/lib/free-resources";
 import { CalendarIcon, CloseIcon, DownloadIcon, RocketIcon } from "../Icons";
@@ -15,6 +16,7 @@ export default function FreeDownloadButton({ href, itemTitle, suggestion }: { hr
   const [open, setOpen] = useState(false);
 
   function onClick() {
+    track("free_resource", { action: "download" });
     if (shown.has(itemTitle)) return;
     shown.add(itemTitle);
     setTimeout(() => setOpen(true), 1200); // let the download start first

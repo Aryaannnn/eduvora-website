@@ -115,7 +115,7 @@ export const siteConfig = {
   },
 
   // Date shown on the policy pages
-  policiesUpdated: "5 November 2026",
+  policiesUpdated: "7 November 2026",
 
   // ---------- Login options (true = shown on the login page) ----------
   // Turn one on ONLY after switching it on in Supabase → Authentication → Sign In / Providers.

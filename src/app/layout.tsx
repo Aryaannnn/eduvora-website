@@ -6,6 +6,7 @@ import Footer from "@/components/Footer";
 import FloatingButtons from "@/components/FloatingButtons";
 import NavigationEffects from "@/components/NavigationEffects";
 import CompleteProfilePrompt from "@/components/auth/CompleteProfilePrompt";
+import SiteAnalytics from "@/components/analytics/SiteAnalytics";
 import { communityHref, getCommunityLink } from "@/lib/community";
 import { Suspense } from "react";
 import PrivatePageGuard from "@/components/auth/PrivatePageGuard";
@@ -56,6 +57,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <PrivatePageGuard />
         <Suspense fallback={null}>
           <ProfilePrompt />
+        </Suspense>
+        {/* Vercel Analytics + Speed Insights (+ Google Analytics if NEXT_PUBLIC_GA_ID is set) */}
+        <Suspense fallback={null}>
+          <SiteAnalytics />
         </Suspense>
       </body>
     </html>

@@ -27,6 +27,7 @@ Add each one for the **Production** environment. Add them for **Preview** too if
 | `RESEND_API_KEY` | Resend → API Keys | **yes** | no |
 | `ADMIN_EMAIL` | Where "new payment / booking / enquiry" alerts go | no | no |
 | `CONTACT_PHONE` | Your full phone number (full number + Call button only for paid students; WhatsApp chat uses it for everyone) | **yes** | no |
+| `NEXT_PUBLIC_GA_ID` | *Optional.* Google Analytics 4 Measurement ID (`G-…`). Leave it out to not use Google Analytics | no | no |
 | `WHATSAPP_PHONE` | *Optional.* A separate number just for WhatsApp chat. Leave it out to use `CONTACT_PHONE` | no | no |
 | `CRON_SECRET` | Any long random text (40+ characters) that protects the automatic jobs | **yes** | Use a new one for the live site (don't reuse the one on your computer) |
 
@@ -79,13 +80,42 @@ Both refuse to run (401) unless the request carries the header `Authorization: B
 6. Repeat for `EDUVORA reminders` with the URL `https://YOUR-ADDRESS/api/cron/reminders`.
 7. Click **Test run** on each one. You should see status **200** and a reply like `{"ok":true,…}`. A **401** means the header is wrong.
 
-## 6. Pre-launch mode (hidden from Google)
+## 6. Analytics (see who visits and what they do)
+
+**Vercel Analytics + Speed Insights** are already in the code — you only switch them on:
+
+1. Vercel → your project → **Analytics** tab → **Enable**.
+2. Vercel → your project → **Speed Insights** tab → **Enable**.
+3. Redeploy once (Deployments → ⋯ → Redeploy). Data appears within minutes of the first visits.
+
+**Google Analytics 4 (optional, free):**
+
+1. analytics.google.com → **Admin → Create → Property** (time zone: India, currency: INR) → **Web** data stream with your address.
+2. Copy the **Measurement ID** (`G-…`) → add it in Vercel as `NEXT_PUBLIC_GA_ID` → **Redeploy**.
+3. GA4 → **Reports → Realtime** shows visits within seconds; **Reports → Engagement → Events** shows the events below (they appear after ~24 hours).
+4. Optional: in GA4 **Admin → Events**, mark `payment_success` and `slot_booked` as **Key events** (conversions).
+
+**Events the website sends** (never names, emails or phone numbers):
+
+| Event | When |
+|---|---|
+| `sign_up` / `login` | account created / signed in (method: email, google or phone) |
+| `buy_click` | a Buy / Enroll / Get package button is clicked |
+| `payment_success` | the payment success page opens (amount + item type) |
+| `slot_booked` | a counselling slot is booked (paid, credit or free) |
+| `predictor_used` | the first prediction on a page (guest / free / full) |
+| `free_resource` | a free item is unlocked or downloaded |
+| `whatsapp_click`, `call_click`, `community_click` | WhatsApp / Call / WhatsApp community buttons |
+
+Note: custom events in **Vercel** Analytics need Vercel's Pro plan — on the free Hobby plan Vercel shows page views, visitors, countries, devices and referrers, while **Google Analytics shows all the events for free**.
+
+## 7. Pre-launch mode (hidden from Google)
 
 The site is in **pre-launch mode**: every page tells search engines "noindex". Anyone with the link can still open it.
 
 To launch publicly: open `src/config/launch.ts`, change `PRE_LAUNCH = true` to `false`, then commit and push.
 
-## 7. After the first deploy: quick checks
+## 8. After the first deploy: quick checks
 
 - Open the site, sign up, log in and log out.
 - Try "Forgot password". The email link should open your live address, not localhost.

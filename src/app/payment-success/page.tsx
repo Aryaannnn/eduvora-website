@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import CheckPaymentButton from "@/components/CheckPaymentButton";
+import TrackEvent from "@/components/analytics/TrackEvent";
 import DirectContact from "@/components/contact/DirectContact";
 import { CheckIcon, ClockIcon, ReceiptIcon } from "@/components/Icons";
 import { getContactAccess } from "@/lib/contact";
@@ -98,6 +99,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/payment-suc
 
   return (
     <div className="space-y-6">
+      {order && !free && <TrackEvent name="payment_success" onceKey={`pay-${order.id}`} props={{ value: order.amount, currency: "INR", item_type: order.products?.category ?? "item" }} />}
       <div className="card overflow-hidden">
         <div className="bg-emerald-50 px-6 py-8 text-center ring-1 ring-emerald-100 sm:px-10">
           <span className="mx-auto grid h-16 w-16 animate-fade-up place-items-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/30"><CheckIcon className="h-9 w-9" /></span>

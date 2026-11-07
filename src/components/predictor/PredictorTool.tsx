@@ -12,6 +12,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { siteConfig } from "@/config/site";
+import { track } from "@/lib/analytics";
 import { formatDateTime } from "@/lib/format";
 import { CHANCE_LABEL, MAX_MARKS, type Chance, type CollegeMatch, type Prediction } from "@/lib/predictor";
 import { CalendarIcon, DownloadIcon, LockIcon, TargetIcon, UserIcon } from "../Icons";
@@ -80,6 +81,7 @@ export default function PredictorTool({
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [printedAt, setPrintedAt] = useState("");
   const lastSaved = useRef("");
+  const usedOnce = useRef(false); // analytics: count one "predictor used" per visit
 
   const hasData = options.hasData;
   const full = access === "full";
@@ -99,6 +101,10 @@ export default function PredictorTool({
         const body = await res.json();
         if (!res.ok) throw new Error(body.error || "Could not calculate.");
         setResult(body as Result);
+        if (!usedOnce.current) {
+          usedOnce.current = true;
+          track("predictor_used", { access, method: (JSON.parse(key) as { inputType: string }).inputType, page: mode });
+        }
         setProblem("");
       } catch (e) {
         if ((e as Error).name !== "AbortError") setProblem((e as Error).message);
@@ -110,7 +116,7 @@ export default function PredictorTool({
       clearTimeout(id);
       ctrl.abort();
     };
-  }, [key, hasData, rankOk, guest]);
+  }, [key, hasData, rankOk, guest, access, mode]);
 
   // Logged-in students: save the prediction a moment after they stop changing it
   // (shows in "My Past Predictions" and in Admin -> Predictor as a lead)

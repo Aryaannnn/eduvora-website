@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import BookingCheckButton from "@/components/BookingCheckButton";
 import Confetti from "@/components/Confetti";
+import TrackEvent from "@/components/analytics/TrackEvent";
 import DirectContact from "@/components/contact/DirectContact";
 import { CalendarIcon, CheckIcon, ClockIcon, ReceiptIcon, TargetIcon } from "@/components/Icons";
 import { siteConfig } from "@/config/site";
@@ -117,6 +118,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/booking-con
 
   return (
     <div className="space-y-6">
+      <TrackEvent name="slot_booked" onceKey={`slot-${b.id}`} props={{ method: byCredit ? "credit" : isFree ? "free" : "paid", value: b.amount ?? 0, currency: "INR" }} />
       <div className="relative overflow-hidden rounded-[2rem] bg-white shadow-2xl shadow-brand-950/30 ring-4 ring-accent-400/70">
         <Confetti />
         {/* header */}

@@ -16,6 +16,7 @@ import { failedUrl, openCheckout, postJson, preloadCheckout } from "@/lib/razorp
 import { ShieldIcon } from "./Icons";
 import RefundNote from "./RefundNote";
 import { CheckoutDialog } from "./checkout/Checkout";
+import { track } from "@/lib/analytics";
 
 // ---- shared (one request per page) list of products this student owns ----
 type Owned = { loggedIn: boolean; owned: string[] };
@@ -88,6 +89,8 @@ export default function BuyButton({
   // Click: free → unlock now · logged out → login · paid → checkout window
   function start() {
     setError("");
+    if (free) track("free_resource", { action: "unlock", item_id: productId });
+    else track("buy_click", { item_id: productId });
     if (free || !loggedIn) return void buy();
     setCheckout(true);
   }

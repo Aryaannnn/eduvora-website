@@ -13,6 +13,7 @@ import {
   signUpWithEmail,
   verifyOtp,
 } from "@/lib/auth";
+import { track } from "@/lib/analytics";
 import { Field } from "./ContactForm";
 import { CheckIcon, GoogleIcon, MailIcon, PhoneIcon } from "./Icons";
 
@@ -87,12 +88,14 @@ export default function LoginForm({ initialMode = "signin" }: { initialMode?: Mo
       const res = await signUpWithEmail(email.trim(), password, profile(), nextPathFromUrl());
       setLoading("");
       if (!res.ok) return setError(res.message ?? "Could not create your account.");
+      track("sign_up", { method: "email" });
       if (res.needsConfirmation) return setStep("check-email");
       return goNext();
     }
     const res = await signInWithEmail(email.trim(), password);
     setLoading("");
     if (!res.ok) return setError(res.message ?? "Could not sign in.");
+    track("login", { method: "email" });
     goNext();
   }
 
@@ -121,6 +124,7 @@ export default function LoginForm({ initialMode = "signin" }: { initialMode?: Mo
     const res = await verifyOtp(phone, otp);
     setLoading("");
     if (!res.ok) return setError(res.message ?? "Wrong OTP. Please try again.");
+    track(mode === "signup" ? "sign_up" : "login", { method: "phone" });
     if (AUTH_DEMO_MODE) return setStep("done");
     goNext();
   }
@@ -130,6 +134,7 @@ export default function LoginForm({ initialMode = "signin" }: { initialMode?: Mo
     setError("");
     setInfo("");
     setLoading("google");
+    track(mode === "signup" ? "sign_up" : "login", { method: "google" }); // counted when they press the button
     const res = await signInWithGoogle(nextPathFromUrl());
     // On success the browser leaves for Google, so keep the spinner showing
     if (!res.ok) {
