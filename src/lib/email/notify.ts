@@ -13,6 +13,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { siteConfig } from "@/config/site";
 import { googleCalendarUrl, slotStart } from "../calendar";
+import { communityHref, getCommunityLink } from "../community";
 import { fullContactForPaidStudent } from "../contact";
 import { formatDate, formatDateTime, formatPrice, formatTime } from "../format";
 import { buildInvoicePdf, getInvoiceData, invoiceFileName } from "../invoices";
@@ -194,7 +195,8 @@ ${details([["New date & time", slotLine(b)], ["Booking ID", bookingRef(b.id)]])}
 <li>🎯 Try the free <strong>Rank Predictor</strong> — your full college list unlocks with counselling</li>
 <li>📚 Crash courses, study material, previous year papers and mock tests</li>
 </ul>
-<p>${button("Book Counselling", url("/book-a-slot"))}${button("Open Dashboard", url("/dashboard"), "navy")}</p>`,
+<p>${button("Book Counselling", url("/book-a-slot"))}${button("Open Dashboard", url("/dashboard"), "navy")}</p>
+${(await getCommunityLink()) ? `<p>${button("Join our WhatsApp community", url(communityHref("email")), "green")}</p><p style="font-size:13px;color:#64748b">Free VITEEE updates — important dates, results and counselling news.</p>` : ""}`,
       }),
     };
   },

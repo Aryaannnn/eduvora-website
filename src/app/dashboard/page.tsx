@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { DashSkeleton } from "@/components/dashboard/ui";
 import SessionCreditsCard from "@/components/packages/SessionCreditsCard";
+import CommunityBanner from "@/components/CommunityBanner";
 import { ArrowRightIcon, BookIcon, CalendarIcon, ClipboardIcon, GiftIcon, RocketIcon, TargetIcon } from "@/components/Icons";
 import { displayName, getMyAttempts, getMyBookings, getMyPurchases, nextBooking, paidOnly, requireUser } from "@/lib/dashboard";
 import { formatDate, formatTime } from "@/lib/format";
@@ -44,6 +45,9 @@ async function HomeContent() {
           )}
         </div>
       </section>
+
+      {/* WhatsApp community (only when a link is set) */}
+      <CommunityBanner from="dashboard" compact className="bg-white" />
 
       {/* Counselling package: "Sessions left: 2 of 3" */}
       <SessionCreditsCard credits={credits} />

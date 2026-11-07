@@ -838,3 +838,18 @@ export async function deleteVideoTestimonial(id: string): Promise<ActionResult> 
   updateTag("reviews");
   return dbResult(error, "Video deleted.");
 }
+
+// ---------------------------------------------------------------- WHATSAPP COMMUNITY (supabase/whatsapp-community.sql)
+/** Empty link = every "Join our WhatsApp community" banner is hidden. */
+export async function saveCommunityLink(link: string): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const v = link.trim();
+  if (v && !/^https:\/\/(chat\.whatsapp\.com|(www\.)?whatsapp\.com\/channel|wa\.me)\/\S+$/.test(v)) {
+    return fail("Paste a WhatsApp community / group / channel invite link, e.g. https://chat.whatsapp.com/… or https://whatsapp.com/channel/…");
+  }
+  const { error } = await s.supabase.from("community_settings").update({ whatsapp_link: v || null, updated_at: new Date().toISOString() }).eq("id", 1);
+  updateTag("community");
+  if (error && /community_settings/.test(error.message)) return fail("Run supabase/whatsapp-community.sql in Supabase first.");
+  return dbResult(error, v ? "Saved — the WhatsApp community banner is now shown." : "Link removed — the banner is hidden everywhere.");
+}

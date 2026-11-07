@@ -12,7 +12,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { siteConfig } from "@/config/site";
 import { getBrowserSupabase } from "@/lib/supabase/client";
-import { PhoneIcon } from "../Icons";
+import { PhoneIcon, WhatsAppIcon } from "../Icons";
 
 const SKIP_DAYS = 7;
 const HIDDEN_ON = ["/login", "/auth", "/admin", "/reset-password", "/forgot-password"];
@@ -27,15 +27,16 @@ function skippedRecently(uid: string) {
   }
 }
 
-export default function CompleteProfilePrompt() {
+/** communityHref: "Join our WhatsApp community" link (only when set in Admin → Settings) */
+export default function CompleteProfilePrompt({ communityHref = null }: { communityHref?: string | null }) {
   return (
     <Suspense fallback={null}>
-      <Prompt />
+      <Prompt communityHref={communityHref} />
     </Suspense>
   );
 }
 
-function Prompt() {
+function Prompt({ communityHref }: { communityHref: string | null }) {
   const pathname = usePathname();
   const router = useRouter();
   const [user, setUser] = useState<{ id: string; firstName: string } | null>(null);
@@ -132,6 +133,11 @@ function Prompt() {
             Skip for now
           </button>
         </form>
+        {communityHref && (
+          <a href={communityHref} target="_blank" rel="noopener noreferrer" className="mt-4 flex items-center justify-center gap-2 rounded-xl bg-[#25D366]/10 px-3 py-2.5 text-sm font-bold text-[#128C4B] ring-1 ring-[#25D366]/30 hover:bg-[#25D366]/15">
+            <WhatsAppIcon className="h-4 w-4" /> Join our free VITEEE WhatsApp community
+          </a>
+        )}
       </div>
     </div>
   );

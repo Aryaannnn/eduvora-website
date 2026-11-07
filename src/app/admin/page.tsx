@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { StatusBadge, DashSkeleton } from "@/components/dashboard/ui";
-import { CalendarIcon, ReceiptIcon, UsersIcon, ZapIcon } from "@/components/Icons";
+import { CalendarIcon, ReceiptIcon, UsersIcon, WhatsAppIcon, ZapIcon } from "@/components/Icons";
 import { requireAdmin } from "@/lib/admin";
 import { personLabel, profilesById } from "@/lib/admin-data";
 import { formatDate, formatDateTime, formatPrice, formatTime, todayInIndia } from "@/lib/format";
@@ -10,6 +10,11 @@ import { after } from "next/server";
 import { sendDueReminders } from "@/lib/email/notify";
 
 export const metadata: Metadata = { title: "Overview" };
+
+/** ISO time n days ago (used for "last 7 days" counts) */
+function daysAgoISO(n: number) {
+  return new Date(Date.now() - n * 86400000).toISOString();
+}
 
 export default function AdminOverview() {
   return (
@@ -27,7 +32,8 @@ async function Overview() {
   after(() => sendDueReminders().catch(() => {})); // session reminders also go out whenever the admin opens the dashboard
   const today = todayInIndia();
 
-  const [paidRes, paidBookingsRes, studentsRes, recentP, recentB, upcomingRes] = await Promise.all([
+  const weekAgo = daysAgoISO(7);
+  const [paidRes, paidBookingsRes, studentsRes, recentP, recentB, upcomingRes, wcClicks, wcWeek, wcSetting] = await Promise.all([
     s.supabase.from("purchases").select("amount,created_at").eq("status", "paid").limit(10000),
     // Online counselling payments (Razorpay) also count as revenue
     s.supabase.from("bookings").select("amount,paid_at,created_at").eq("payment_status", "paid").not("amount", "is", null).limit(10000),
@@ -35,7 +41,14 @@ async function Overview() {
     s.supabase.from("purchases").select("id,user_id,amount,status,created_at,products(title)").in("status", ["paid", "failed"]).order("created_at", { ascending: false }).limit(6),
     s.supabase.from("bookings").select("id,user_id,name,status,created_at,slots(date,start_time)").not("status", "in", "(awaiting_payment,expired)").order("created_at", { ascending: false }).limit(6),
     s.supabase.from("bookings").select("id,slots!inner(date)", { count: "exact", head: true }).in("status", ["pending", "confirmed"]).gte("slots.date", today),
+    // WhatsApp community clicks (supabase/whatsapp-community.sql)
+    s.supabase.from("community_clicks").select("source").limit(50000),
+    s.supabase.from("community_clicks").select("id", { count: "exact", head: true }).gte("created_at", weekAgo),
+    s.supabase.from("community_settings").select("whatsapp_link").eq("id", 1).maybeSingle(),
   ]);
+  const wcBySource = new Map<string, number>();
+  for (const c of (wcClicks.data ?? []) as { source: string }[]) wcBySource.set(c.source, (wcBySource.get(c.source) ?? 0) + 1);
+  const wcTotal = wcClicks.data?.length ?? 0;
 
   const paid = [
     ...((paidRes.data ?? []) as { amount: number; created_at: string }[]),
@@ -72,6 +85,29 @@ async function Overview() {
           </Link>
         ))}
       </div>
+
+      {/* WhatsApp community clicks */}
+      {!wcClicks.error && (
+        <Link href="/admin/settings#community" className="card card-hover flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#25D366] text-white"><WhatsAppIcon className="h-6 w-6" /></span>
+            <div>
+              <p className="text-sm font-semibold text-slate-500">WhatsApp community clicks</p>
+              <p className="text-2xl font-extrabold text-slate-900">
+                {wcTotal.toLocaleString("en-IN")} <span className="text-sm font-semibold text-slate-500">· {(wcWeek.count ?? 0).toLocaleString("en-IN")} in the last 7 days</span>
+              </p>
+              {!wcSetting.data?.whatsapp_link && <p className="text-xs font-semibold text-amber-700">No link set — the banner is hidden. Add it in Settings.</p>}
+            </div>
+          </div>
+          {wcTotal > 0 && (
+            <ul className="flex flex-wrap gap-2 text-xs">
+              {[...wcBySource.entries()].sort((a, b) => b[1] - a[1]).map(([src, n]) => (
+                <li key={src} className="rounded-full bg-slate-100 px-2.5 py-1 font-semibold capitalize text-slate-700">{src === "dates" ? "Important dates" : src}: {n}</li>
+              ))}
+            </ul>
+          )}
+        </Link>
+      )}
 
       <section className="card p-5 sm:p-6">
         <div className="flex flex-wrap items-baseline justify-between gap-2">

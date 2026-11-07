@@ -3,6 +3,7 @@ import Link from "next/link";
 import { CATEGORY_LABEL, getImportantDates, getSiteUpdates } from "@/lib/important-dates";
 import { countdown, dateRange, EmptyDates, OFFICIAL_NOTE, OfficialLink, STATUS_STYLE, StatusBadge } from "@/components/dates/DateBits";
 import { CalendarIcon, ExternalIcon, MegaphoneIcon } from "@/components/Icons";
+import CommunityBanner from "@/components/CommunityBanner";
 import PageHero from "@/components/PageHero";
 import Reveal from "@/components/Reveal";
 import { formatDayIST } from "@/lib/format";
@@ -71,6 +72,7 @@ export default async function ImportantDatesPage() {
 
         {/* ---------- Latest updates ---------- */}
         <aside className="lg:sticky lg:top-24 lg:self-start">
+          <CommunityBanner from="dates" compact className="mb-5 bg-white" />
           <div className="card p-5 sm:p-6">
             <h2 className="flex items-center gap-2 text-xl font-extrabold text-slate-900">
               <span className="grid h-9 w-9 place-items-center rounded-xl bg-accent-400 text-brand-950"><MegaphoneIcon className="h-5 w-5" /></span>

@@ -7,6 +7,7 @@ import EmptyState from "@/components/EmptyState";
 import { FreeProductCard, FreeTestCard } from "@/components/free/FreeResourceCard";
 import BookCallSection from "@/components/home/BookCallSection";
 import PackageCards from "@/components/packages/PackageCards";
+import CommunityBanner from "@/components/CommunityBanner";
 import ContactSection from "@/components/home/ContactSection";
 import FounderSection from "@/components/home/FounderSection";
 import HeroSlider from "@/components/home/HeroSlider";
@@ -65,6 +66,9 @@ export default async function Home() {
           </div>
         </section>
       )}
+
+      {/* WhatsApp community (hidden until a link is set in Admin → Settings) */}
+      <div className="pb-4"><CommunityBanner from="home" /></div>
 
       {/* Counselling packages (hidden when there are none) */}
       <section className="section bg-slate-50">

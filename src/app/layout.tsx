@@ -6,6 +6,8 @@ import Footer from "@/components/Footer";
 import FloatingButtons from "@/components/FloatingButtons";
 import NavigationEffects from "@/components/NavigationEffects";
 import CompleteProfilePrompt from "@/components/auth/CompleteProfilePrompt";
+import { communityHref, getCommunityLink } from "@/lib/community";
+import { Suspense } from "react";
 import PrivatePageGuard from "@/components/auth/PrivatePageGuard";
 import { PRE_LAUNCH } from "@/config/launch";
 import { siteConfig } from "@/config/site";
@@ -52,8 +54,16 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <FloatingButtons />
         <NavigationEffects />
         <PrivatePageGuard />
-        <CompleteProfilePrompt />
+        <Suspense fallback={null}>
+          <ProfilePrompt />
+        </Suspense>
       </body>
     </html>
   );
+}
+
+// "Complete your profile" popup (shown right after sign-up) + WhatsApp community link if set
+async function ProfilePrompt() {
+  const link = await getCommunityLink();
+  return <CompleteProfilePrompt communityHref={link ? communityHref("signup") : null} />;
 }
