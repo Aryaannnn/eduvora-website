@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import MyDataPanel from "@/components/dashboard/MyDataPanel";
 import ProfileForm from "@/components/dashboard/ProfileForm";
 import { DashSkeleton, PageHeader, Panel } from "@/components/dashboard/ui";
 import { initials } from "@/lib/format";
@@ -19,6 +20,8 @@ async function ProfileContent() {
   const s = await requireUser("/dashboard/profile");
   const name = displayName(s);
   const phone = (s.profile?.phone ?? "").replace(/^\+?91(?=\d{10}$)/, "");
+  // consent date (column from supabase/privacy.sql — missing before it is run)
+  const { data: c } = await s.supabase.from("profiles").select("consent_at").eq("id", s.user.id).maybeSingle();
 
   return (
     <>
@@ -34,6 +37,7 @@ async function ProfileContent() {
           <ProfileForm userId={s.user.id} email={s.user.email ?? ""} fullName={s.profile?.full_name ?? ""} phone={phone} />
         </Panel>
       </div>
+      <div className="mt-6"><MyDataPanel isAdmin={s.profile?.role === "admin"} consentAt={(c?.consent_at as string | null | undefined) ?? null} /></div>
     </>
   );
 }

@@ -932,3 +932,20 @@ export async function logAdminSignIn(firstSetup: boolean): Promise<ActionResult>
   });
   return dbResult(error);
 }
+
+// ---------------------------------------------------------------- ACCOUNT DELETION (supabase/privacy.sql)
+/** An admin deletes a student's account on request (type DELETE). Payment records are kept, anonymised. */
+export async function adminDeleteAccount(userId: string, confirmText: string): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  if (confirmText.trim() !== "DELETE") return fail("Type DELETE to confirm.");
+  if (userId === s.user.id) return fail("You can't delete your own admin account here.");
+  const { data: p } = await s.supabase.from("profiles").select("full_name,email,role").eq("id", userId).maybeSingle();
+  if (p?.role === "admin") return fail("Remove the admin role first, then delete the account.");
+  const who = (p?.full_name as string | null) || (p?.email as string | null) || "a student";
+  const { deleteAccount } = await import("@/lib/account");
+  const res = await deleteAccount(userId, "admin", s.user.id);
+  if (!res.ok) return fail(res.error);
+  await s.supabase.rpc("log_admin_event", { p_action: "account.delete", p_summary: `Deleted the account of ${who} (on request)`, p_details: {} }).then(() => undefined, () => undefined);
+  return { ok: true, message: `Account of ${who} deleted. Payment records were kept without personal details. A confirmation email was sent.` };
+}

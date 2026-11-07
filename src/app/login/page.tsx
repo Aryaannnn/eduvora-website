@@ -82,6 +82,13 @@ async function FormWithMode({ searchParams }: { searchParams: PageProps<"/login"
 // Shown after clicking Logout (/login?loggedOut=1)
 async function LoggedOutNotice({ searchParams }: { searchParams: PageProps<"/login">["searchParams"] }) {
   const sp = await searchParams;
+  if (sp.loggedOut === "deleted") {
+    return (
+      <p role="status" className="mt-4 rounded-xl bg-emerald-50 px-4 py-2.5 text-center text-sm font-semibold text-emerald-800 ring-1 ring-emerald-200">
+        ✓ Your account has been deleted. A confirmation email is on its way. Thank you for using {siteConfig.businessName}.
+      </p>
+    );
+  }
   if (sp.loggedOut === "idle") {
     return (
       <p role="status" className="mt-4 rounded-xl bg-amber-50 px-4 py-2.5 text-center text-sm font-semibold text-amber-900 ring-1 ring-amber-200">

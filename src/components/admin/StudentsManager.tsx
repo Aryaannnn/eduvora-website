@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { adjustSessionCredits, setPredictorAccess, setUserRole } from "@/app/admin/actions";
+import { adjustSessionCredits, adminDeleteAccount, setPredictorAccess, setUserRole } from "@/app/admin/actions";
 import { csvDateTimeIST, formatDateTime } from "@/lib/format";
 import { LockIcon, SearchIcon, ShieldIcon, TargetIcon } from "../Icons";
 import { AdminHeader, Notice, downloadCsv } from "./ui";
@@ -56,6 +56,21 @@ export default function StudentsManager({ students, currentUserId, setupMissing 
     (s) => (!onlyFree || s.freeItems.length > 0) && (!q || `${s.full_name ?? ""} ${s.email ?? ""} ${s.phone ?? ""}`.toLowerCase().includes(q.toLowerCase())),
   );
   const freeUsers = students.filter((s) => s.freeItems.length > 0).length;
+
+  // Deletion request (student asked by email/WhatsApp): type DELETE to confirm
+  const deleteAccount = (s: AdminStudent) => {
+    const who = s.full_name || s.email || "this student";
+    const typed = prompt(
+      `Delete the account of ${who}?\n\n• Deleted: login, profile, predictions, test results, enquiries, reviews, credits.\n• Kept without name/email/phone: payment and invoice records (tax).\n• They get a confirmation email.\n\nThis can't be undone. Type DELETE to confirm:`,
+      "",
+    );
+    if (typed === null) return;
+    start(async () => {
+      const res = await adminDeleteAccount(s.id, typed);
+      setMsg(res.ok ? { kind: "success", text: res.message ?? "Deleted." } : { kind: "error", text: res.error });
+      if (res.ok) router.refresh();
+    });
+  };
 
   const changeRole = (s: AdminStudent, role: "admin" | "student") => {
     const who = s.full_name || s.email || "this user";
@@ -201,7 +216,10 @@ export default function StudentsManager({ students, currentUserId, setupMissing 
                   ) : s.role === "admin" ? (
                     <button type="button" onClick={() => changeRole(s, "student")} className="btn-light !px-3 !py-1.5 text-xs !text-red-600">Remove admin</button>
                   ) : (
-                    <button type="button" onClick={() => changeRole(s, "admin")} className="btn-light !px-3 !py-1.5 text-xs"><ShieldIcon className="h-4 w-4" /> Make admin</button>
+                    <div className="flex flex-col items-end gap-1.5">
+                      <button type="button" onClick={() => changeRole(s, "admin")} className="btn-light !px-3 !py-1.5 text-xs"><ShieldIcon className="h-4 w-4" /> Make admin</button>
+                      <button type="button" onClick={() => deleteAccount(s)} className="text-xs font-semibold text-red-600 underline">Delete account</button>
+                    </div>
                   )}
                 </td>
               </tr>

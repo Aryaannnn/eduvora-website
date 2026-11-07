@@ -3,6 +3,7 @@
 //  Phone number + OTP and Google sign-in.
 //  If Supabase keys are not set in .env.local yet, it runs in DEMO mode.
 // =====================================================================
+import { siteConfig } from "@/config/site";
 import { appOrigin } from "./site-url";
 import { getBrowserSupabase } from "./supabase/client";
 import { isSupabaseConfigured } from "./supabase/env";
@@ -47,7 +48,8 @@ export async function signUpWithEmail(
     email,
     password,
     options: {
-      data: { full_name: profile.fullName, role: profile.role }, // saved to the profile by the database trigger
+      // saved to the profile by the database trigger — incl. the Privacy Policy / Terms consent (date is set by the database)
+      data: { full_name: profile.fullName, role: profile.role, privacy_consent: "true", consent_version: siteConfig.policiesUpdated },
       emailRedirectTo: `${appOrigin()}/auth/callback?next=${encodeURIComponent(next)}`,
     },
   });

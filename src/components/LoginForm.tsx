@@ -69,7 +69,7 @@ export default function LoginForm({ initialMode = "signin" }: { initialMode?: Mo
   function signupChecks(): string {
     if (mode !== "signup") return "";
     if (name.trim().length < 2) return "Please enter your full name.";
-    if (!agree) return "Please accept the Terms & Privacy Policy to continue.";
+    if (!agree) return "Please tick “I agree to the Privacy Policy and Terms & Conditions” to continue.";
     return "";
   }
 
@@ -322,8 +322,8 @@ export default function LoginForm({ initialMode = "signin" }: { initialMode?: Mo
               <label className="flex items-start gap-2.5 text-sm text-slate-600">
                 <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-brand-600" />
                 <span>
-                  I agree to the <Link href="/terms-and-conditions" className="font-semibold text-brand-700 underline">Terms</Link> and{" "}
-                  <Link href="/privacy-policy" className="font-semibold text-brand-700 underline">Privacy Policy</Link>.
+                  I agree to the <Link href="/privacy-policy" target="_blank" className="font-semibold text-brand-700 underline">Privacy Policy</Link> and{" "}
+                  <Link href="/terms-and-conditions" target="_blank" className="font-semibold text-brand-700 underline">Terms &amp; Conditions</Link>. <span className="text-red-600">*</span>
                 </span>
               </label>
             )}
