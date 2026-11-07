@@ -780,3 +780,61 @@ export async function deleteSiteUpdate(id: string): Promise<ActionResult> {
   updateTag("important-dates");
   return dbResult(error, "Update deleted.");
 }
+
+// ---------------------------------------------------------------- VIDEO TESTIMONIALS (supabase/video-testimonials.sql)
+export type VideoInput = {
+  id?: string; youtube: string; student_name: string; achievement?: string; year?: number | string | null;
+  consent_confirmed: boolean; is_published: boolean; sort_order?: number | string;
+};
+
+export async function saveVideoTestimonial(input: VideoInput): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const { youtubeId } = await import("@/lib/youtube");
+  const vid = youtubeId(input.youtube);
+  if (!vid) return fail("Please paste a valid YouTube link (e.g. https://youtu.be/… or https://www.youtube.com/watch?v=…).");
+  const name = input.student_name.trim();
+  if (name.length < 2) return fail("Please enter the student's name.");
+  const year = int(input.year);
+  if (year !== null && (Number.isNaN(year) || year < 2000 || year > 2100)) return fail("Please enter a valid year, e.g. 2025.");
+  if (input.is_published && !input.consent_confirmed) return fail("Tick the consent box before showing this video on the website.");
+
+  // keep the original consent time when editing
+  let consentAt: string | null = null;
+  if (input.consent_confirmed && input.id) {
+    const { data: old } = await s.supabase.from("video_testimonials").select("consent_confirmed,consent_at").eq("id", input.id).maybeSingle();
+    consentAt = old?.consent_confirmed ? (old.consent_at as string | null) : null;
+  }
+  const row = {
+    youtube_id: vid,
+    student_name: name.slice(0, 80),
+    achievement: input.achievement?.trim().slice(0, 120) || null,
+    year,
+    consent_confirmed: input.consent_confirmed,
+    consent_at: input.consent_confirmed ? consentAt ?? new Date().toISOString() : null,
+    consent_by: input.consent_confirmed ? s.user.id : null,
+    is_published: input.is_published && input.consent_confirmed,
+    sort_order: int(input.sort_order) ?? 0,
+  };
+  const res = input.id ? await s.supabase.from("video_testimonials").update(row).eq("id", input.id) : await s.supabase.from("video_testimonials").insert(row);
+  updateTag("reviews");
+  if (res.error && /video_testimonials/.test(res.error.message)) return fail("Run supabase/video-testimonials.sql in Supabase first.");
+  return dbResult(res.error, input.id ? "Video saved." : "Video added.");
+}
+
+export async function setVideoPublished(id: string, value: boolean): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const { error } = await s.supabase.from("video_testimonials").update({ is_published: value }).eq("id", id);
+  updateTag("reviews");
+  if (error && /check/i.test(error.message)) return fail("Confirm the student's consent first (Edit → consent box).");
+  return dbResult(error);
+}
+
+export async function deleteVideoTestimonial(id: string): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const { error } = await s.supabase.from("video_testimonials").delete().eq("id", id);
+  updateTag("reviews");
+  return dbResult(error, "Video deleted.");
+}

@@ -111,3 +111,24 @@ export async function getSiteStats(): Promise<SiteStat[]> {
 
 // Rank & College Predictor data is PRIVATE (server only; the college list is for paid counselling) —
 // it is loaded on the server in src/lib/predictor-server.ts
+
+// ---------------------------------------------------------------- VIDEO TESTIMONIALS
+// Only videos with the student's consent confirmed (supabase/video-testimonials.sql).
+export type VideoTestimonial = { id: string; youtube_id: string; student_name: string; achievement: string | null; year: number | null };
+
+export async function getVideoTestimonials(): Promise<VideoTestimonial[]> {
+  "use cache";
+  cacheTag("reviews");
+  const supabase = getPublicSupabase();
+  if (!supabase) return (ok(), []);
+  const { data, error } = await supabase
+    .from("video_testimonials")
+    .select("id,youtube_id,student_name,achievement,year")
+    .eq("is_published", true)
+    .eq("consent_confirmed", true)
+    .order("sort_order")
+    .order("created_at", { ascending: false });
+  if (error) return (retrySoon("getVideoTestimonials", error.message), []);
+  ok();
+  return (data ?? []) as VideoTestimonial[];
+}

@@ -18,14 +18,15 @@ import Reveal from "@/components/Reveal";
 import SectionHeading from "@/components/SectionHeading";
 import { faqs } from "@/data/misc";
 import PredictorGate from "@/components/predictor/PredictorGate";
-import { getApprovedReviews, getProducts, getUpcomingSlots } from "@/lib/data";
+import { getApprovedReviews, getProducts, getUpcomingSlots, getVideoTestimonials } from "@/lib/data";
+import VideoTestimonials from "@/components/reviews/VideoTestimonials";
 import { getFreeResources } from "@/lib/free-resources";
 import { getNextDates } from "@/lib/important-dates";
 import { NextDatesList, OFFICIAL_NOTE } from "@/components/dates/DateBits";
 
 export default async function Home() {
   // All of this comes from Supabase (cached for a few minutes)
-  const [materials, courses, mockTests, papers, reviews, slots, free, nextDates] = await Promise.all([
+  const [materials, courses, mockTests, papers, reviews, slots, free, nextDates, videos] = await Promise.all([
     getProducts("study_material"),
     getProducts("crash_course"),
     getProducts("mock_test"),
@@ -34,6 +35,7 @@ export default async function Home() {
     getUpcomingSlots(6),
     getFreeResources(),
     getNextDates(3),
+    getVideoTestimonials(),
   ]);
   // Up to 6 free items for the home page (tests first, then papers and guides)
   const freeItems = [
@@ -137,6 +139,8 @@ export default async function Home() {
       {/* 8. Reviews */}
       {/* Hidden automatically until at least one review is approved */}
       {reviews.length > 0 && <ReviewsSection reviews={reviews} />}
+      {/* Video testimonials (hidden when there are none) */}
+      <VideoTestimonials videos={videos.slice(0, 6)} className={reviews.length > 0 ? "!pt-0" : ""} />
 
       {/* 9. Trust / secure payments */}
       <TrustSection />

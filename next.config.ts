@@ -6,7 +6,11 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   // Image qualities the website may use (90 keeps the logo's thin letters sharp)
-  images: { qualities: [75, 90] },
+  images: {
+    qualities: [75, 90],
+    // YouTube thumbnails for video testimonials
+    remotePatterns: [{ protocol: "https", hostname: "i.ytimg.com", pathname: "/vi/**" }],
+  },
   // The small logo is read from disk when building PDF invoices (server routes)
   outputFileTracingIncludes: {
     "/api/**": ["./public/logo-email.png"],
