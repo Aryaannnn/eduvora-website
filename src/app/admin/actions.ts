@@ -919,3 +919,16 @@ export async function deleteBlogPost(id: string): Promise<ActionResult> {
   updateTag("blog");
   return dbResult(error, "Post deleted.");
 }
+
+// ---------------------------------------------------------------- ACTIVITY LOG (supabase/admin-security.sql)
+/** Recorded after a successful authenticator-app check. */
+export async function logAdminSignIn(firstSetup: boolean): Promise<ActionResult> {
+  const s = await adminOrError(); // also confirms the 2FA login
+  if (isError(s)) return s;
+  const { error } = await s.supabase.rpc("log_admin_event", {
+    p_action: firstSetup ? "security.2fa_setup" : "security.signin",
+    p_summary: firstSetup ? "Turned on 2-step verification and signed in" : "Signed in to the admin panel with 2-step verification",
+    p_details: {},
+  });
+  return dbResult(error);
+}

@@ -160,7 +160,9 @@ create or replace function public.is_admin()
 returns boolean
 language sql stable security definer set search_path = public
 as $$
-  select exists (select 1 from public.profiles where id = auth.uid() and role = 'admin');
+  -- admin role AND signed in with 2-factor (authenticator app) — see admin-security.sql
+  select exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
+     and coalesce(auth.jwt() ->> 'aal', 'aal1') = 'aal2';
 $$;
 
 -- true if the logged-in user has PAID for this product

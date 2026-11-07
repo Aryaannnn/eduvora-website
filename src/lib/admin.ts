@@ -1,18 +1,28 @@
 // =====================================================================
 //  ADMIN SECURITY (server only)
-//  Two layers protect every admin page and action:
+//  Layers that protect every admin page and action:
 //   1. This file checks role = 'admin' ON THE SERVER before anything runs.
-//   2. Supabase Row Level Security (supabase/setup.sql) allows changes only
-//      for admins — even if someone skipped layer 1, the database says no.
+//   2. …and that this login passed the 2-step check (authenticator app,
+//      "aal2"). No 2FA yet → /admin-verify (set up or enter the code).
+//   3. Supabase Row Level Security: is_admin() is only true for role 'admin'
+//      WITH a 2FA login (supabase/admin-security.sql) — even if someone
+//      skipped layers 1–2, the database says no.
 // =====================================================================
 import { redirect } from "next/navigation";
 import { getSession, type Session } from "./dashboard";
 
-/** For admin PAGES: not logged in → login page; logged in but not admin → student dashboard. */
+/** true when this login passed the authenticator-app check (verified token claim "aal2"). */
+export async function hasAdmin2fa(s: Session): Promise<boolean> {
+  const { data } = await s.supabase.auth.getClaims();
+  return (data?.claims as { aal?: string } | undefined)?.aal === "aal2";
+}
+
+/** For admin PAGES: not logged in → login page; not admin → student dashboard; no 2FA yet → /admin-verify. */
 export async function requireAdmin(path = "/admin"): Promise<Session> {
   const s = await getSession();
   if (!s) redirect(`/login?next=${encodeURIComponent(path)}`);
   if (s.profile?.role !== "admin") redirect("/dashboard");
+  if (!(await hasAdmin2fa(s))) redirect(`/admin-verify?next=${encodeURIComponent(path)}`);
   return s;
 }
 
@@ -23,6 +33,7 @@ export async function adminOrError(): Promise<Session | { ok: false; error: stri
   const s = await getSession();
   if (!s) return { ok: false, error: "Please sign in again." };
   if (s.profile?.role !== "admin") return { ok: false, error: "Only admins can do this." };
+  if (!(await hasAdmin2fa(s))) return { ok: false, error: "Please confirm it's you with your authenticator app first — reload the page." };
   return s;
 }
 

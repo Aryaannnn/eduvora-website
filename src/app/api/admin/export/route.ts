@@ -4,6 +4,7 @@
 // database backup (BACKUPS.md) — this is an easy-to-read copy.
 import { strToU8, zipSync } from "fflate";
 import { NextResponse } from "next/server";
+import { hasAdmin2fa } from "@/lib/admin";
 import { getSession } from "@/lib/dashboard";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 
@@ -55,6 +56,7 @@ export async function GET() {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Please log in." }, { status: 401 });
   if (session.profile?.role !== "admin") return NextResponse.json({ error: "Only admins can export data." }, { status: 403 });
+  if (!(await hasAdmin2fa(session))) return NextResponse.json({ error: "Please confirm it's you with your authenticator app first (reload the page)." }, { status: 403 });
   const db = getAdminSupabase();
   if (!db) return NextResponse.json({ error: "Export is not available (server key missing)." }, { status: 503 });
 
@@ -92,6 +94,14 @@ export async function GET() {
       ...summary,
     ].join("\r\n"),
   );
+
+  // Activity Log (supabase/admin-security.sql) — recorded with the admin's own login
+  const { error: logErr } = await session.supabase.rpc("log_admin_event", {
+    p_action: "data.export",
+    p_summary: `Downloaded "Export all data" (${summary.length} files)`,
+    p_details: { files: summary },
+  });
+  if (logErr && !/log_admin_event|function/i.test(logErr.message)) console.warn("[export] activity log:", logErr.message);
 
   const zip = zipSync(files, { level: 6 });
   return new NextResponse(Buffer.from(zip), {
