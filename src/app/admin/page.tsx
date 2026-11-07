@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { StatusBadge, DashSkeleton } from "@/components/dashboard/ui";
-import { CalendarIcon, ReceiptIcon, UsersIcon, WhatsAppIcon, ZapIcon } from "@/components/Icons";
+import { CalendarIcon, ReceiptIcon, UsersIcon, VideoIcon, WhatsAppIcon, ZapIcon } from "@/components/Icons";
 import { requireAdmin } from "@/lib/admin";
 import { personLabel, profilesById } from "@/lib/admin-data";
 import { formatDate, formatDateTime, formatPrice, formatTime, todayInIndia } from "@/lib/format";
@@ -33,7 +33,7 @@ async function Overview() {
   const today = todayInIndia();
 
   const weekAgo = daysAgoISO(7);
-  const [paidRes, paidBookingsRes, studentsRes, recentP, recentB, upcomingRes, wcClicks, wcWeek, wcSetting] = await Promise.all([
+  const [paidRes, paidBookingsRes, studentsRes, recentP, recentB, upcomingRes, wcClicks, wcWeek, wcSetting, noMeet] = await Promise.all([
     s.supabase.from("purchases").select("amount,created_at").eq("status", "paid").limit(10000),
     // Online counselling payments (Razorpay) also count as revenue
     s.supabase.from("bookings").select("amount,paid_at,created_at").eq("payment_status", "paid").not("amount", "is", null).limit(10000),
@@ -45,6 +45,8 @@ async function Overview() {
     s.supabase.from("community_clicks").select("source").limit(50000),
     s.supabase.from("community_clicks").select("id", { count: "exact", head: true }).gte("created_at", weekAgo),
     s.supabase.from("community_settings").select("whatsapp_link").eq("id", 1).maybeSingle(),
+    // Upcoming confirmed sessions with no Google Meet link (supabase/google-calendar.sql)
+    s.supabase.from("bookings").select("id,slots!inner(date)", { count: "exact", head: true }).eq("status", "confirmed").is("meet_link", null).gte("slots.date", today),
   ]);
   const wcBySource = new Map<string, number>();
   for (const c of (wcClicks.data ?? []) as { source: string }[]) wcBySource.set(c.source, (wcBySource.get(c.source) ?? 0) + 1);
@@ -75,6 +77,15 @@ async function Overview() {
         <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">Overview</h1>
         <p className="mt-1 text-slate-600">Your business at a glance.</p>
       </div>
+
+      {!noMeet.error && (noMeet.count ?? 0) > 0 && (
+        <Link href="/admin/bookings" className="flex items-start gap-3 rounded-2xl bg-amber-50 p-4 text-sm text-amber-900 ring-1 ring-amber-200 hover:bg-amber-100" role="alert">
+          <VideoIcon className="mt-0.5 h-5 w-5 shrink-0" />
+          <span>
+            <strong>{noMeet.count} upcoming session{noMeet.count === 1 ? " has" : "s have"} no Google Meet link.</strong> Students see &ldquo;Meet link will be shared soon&rdquo;. Open Bookings to add the link by hand →
+          </span>
+        </Link>
+      )}
 
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         {stats.map((c) => (

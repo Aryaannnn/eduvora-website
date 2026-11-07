@@ -12,6 +12,7 @@ import "server-only";
 import { siteConfig } from "@/config/site";
 import { esc, layout } from "./email/layout";
 import { sendAndLog } from "./email/send";
+import { deleteEventsQuietly } from "./google-calendar";
 import { getAdminSupabase } from "./supabase/admin";
 
 export async function deleteAccount(userId: string, requestedBy: "student" | "admin", adminId?: string): Promise<{ ok: true; name: string } | { ok: false; error: string }> {
@@ -25,11 +26,16 @@ export async function deleteAccount(userId: string, requestedBy: "student" | "ad
   const name = ((p?.full_name as string | null) || "").split(" ")[0] || "there";
   if (p?.role === "admin") return { ok: false, error: "Admin accounts can't be deleted. Remove the admin role first." };
 
+  // Their calendar events contain name/phone → remove them after the data is deleted
+  const { data: evs } = await db.from("bookings").select("calendar_event_id").eq("user_id", userId).not("calendar_event_id", "is", null);
+  const eventIds = (evs ?? []).map((e) => e.calendar_event_id as string);
+
   const { error: e1 } = await db.rpc("delete_account_data", { p_user: userId, p_requested_by: requestedBy, p_admin: adminId ?? null });
   if (e1) {
     console.warn("[account] delete data failed:", e1.message);
     return { ok: false, error: /delete_account_data|function/i.test(e1.message) ? "Account deletion is being set up (run supabase/privacy.sql). Please try again later." : "Could not delete the account. Please try again." };
   }
+  await deleteEventsQuietly(eventIds);
   const { error: e2 } = await db.auth.admin.deleteUser(userId);
   if (e2) {
     console.warn("[account] delete login failed:", e2.message);

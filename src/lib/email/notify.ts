@@ -17,6 +17,7 @@ import { communityHref, getCommunityLink } from "../community";
 import { fullContactForPaidStudent } from "../contact";
 import { formatDate, formatDateTime, formatPrice, formatTime } from "../format";
 import { buildInvoicePdf, getInvoiceData, invoiceFileName } from "../invoices";
+import { syncBookingCalendar } from "../google-calendar";
 import { getAdminSupabase } from "../supabase/admin";
 import { button, details, esc, layout, note, url } from "./layout";
 import { adminEmail, inBackground, sendAndLog, type Email } from "./send";
@@ -27,14 +28,14 @@ type Booking = {
   id: string; user_id: string; name: string; phone: string; email: string | null; message: string | null; class_year: string | null;
   expected_marks: number | null; status: string; payment_status: string; amount: number | null; invoice_number: string | null; paid_at: string | null;
   slots: { date: string; start_time: string; end_time: string; price: number } | null;
+  meet_link?: string | null;
 };
 
+const BOOKING_COLS = "id,user_id,name,phone,email,message,class_year,expected_marks,status,payment_status,amount,invoice_number,paid_at,slots(date,start_time,end_time,price)";
+
 async function loadBooking(db: SupabaseClient, id: string) {
-  const { data } = await db
-    .from("bookings")
-    .select("id,user_id,name,phone,email,message,class_year,expected_marks,status,payment_status,amount,invoice_number,paid_at,slots(date,start_time,end_time,price)")
-    .eq("id", id)
-    .maybeSingle();
+  let { data, error } = await db.from("bookings").select(`${BOOKING_COLS},meet_link`).eq("id", id).maybeSingle();
+  if (error?.code === "42703") ({ data, error } = await db.from("bookings").select(BOOKING_COLS).eq("id", id).maybeSingle()); // google-calendar.sql not run yet
   if (!data) return null;
   const b = data as unknown as Booking;
   if (!b.email) {
@@ -45,6 +46,12 @@ async function loadBooking(db: SupabaseClient, id: string) {
 }
 const slotLine = (b: Booking) => (b.slots ? `${formatDate(b.slots.date, true)}, ${formatTime(b.slots.start_time)} – ${formatTime(b.slots.end_time)} IST` : "—");
 const bookingRef = (id: string) => id.slice(0, 8).toUpperCase();
+
+/** "Join Google Meet" button — or "Meet link will be shared soon" until we have one. */
+const meetBlock = (b: Booking) =>
+  b.meet_link
+    ? note(`🎥 <strong>Your session is on Google Meet.</strong> Join from a phone or laptop a few minutes early:<br><br>${button("Join Google Meet", b.meet_link, "green")}<br><span style="font-size:12px;color:#64748b">${esc(b.meet_link)}</span>`, "green")
+    : note("🎥 <strong>Google Meet link:</strong> will be shared soon — by email and in My Bookings, before your session.", "navy");
 
 async function invoiceAttachment(db: SupabaseClient, id: string) {
   const inv = await getInvoiceData(db, id);
@@ -122,7 +129,9 @@ ${details([["Item", inv.item], ["Amount paid", formatPrice(inv.amount)], ["Invoi
         title: `Congratulations, ${b.name.split(" ")[0]}! 🎉`,
         body: `<p>Your one-to-one counselling session with <strong>${esc(founder)}</strong> is booked.</p>
 ${details(rows)}
-${gcal ? `<p>${button("Add to Google Calendar", gcal)}${button("My Bookings", url("/dashboard/bookings"), "navy")}</p>` : ""}
+${meetBlock(b)}
+${gcal && !b.meet_link ? `<p>${button("Add to Google Calendar", gcal)}${button("My Bookings", url("/dashboard/bookings"), "navy")}</p>` : `<p>${button("My Bookings", url("/dashboard/bookings"), "navy")}</p>`}
+${b.meet_link && b.email ? `<p style="font-size:13px;color:#64748b">A Google Calendar invite has also been sent to ${esc(b.email)}.</p>` : ""}
 ${
   phone
     ? note(`<strong>${esc(founderFirst)} Sir's direct number:</strong> <a href="${phone.tel}" style="color:#0b2a5b;font-weight:bold">${esc(phone.display)}</a><br>
@@ -174,7 +183,8 @@ ${details([["Was booked for", slotLine(b)], ["Booking ID", bookingRef(b.id)], ["
         body: `<p>Hi ${esc(b.name.split(" ")[0])},</p>
 <p>Your counselling session with <strong>${esc(founder)}</strong> has been moved to a new time:</p>
 ${details([["New date & time", slotLine(b)], ["Booking ID", bookingRef(b.id)]])}
-<p>${gcal ? button("Add new time to Google Calendar", gcal) : ""}${button("My Bookings", url("/dashboard/bookings"), "navy")}</p>`,
+${meetBlock(b)}
+<p>${gcal && !b.meet_link ? button("Add new time to Google Calendar", gcal) : ""}${button("My Bookings", url("/dashboard/bookings"), "navy")}</p>`,
       }),
     };
   },
@@ -240,7 +250,33 @@ ${(await getCommunityLink()) ? `<p>${button("Join our WhatsApp community", url(c
           ["Booking ID", bookingRef(b.id)],
         ])}
 ${b.message ? note(`<strong>Message:</strong><br>${esc(b.message)}`) : ""}
+${
+  b.meet_link
+    ? `<p>${button("Join Meet", b.meet_link, "green")}</p><p style="font-size:13px;color:#64748b">Added to your Google Calendar with the student as a guest.</p>`
+    : b.status === "confirmed"
+      ? note("⚠️ <strong>No Google Meet link yet</strong> — Google Calendar is not connected or did not respond. Please add the link by hand in Admin → Bookings (the student sees \"Meet link will be shared soon\").")
+      : ""
+}
 <p>${button("Open Admin → Bookings", url("/admin/bookings"), "navy")}</p>`,
+      }),
+    };
+  },
+
+  // ---------- student: Meet link added later ----------
+  async meet_link(db, id) {
+    const b = await loadBooking(db, id);
+    if (!b || !b.email || !b.meet_link || !b.slots || b.status !== "confirmed") return null;
+    return {
+      to: b.email,
+      subject: `Your Google Meet link — counselling on ${formatDate(b.slots.date)}`,
+      html: layout({
+        preheader: `Join your session on ${slotLine(b)} with this Google Meet link.`,
+        title: "Your Google Meet link is ready 🎥",
+        body: `<p>Hi ${esc(b.name.split(" ")[0])},</p>
+<p>Here is the link for your counselling session with <strong>${esc(founder)}</strong>:</p>
+${details([["Date & time", slotLine(b)], ["Booking ID", bookingRef(b.id)]])}
+${meetBlock(b)}
+<p>${button("My Bookings", url("/dashboard/bookings"), "navy")}</p>`,
       }),
     };
   },
@@ -276,9 +312,10 @@ async function reminder(db: SupabaseClient, id: string, which: "24h" | "1h"): Pr
       title: which === "24h" ? "Your session is tomorrow ⏰" : "Your session starts in 1 hour ⏰",
       body: `<p>Hi ${esc(b.name.split(" ")[0])}, a quick reminder about your counselling session with <strong>${esc(founder)}</strong>:</p>
 ${details([["Date & time", slotLine(b)], ["Booking ID", bookingRef(b.id)]])}
+${meetBlock(b)}
 ${note("Keep your VITEEE marks / rank, preferred campuses and questions ready. Parents are welcome to join.")}
 ${phone ? `<p>${button("Call " + founderFirst + " Sir", phone.tel, "navy")}${button("WhatsApp", phone.whatsapp, "green")}</p>` : ""}
-<p>${button("Add to Google Calendar", googleCalendarUrl(b.slots, b.id, b.invoice_number))}</p>`,
+${b.meet_link ? "" : `<p>${button("Add to Google Calendar", googleCalendarUrl(b.slots, b.id, b.invoice_number))}</p>`}`,
     }),
   };
 }
@@ -329,6 +366,9 @@ export function notifyBookingConfirmed(bookingId: string) {
     const db = getAdminSupabase();
     if (!db) return;
     if (!(await claim(db, "bookings", "confirmation_email_sent_at", bookingId))) return;
+    // Google Calendar event + Meet link first, so the emails include it.
+    // If it fails, the booking stays confirmed and emails say "shared soon".
+    await syncBookingCalendar(bookingId);
     await sendKind("booking_confirmed", bookingId);
     await sendKind("admin_booking", bookingId);
     const { data: b } = await db.from("bookings").select("payment_status").eq("id", bookingId).maybeSingle();
@@ -337,7 +377,15 @@ export function notifyBookingConfirmed(bookingId: string) {
 }
 
 export function notifyBookingChanged(bookingId: string, change: "cancelled" | "rescheduled") {
-  inBackground(() => sendKind(change === "cancelled" ? "booking_cancelled" : "booking_rescheduled", bookingId));
+  inBackground(async () => {
+    await syncBookingCalendar(bookingId); // move or cancel the calendar event (Google updates the student's invite)
+    await sendKind(change === "cancelled" ? "booking_cancelled" : "booking_rescheduled", bookingId);
+  });
+}
+
+/** A Meet link was added after the confirmation email (by Google later, or by hand). */
+export function notifyMeetLinkReady(bookingId: string) {
+  inBackground(() => sendKind("meet_link", bookingId));
 }
 
 export function notifyEnquiry(enquiryId: string) {

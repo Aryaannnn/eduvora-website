@@ -53,7 +53,7 @@ export default function PrivacyPolicyPage() {
         <li><strong>Supabase</strong> — our database, login system and secure file storage.</li>
         <li><strong>Resend</strong> — sending emails (receipts, booking confirmations, reminders).</li>
         <li><strong>Vercel</strong> — hosting the website, plus Vercel Web Analytics and Speed Insights.</li>
-        <li><strong>Google</strong> — only if you choose &ldquo;Continue with Google&rdquo; (sign-in), and Google Analytics if we turn it on.</li>
+        <li><strong>Google</strong> — if you choose &ldquo;Continue with Google&rdquo; (sign-in); Google Analytics if we turn it on; and <strong>Google Calendar &amp; Google Meet</strong> for counselling sessions (your name, phone, email, class, expected marks and message are added to our calendar event, and you are invited as a guest).</li>
       </ul>
       <p>
         Some of these providers may store or process data on servers outside India. We may also share data if required by law or to

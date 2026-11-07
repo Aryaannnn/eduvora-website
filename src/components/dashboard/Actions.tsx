@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { getBrowserSupabase } from "@/lib/supabase/client";
+import { cancelMyBooking } from "@/lib/booking-actions";
 import { LogoutIcon, ReceiptIcon } from "../Icons";
 import { useLogout } from "@/lib/useLogout";
 import { Spinner } from "../BuyButton";
@@ -27,9 +27,9 @@ export function CancelBookingButton({ bookingId }: { bookingId: string }) {
       onClick={async () => {
         if (!confirm("Cancel this booking? See our Refund & Cancellation Policy for refund rules.")) return;
         setBusy(true);
-        const { error } = (await getBrowserSupabase()?.from("bookings").update({ status: "cancelled" }).eq("id", bookingId)) ?? {};
+        const res = await cancelMyBooking(bookingId); // server: cancels + removes the Google Calendar event
         setBusy(false);
-        if (error) return alert(error.message);
+        if (!res.ok) return alert(res.error);
         router.refresh();
       }}
       className="text-sm font-semibold text-red-600 hover:underline disabled:opacity-50"

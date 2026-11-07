@@ -152,6 +152,11 @@ async function Content({ searchParams }: { searchParams: PageProps<"/booking-con
             <a href={`/api/invoices/${b.id}`} download className="font-semibold text-brand-700 underline">Download invoice PDF</a> · a copy is also in your email
           </p>
         )}
+        {b.status === "confirmed" && (
+          <p className="relative -mb-3 mt-4 px-5 text-center text-xs text-slate-500">
+            🎥 The session is on <strong>Google Meet</strong> — the link comes in your confirmation email and appears in My Bookings.
+          </p>
+        )}
         {/* actions */}
         <div className="relative grid gap-3 p-5 sm:grid-cols-3 sm:p-8">
           {gcal && (

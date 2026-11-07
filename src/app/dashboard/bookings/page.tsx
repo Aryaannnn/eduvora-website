@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { CancelBookingButton } from "@/components/dashboard/Actions";
 import { DashSkeleton, EmptyBox, PageHeader, StatusBadge } from "@/components/dashboard/ui";
 import SessionCreditsCard from "@/components/packages/SessionCreditsCard";
-import { CalendarIcon, ClockIcon } from "@/components/Icons";
+import { CalendarIcon, ClockIcon, VideoIcon } from "@/components/Icons";
 import { getMyBookings, requireUser } from "@/lib/dashboard";
 import { formatDate, formatDateTime, formatPrice, formatTime, todayInIndia } from "@/lib/format";
 import { getCredits } from "@/lib/packages";
@@ -51,6 +51,17 @@ async function BookingsContent() {
                       </p>
                     )}
                     <p className="mt-1 text-xs text-slate-500">Booked on {formatDateTime(b.created_at)} · Payment: {b.payment_status}</p>
+                    {upcoming && b.status === "confirmed" && (
+                      b.meet_link ? (
+                        <a href={b.meet_link} target="_blank" rel="noopener noreferrer" className="btn-primary mt-3 !bg-emerald-600 !px-4 !py-2 text-sm hover:!bg-emerald-700">
+                          <VideoIcon className="h-4 w-4" /> Join Google Meet
+                        </a>
+                      ) : (
+                        <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">
+                          <VideoIcon className="h-3.5 w-3.5" /> Meet link will be shared soon
+                        </p>
+                      )
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-4 sm:flex-col sm:items-end sm:gap-2">

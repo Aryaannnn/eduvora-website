@@ -2,9 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { rescheduleBooking, updateBooking } from "@/app/admin/actions";
+import { rescheduleBooking, retryBookingCalendar, setMeetLink, updateBooking } from "@/app/admin/actions";
 import { formatDate, formatDateTime, formatPrice, formatTime } from "@/lib/format";
-import { MailIcon, PhoneIcon, SearchIcon, WhatsAppIcon } from "../Icons";
+import { MailIcon, PhoneIcon, SearchIcon, VideoIcon, WhatsAppIcon } from "../Icons";
 import { AdminHeader, Notice } from "./ui";
 
 export type FreeSlot = { id: string; date: string; start_time: string; end_time: string };
@@ -14,6 +14,7 @@ export type AdminBooking = {
   class_year?: string | null; expected_marks?: number | null; amount?: number | null; invoice_number?: string | null; paid_at?: string | null;
   status: "pending" | "confirmed" | "cancelled" | "completed"; payment_status: "unpaid" | "pending" | "paid" | "failed" | "refunded"; created_at: string;
   slots: { date: string; start_time: string; end_time: string; price: number } | null;
+  meet_link?: string | null; calendar_status?: string | null; calendar_error?: string | null;
 };
 
 const STATUS = ["pending", "confirmed", "completed", "cancelled"] as const;
@@ -26,7 +27,7 @@ const intlPhone = (p: string) => {
   return d.length === 10 ? `91${d}` : d;
 };
 
-export default function BookingsManager({ bookings, today, freeSlots = [] }: { bookings: AdminBooking[]; today: string; freeSlots?: FreeSlot[] }) {
+export default function BookingsManager({ bookings, today, freeSlots = [], meetReady = true }: { bookings: AdminBooking[]; today: string; freeSlots?: FreeSlot[]; meetReady?: boolean }) {
   const router = useRouter();
   const [filter, setFilter] = useState<"upcoming" | "all" | (typeof STATUS)[number]>("upcoming");
   const [q, setQ] = useState("");
@@ -50,6 +51,22 @@ export default function BookingsManager({ bookings, today, freeSlots = [] }: { b
     });
   };
 
+  const isUpcoming = (b: AdminBooking) => !!b.slots && b.slots.date >= today && b.status === "confirmed";
+  const missingMeet = meetReady ? bookings.filter((b) => isUpcoming(b) && !b.meet_link) : [];
+
+  const saveMeet = (b: AdminBooking, link: string) =>
+    start(async () => {
+      const res = await setMeetLink(b.id, link);
+      setMsg(res.ok ? { kind: "success", text: res.message ?? "Saved." } : { kind: "error", text: res.error });
+      if (res.ok) router.refresh();
+    });
+  const retryMeet = (b: AdminBooking) =>
+    start(async () => {
+      const res = await retryBookingCalendar(b.id);
+      setMsg(res.ok ? { kind: "success", text: res.message ?? "Done." } : { kind: "error", text: res.error });
+      router.refresh();
+    });
+
   const change = (id: string, patch: Parameters<typeof updateBooking>[1]) =>
     start(async () => {
       const res = await updateBooking(id, patch);
@@ -71,6 +88,14 @@ export default function BookingsManager({ bookings, today, freeSlots = [] }: { b
           {STATUS.map((s) => <option key={s} value={s} className="capitalize">{s}</option>)}
         </select>
       </div>
+      {missingMeet.length > 0 && (
+        <div className="mb-4 rounded-2xl bg-amber-50 p-4 text-sm text-amber-900 ring-1 ring-amber-200" role="alert">
+          <strong>⚠️ {missingMeet.length} upcoming session{missingMeet.length === 1 ? " has" : "s have"} no Google Meet link</strong> — the student sees &ldquo;Meet link will be shared soon&rdquo;.
+          Paste a link below (they get an email), or <a href="/admin/settings#google-calendar" className="font-semibold underline">connect Google Calendar</a> so it&apos;s automatic.
+          <span className="mt-1 block text-xs">{missingMeet.slice(0, 5).map((b) => `${b.name} (${b.slots ? formatDate(b.slots.date) : ""})`).join(" · ")}{missingMeet.length > 5 ? " …" : ""}</span>
+        </div>
+      )}
+      {!meetReady && <div className="mb-4"><Notice kind="error">Run supabase/google-calendar.sql in Supabase to turn on Google Meet links.</Notice></div>}
       {msg && <div className="mb-4"><Notice kind={msg.kind}>{msg.text}</Notice></div>}
 
       {shown.length === 0 ? (
@@ -110,10 +135,14 @@ export default function BookingsManager({ bookings, today, freeSlots = [] }: { b
                         {b.status === "pending" && <strong className="ml-1 text-amber-700">· Paid late — time was taken: reschedule or refund</strong>}
                       </p>
                     )}
+                    {meetReady && isUpcoming(b) && <MeetRow b={b} disabled={pending} onSave={(l) => saveMeet(b, l)} onRetry={() => retryMeet(b)} />}
                     <p className="text-xs text-slate-400">Booked {formatDateTime(b.created_at)}</p>
                   </div>
                   <div className="flex shrink-0 flex-col gap-2 sm:flex-row lg:flex-col lg:items-end">
                     <div className="flex gap-2">
+                      {b.meet_link && ["pending", "confirmed"].includes(b.status) && (
+                        <a href={b.meet_link} target="_blank" rel="noopener noreferrer" className="btn-primary !bg-emerald-600 !px-4 !py-2 text-sm hover:!bg-emerald-700"><VideoIcon className="h-4 w-4" /> Join Meet</a>
+                      )}
                       <a href={`tel:+${phone}`} className="btn-primary !px-4 !py-2 text-sm"><PhoneIcon className="h-4 w-4" /> Call</a>
                       <a href={wa} target="_blank" rel="noopener noreferrer" className="btn-primary !bg-[#25D366] !px-4 !py-2 text-sm"><WhatsAppIcon className="h-4 w-4" /> WhatsApp</a>
                     </div>
@@ -147,5 +176,46 @@ export default function BookingsManager({ bookings, today, freeSlots = [] }: { b
       )}
       <p className="mt-3 text-xs text-slate-500">Setting a booking to <strong>cancelled</strong> opens the slot again for other students.</p>
     </>
+  );
+}
+
+/** Meet link status for one upcoming booking: link (edit) · or alert + paste box + "try again". */
+function MeetRow({ b, disabled, onSave, onRetry }: { b: AdminBooking; disabled: boolean; onSave: (link: string) => void; onRetry: () => void }) {
+  const [editing, setEditing] = useState(false);
+  const [link, setLink] = useState(b.meet_link ?? "");
+  if (b.meet_link && !editing) {
+    return (
+      <p className="flex flex-wrap items-center gap-x-2 text-xs text-emerald-700">
+        <VideoIcon className="h-3.5 w-3.5" />
+        <a href={b.meet_link} target="_blank" rel="noopener noreferrer" className="font-semibold underline">{b.meet_link.replace(/^https:\/\//, "")}</a>
+        <span className="text-slate-400">{b.calendar_status === "manual" ? "· added by hand" : "· in Google Calendar"}</span>
+        <button type="button" onClick={() => setEditing(true)} className="font-semibold text-slate-500 underline">Change</button>
+      </p>
+    );
+  }
+  return (
+    <div className="rounded-xl bg-amber-50 p-3 text-xs ring-1 ring-amber-200">
+      {!b.meet_link && (
+        <p className="font-semibold text-amber-900">
+          ⚠️ No Meet link yet{b.calendar_status === "not_connected" ? " — Google Calendar is not connected" : b.calendar_status === "failed" ? " — Google Calendar failed" : ""}. Add it by hand:
+        </p>
+      )}
+      {b.calendar_error && !b.meet_link && <p className="mt-0.5 text-amber-800">{b.calendar_error}</p>}
+      <form
+        className="mt-2 flex flex-col gap-2 sm:flex-row"
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSave(link);
+          setEditing(false);
+        }}
+      >
+        <input value={link} onChange={(e) => setLink(e.target.value)} type="url" placeholder="https://meet.google.com/abc-defg-hij" className="input !py-1.5 text-sm" aria-label={`Meet link for ${b.name}`} />
+        <div className="flex gap-2">
+          <button type="submit" disabled={disabled} className="btn-primary !px-3 !py-1.5 text-xs disabled:opacity-50">Save &amp; email student</button>
+          {!b.meet_link && <button type="button" onClick={onRetry} disabled={disabled} className="btn-light !px-3 !py-1.5 text-xs disabled:opacity-50">Try Google again</button>}
+          {editing && <button type="button" onClick={() => { setEditing(false); setLink(b.meet_link ?? ""); }} className="btn-light !px-3 !py-1.5 text-xs">Cancel</button>}
+        </div>
+      </form>
+    </div>
   );
 }

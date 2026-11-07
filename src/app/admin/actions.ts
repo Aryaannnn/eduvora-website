@@ -10,7 +10,8 @@ import { updateTag } from "next/cache";
 import { adminOrError, friendlyDbError, isError, type ActionResult } from "@/lib/admin";
 import { yearInIndia } from "@/lib/format";
 import { getAdminSupabase } from "@/lib/supabase/admin";
-import { notifyBookingChanged, notifyBookingConfirmed, notifyPurchasePaid, sendKind } from "@/lib/email/notify";
+import { notifyBookingChanged, notifyBookingConfirmed, notifyMeetLinkReady, notifyPurchasePaid, sendKind } from "@/lib/email/notify";
+import { disconnectCalendar, syncBookingCalendar } from "@/lib/google-calendar";
 
 const fail = (error: string): ActionResult => ({ ok: false, error });
 const dbResult = (error: { message: string } | null, message?: string): ActionResult =>
@@ -224,6 +225,11 @@ export async function updateBooking(
   updateTag("slots"); // cancelling frees the slot
   if (!error && patch.status === "cancelled" && before?.status !== "cancelled") notifyBookingChanged(id, "cancelled");
   if (!error && patch.payment_status === "paid" && before?.payment_status !== "paid") notifyBookingConfirmed(id);
+  // Other status changes (e.g. back to confirmed, or expired) → keep the calendar in step
+  else if (!error && patch.status && patch.status !== before?.status && patch.status !== "cancelled" && patch.status !== "completed") {
+    const r = await syncBookingCalendar(id);
+    if (r.newLink) notifyMeetLinkReady(id);
+  }
   return dbResult(error, patch.status === "cancelled" ? "Booking cancelled — the student has been emailed." : "Booking updated.");
 }
 
@@ -236,6 +242,47 @@ export async function rescheduleBooking(id: string, newSlotId: string): Promise<
   if (error) return fail(/function/i.test(error.message) && /find/i.test(error.message) ? "Run supabase/emails-invoices.sql in Supabase first." : error.message);
   notifyBookingChanged(id, "rescheduled");
   return { ok: true, message: "Booking moved — the student has been emailed the new time." };
+}
+
+// ---------------------------------------------------------------- GOOGLE MEET
+/** Admin pastes a Meet (or Zoom) link by hand → saved and emailed to the student. Empty = remove. */
+export async function setMeetLink(id: string, link: string): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const url = link.trim();
+  if (url && (!/^https:\/\/\S+$/.test(url) || url.length > 300)) return fail("Please paste the full link, starting with https:// (for example https://meet.google.com/abc-defg-hij).");
+  const { data: b } = await s.supabase.from("bookings").select("status,meet_link").eq("id", id).maybeSingle();
+  if (!b) return fail("Booking not found.");
+  const { error } = await s.supabase
+    .from("bookings")
+    .update(url ? { meet_link: url, calendar_status: "manual", calendar_error: null } : { meet_link: null, calendar_status: null })
+    .eq("id", id);
+  if (error) return fail(/meet_link|calendar_status/.test(error.message) ? "Run supabase/google-calendar.sql in Supabase first." : friendlyDbError(error.message));
+  if (url && url !== b.meet_link && b.status === "confirmed") {
+    notifyMeetLinkReady(id);
+    return { ok: true, message: "Meet link saved — the student has been emailed." };
+  }
+  return { ok: true, message: url ? "Meet link saved." : "Meet link removed." };
+}
+
+/** "Try Google Calendar again" for one booking. */
+export async function retryBookingCalendar(id: string): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const r = await syncBookingCalendar(id);
+  if (r.result === "setup_missing") return fail("Run supabase/google-calendar.sql in Supabase first.");
+  if (r.result === "not_connected") return fail("Google Calendar is not connected. Connect it in Admin → Settings, or paste a Meet link by hand.");
+  if (r.result === "failed") return fail("Google Calendar did not respond. Please paste a Meet link by hand, or try again later.");
+  if (r.newLink) notifyMeetLinkReady(id);
+  return { ok: true, message: r.newLink ? "Meet link created — the student has been emailed." : "Calendar is up to date." };
+}
+
+export async function disconnectGoogleCalendar(): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  await disconnectCalendar();
+  await s.supabase.rpc("log_admin_event", { p_action: "google_calendar.disconnect", p_summary: "Disconnected Google Calendar", p_details: {} }).then(() => undefined, () => undefined);
+  return { ok: true, message: "Google Calendar disconnected. New bookings will show \"Meet link will be shared soon\"." };
 }
 
 // ---------------------------------------------------------------- EMAIL LOGS
