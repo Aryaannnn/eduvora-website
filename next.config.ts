@@ -33,7 +33,17 @@ const nextConfig: NextConfig = {
   },
   // Pre-launch: also tell search engines "noindex" in a header (covers PDFs and images too)
   async headers() {
-    return PRE_LAUNCH ? [{ source: "/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] }] : [];
+    // Private parent pages (/parent/<secret>): never indexed or cached, and the secret
+    // is never sent to other sites as a "referrer"
+    const parent = {
+      source: "/parent/:path*",
+      headers: [
+        { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+        { key: "Referrer-Policy", value: "no-referrer" },
+        { key: "Cache-Control", value: "private, no-store, max-age=0" },
+      ],
+    };
+    return PRE_LAUNCH ? [{ source: "/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] }, parent] : [parent];
   },
   // The old "My Account" page now lives inside the student dashboard
   async redirects() {

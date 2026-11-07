@@ -22,7 +22,7 @@ export async function GET() {
   const uid = s.user.id;
   const email = (s.profile?.email || s.user.email || "").toLowerCase();
 
-  const [profile, purchases, bookings, attempts, predictions, reviews, enquiries, myReferral, referredByMe, rewards, credits, coupons, downloads, feedback] = await Promise.all([
+  const [profile, purchases, bookings, attempts, predictions, reviews, enquiries, myReferral, referredByMe, rewards, credits, coupons, downloads, feedback, parentLink] = await Promise.all([
     safe(db.from("profiles").select("*").eq("id", uid)),
     safe(db.from("purchases").select("id,amount,original_amount,coupon_code,coupon_discount,referral_discount,reward_used,status,invoice_number,razorpay_payment_id,payment_method,created_at,paid_at,refunded_at,products(title,category)").eq("user_id", uid).in("status", ["paid", "failed", "refunded"])),
     safe(db.from("bookings").select("id,name,phone,email,class_year,expected_marks,message,status,payment_status,amount,invoice_number,paid_at,created_at,slots(date,start_time,end_time)").eq("user_id", uid).not("status", "in", "(awaiting_payment,expired)")),
@@ -37,6 +37,7 @@ export async function GET() {
     safe(db.from("coupon_redemptions").select("discount,status,created_at,coupons(code)").eq("user_id", uid)),
     safe(db.from("file_downloads").select("file_name,action,watermarked,created_at").eq("user_id", uid)),
     safe(db.from("session_feedback").select("rating,helped_most,improve,allow_public,consent_at,created_at,updated_at").eq("user_id", uid)),
+    safe(db.from("parent_shares").select("parent_email,created_at,expires_at,revoked_at,view_count,last_viewed_at").eq("user_id", uid)), // never the secret
   ]);
 
   const now = new Date();
@@ -63,6 +64,7 @@ export async function GET() {
     coupons_used: coupons,
     file_downloads: downloads,
     session_feedback: feedback,
+    parent_link: parentLink,
   };
 
   const day = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(now);

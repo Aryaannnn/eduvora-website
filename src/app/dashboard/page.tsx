@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { getMyParentShare } from "@/lib/parent-share";
+import type { Session } from "@/lib/dashboard";
 import { Suspense } from "react";
 import { DashSkeleton } from "@/components/dashboard/ui";
 import SessionCreditsCard from "@/components/packages/SessionCreditsCard";
@@ -48,6 +50,9 @@ async function HomeContent() {
           )}
         </div>
       </section>
+
+      {/* Parent progress link */}
+      <Suspense fallback={null}><ParentLinkBadge s={s} /></Suspense>
 
       {/* WhatsApp community (only when a link is set) */}
       <CommunityBanner from="dashboard" compact className="bg-white" />
@@ -120,6 +125,34 @@ function QuickCard(props: { href: string; icon: typeof BookIcon; color: string; 
       <p className="mt-1 flex items-center gap-1 truncate text-sm capitalize text-slate-500">
         {props.hint} <ArrowRightIcon className="h-3.5 w-3.5 shrink-0 transition group-hover:translate-x-0.5" />
       </p>
+    </Link>
+  );
+}
+
+/** "Parent link active" (or a nudge to share) */
+async function ParentLinkBadge({ s }: { s: Session }) {
+  const share = await getMyParentShare(s);
+  if (share.status === "active") {
+    return (
+      <Link href="/dashboard/parent" className="card card-hover flex items-center justify-between gap-3 p-4 ring-1 ring-emerald-200">
+        <span className="flex items-center gap-3">
+          <span className="grid h-9 w-9 place-items-center rounded-full bg-emerald-50 text-lg" aria-hidden>👪</span>
+          <span>
+            <span className="block text-sm font-extrabold text-emerald-700">● Parent link active</span>
+            <span className="block text-xs text-slate-500">Until {formatDate(share.expires_at!.slice(0, 10))}{share.view_count ? ` · opened ${share.view_count}×` : ""}</span>
+          </span>
+        </span>
+        <span className="text-xs font-semibold text-brand-700">Manage →</span>
+      </Link>
+    );
+  }
+  return (
+    <Link href="/dashboard/parent" className="card card-hover flex items-center justify-between gap-3 p-4">
+      <span className="flex items-center gap-3">
+        <span className="grid h-9 w-9 place-items-center rounded-full bg-slate-100 text-lg" aria-hidden>👪</span>
+        <span className="text-sm text-slate-700"><strong>Share your progress with your parents</strong>{share.status === "expired" ? " — your link expired" : ""}</span>
+      </span>
+      <span className="text-xs font-semibold text-brand-700">Share →</span>
     </Link>
   );
 }

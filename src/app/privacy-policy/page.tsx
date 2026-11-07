@@ -32,6 +32,7 @@ export default function PrivacyPolicyPage() {
         <li><strong>Referrals and rewards:</strong> your referral code, who joined with your link, coupon uses and reward credit.</li>
         <li><strong>Technical data:</strong> pages visited, device and browser type, approximate location (country/city) and page speed — collected automatically (see Cookies below).</li>
         <li><strong>Consent record:</strong> the date you accepted this policy and our Terms.</li>
+        <li><strong>Parent sharing (only if you use it):</strong> your parent&apos;s email (if you enter one) and how often your private parent link was opened. The parent page shows your name, sessions, courses, test scores and predicted rank — never payments or contact details.</li>
       </ul>
 
       <h2>2. Why we use it</h2>
