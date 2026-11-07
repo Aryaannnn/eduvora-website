@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { CancelBookingButton } from "@/components/dashboard/Actions";
+import FeedbackForm, { type MyFeedback } from "@/components/dashboard/FeedbackForm";
 import { DashSkeleton, EmptyBox, PageHeader, StatusBadge } from "@/components/dashboard/ui";
 import SessionCreditsCard from "@/components/packages/SessionCreditsCard";
 import { CalendarIcon, ClockIcon, VideoIcon } from "@/components/Icons";
@@ -21,7 +22,12 @@ export default function BookingsPage() {
 
 async function BookingsContent() {
   const s = await requireUser("/dashboard/bookings");
-  const [bookings, credits] = await Promise.all([getMyBookings(s), getCredits(s.supabase)]);
+  const [bookings, credits, fbRes] = await Promise.all([
+    getMyBookings(s),
+    getCredits(s.supabase),
+    s.supabase.from("session_feedback").select("booking_id,rating,helped_most,improve,allow_public").eq("user_id", s.user.id), // empty before feedback.sql
+  ]);
+  const feedback = new Map(((fbRes.data ?? []) as (MyFeedback & { booking_id: string })[]).map((f) => [f.booking_id, f]));
   const today = todayInIndia();
 
   return (
@@ -37,8 +43,10 @@ async function BookingsContent() {
         <ul className="space-y-3">
           {bookings.map((b) => {
             const upcoming = !!b.slots && b.slots.date >= today && ["pending", "confirmed"].includes(b.status);
+            const fb = feedback.get(b.id);
             return (
-              <li key={b.id} className="card flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+              <li key={b.id} className="card p-5">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-start gap-4">
                   <span className={`grid h-14 w-14 shrink-0 place-items-center rounded-2xl text-center ${upcoming ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-500"}`}>
                     <CalendarIcon className="h-6 w-6" />
@@ -75,6 +83,24 @@ async function BookingsContent() {
                   )}
                   {upcoming && <CancelBookingButton bookingId={b.id} />}
                 </div>
+              </div>
+              {b.status === "completed" && !fbRes.error && (
+                <details className="group mt-4 rounded-2xl bg-slate-50 ring-1 ring-slate-200" open={!fb}>
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-bold text-slate-800">
+                    {fb ? (
+                      <span>
+                        Your feedback: <span className="text-amber-500" aria-label={`${fb.rating} out of 5 stars`}>{"★".repeat(fb.rating)}<span className="text-slate-300">{"★".repeat(5 - fb.rating)}</span></span> · Thank you!
+                      </span>
+                    ) : (
+                      <span>⭐ How was your session? Give feedback (1 minute)</span>
+                    )}
+                    <span className="text-xs font-semibold text-brand-700 group-open:hidden">{fb ? "Edit" : "Open"}</span>
+                  </summary>
+                  <div className="border-t border-slate-200 bg-white p-4 sm:p-5">
+                    <FeedbackForm bookingId={b.id} initial={fb ?? null} />
+                  </div>
+                </details>
+              )}
               </li>
             );
           })}

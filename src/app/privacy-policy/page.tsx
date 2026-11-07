@@ -28,7 +28,7 @@ export default function PrivacyPolicyPage() {
         <li><strong>Counselling bookings:</strong> student name, phone, email, class/year, expected VITEEE marks, your message and the slot you booked.</li>
         <li><strong>Payments:</strong> payments are handled by <strong>Razorpay</strong>. We receive the amount, item, payment and order IDs, payment method type (e.g. UPI or card) and status. <strong>We never see or store your card number, UPI PIN or bank passwords.</strong></li>
         <li><strong>Learning data:</strong> test answers and scores, rank predictions (marks or rank you enter), and which study files you download (with date and an anonymous device code).</li>
-        <li><strong>Enquiries and reviews</strong> you send us.</li>
+        <li><strong>Enquiries, reviews and session feedback</strong> you send us (your rating and answers after a counselling session). Feedback is shown on the website only if you tick the box allowing it — then only your first name, rating and &ldquo;What helped you most?&rdquo;.</li>
         <li><strong>Referrals and rewards:</strong> your referral code, who joined with your link, coupon uses and reward credit.</li>
         <li><strong>Technical data:</strong> pages visited, device and browser type, approximate location (country/city) and page speed — collected automatically (see Cookies below).</li>
         <li><strong>Consent record:</strong> the date you accepted this policy and our Terms.</li>

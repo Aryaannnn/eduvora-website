@@ -262,6 +262,32 @@ ${
     };
   },
 
+  // ---------- student: feedback 1 hour after the session ----------
+  async feedback_request(db, id) {
+    const b = await loadBooking(db, id);
+    if (!b || !b.email || !b.slots || b.status !== "completed") return null;
+    const { data: done } = await db.from("session_feedback").select("id").eq("booking_id", id).maybeSingle();
+    if (done) return null; // already gave feedback in My Bookings
+    const link = url(`/dashboard/feedback?booking=${b.id}`);
+    const stars = [1, 2, 3, 4, 5]
+      .map((n) => `<a href="${link}&amp;rating=${n}" style="font-size:30px;line-height:1;color:#f5b301;text-decoration:none;padding:0 3px" title="${n} star${n === 1 ? "" : "s"}">★</a>`)
+      .join("");
+    return {
+      to: b.email,
+      subject: `How was your counselling session with ${founderFirst} Sir? (1 minute)`,
+      html: layout({
+        preheader: "Tell us how it went — 1 minute, 3 questions.",
+        title: `How was your session, ${esc(b.name.split(" ")[0])}?`,
+        body: `<p>Thank you for your counselling session with <strong>${esc(founder)}</strong> on ${esc(slotLine(b))}.</p>
+<p>Your feedback takes about 1 minute and helps us guide the next student better.</p>
+<p style="text-align:center;margin:18px 0 6px">${stars}</p>
+<p style="text-align:center;font-size:12px;color:#64748b;margin:0 0 16px">Tap a star to start</p>
+<p style="text-align:center">${button("Give Feedback", link)}</p>
+<p style="font-size:13px;color:#64748b">3 quick questions: your rating, what helped you most, and what we can improve. You can also find this form in <a href="${url("/dashboard/bookings")}">My Bookings</a>.</p>`,
+      }),
+    };
+  },
+
   // ---------- student: Meet link added later ----------
   async meet_link(db, id) {
     const b = await loadBooking(db, id);
@@ -400,6 +426,50 @@ export function welcomeIfNew(userId: string) {
     if (!(await claim(db, "profiles", "welcome_email_sent_at", userId))) return;
     await sendKind("welcome", userId);
   });
+}
+
+// ---------------------------------------------------------------------
+//  AFTER THE SESSION (run by /api/cron/reminders every 15 minutes)
+//   • completePastBookings(): confirmed sessions whose end time has passed
+//     → 'completed' (supabase/feedback.sql → complete_past_bookings()).
+//   • sendDueFeedbackRequests(): 1 hour after a completed session ends,
+//     the student gets the feedback email (once). Only sessions that ended
+//     in the last 2 days — old ones never get a surprise email.
+// ---------------------------------------------------------------------
+export async function completePastBookings(): Promise<number> {
+  const db = getAdminSupabase();
+  if (!db) return 0;
+  const { data, error } = await db.rpc("complete_past_bookings");
+  if (error) {
+    if (!/complete_past_bookings|function/i.test(error.message)) console.warn("[cron] complete bookings failed:", error.message);
+    return 0; // feedback.sql not run yet
+  }
+  return Number(data) || 0;
+}
+
+export async function sendDueFeedbackRequests(): Promise<number> {
+  const db = getAdminSupabase();
+  if (!db) return 0;
+  const day = (ms: number) => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date(ms));
+  const now = Date.now();
+  const { data, error } = await db
+    .from("bookings")
+    .select("id,slots!inner(date,end_time)")
+    .eq("status", "completed")
+    .is("feedback_email_sent_at", null)
+    .gte("slots.date", day(now - 2 * 86400000))
+    .lte("slots.date", day(now))
+    .limit(100);
+  if (error) return 0; // feedback.sql not run yet
+  let sent = 0;
+  for (const b of (data ?? []) as unknown as { id: string; slots: { date: string; end_time: string } }[]) {
+    const ended = slotStart(b.slots.date, b.slots.end_time).getTime();
+    if (now - ended < 60 * 60000 || now - ended > 48 * 3600000) continue; // 1 hour after it ends, within 2 days
+    if (await claim(db, "bookings", "feedback_email_sent_at", b.id)) {
+      if (await sendKind("feedback_request", b.id)) sent++;
+    }
+  }
+  return sent;
 }
 
 // ---------------------------------------------------------------------

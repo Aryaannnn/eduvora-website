@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useLogout } from "@/lib/useLogout";
 import { Spinner } from "../BuyButton";
 import Logo from "../Logo";
-import { BookIcon, CalendarIcon, ChartIcon, ClipboardIcon, ClockIcon, GiftIcon, GridIcon, LogoutIcon, MailIcon, ReceiptIcon, ShieldIcon, StarIcon, TagIcon, TargetIcon, UsersIcon } from "../Icons";
+import { BookIcon, ChatIcon, CalendarIcon, ChartIcon, ClipboardIcon, ClockIcon, GiftIcon, GridIcon, LogoutIcon, MailIcon, ReceiptIcon, ShieldIcon, StarIcon, TagIcon, TargetIcon, UsersIcon } from "../Icons";
 
 const links = [
   { href: "/admin", label: "Overview", icon: ChartIcon },
@@ -19,6 +19,7 @@ const links = [
   { href: "/admin/tests", label: "Tests", icon: ClipboardIcon },
   { href: "/admin/predictor", label: "Predictor", icon: TargetIcon },
   { href: "/admin/reviews", label: "Reviews", icon: StarIcon },
+  { href: "/admin/feedback", label: "Feedback", icon: ChatIcon },
   { href: "/admin/students", label: "Students", icon: UsersIcon },
   { href: "/admin/payments", label: "Payments", icon: ReceiptIcon },
   { href: "/admin/coupons", label: "Coupons", icon: TagIcon },

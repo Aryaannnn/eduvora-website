@@ -33,6 +33,7 @@ const TABLES: [string, string][] = [
   ["site-updates", "site_updates"],
   ["blog-posts", "blog_posts"],
   ["video-testimonials", "video_testimonials"],
+  ["session-feedback", "session_feedback"],
   ["email-logs", "email_logs"],
 ];
 const PAGE = 1000;

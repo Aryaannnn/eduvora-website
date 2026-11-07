@@ -14,6 +14,7 @@ export const ChevronDownIcon = ({ className = "h-5 w-5" }: P) => s(className, <p
 export const ClockIcon = ({ className = "h-5 w-5" }: P) => s(className, <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>);
 export const CalendarIcon = ({ className = "h-5 w-5" }: P) => s(className, <><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M16 3v4M8 3v4M3 11h18" /></>);
 export const MonitorIcon = ({ className = "h-5 w-5" }: P) => s(className, <><rect x="3" y="4" width="18" height="12" rx="2" /><path d="M8 20h8M12 16v4" /></>);
+export const ChatIcon = ({ className = "h-5 w-5" }: P) => s(className, <path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12Z" />);
 export const VideoIcon = ({ className = "h-5 w-5" }: P) => s(className, <><rect x="2" y="6" width="14" height="12" rx="2" /><path d="m22 8-6 4 6 4V8Z" /></>);
 export const PhoneIcon = ({ className = "h-5 w-5" }: P) => s(className, <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2Z" />);
 export const MailIcon = ({ className = "h-5 w-5" }: P) => s(className, <><rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-10 6L2 7" /></>);

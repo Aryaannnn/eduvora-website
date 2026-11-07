@@ -7,7 +7,7 @@ import { requireAdmin } from "@/lib/admin";
 import { personLabel, profilesById } from "@/lib/admin-data";
 import { formatDate, formatDateTime, formatPrice, formatTime, todayInIndia } from "@/lib/format";
 import { after } from "next/server";
-import { sendDueReminders } from "@/lib/email/notify";
+import { completePastBookings, sendDueFeedbackRequests, sendDueReminders } from "@/lib/email/notify";
 
 export const metadata: Metadata = { title: "Overview" };
 
@@ -29,7 +29,12 @@ type Booking = { id: string; user_id: string; name: string; status: string; crea
 
 async function Overview() {
   const s = await requireAdmin("/admin");
-  after(() => sendDueReminders().catch(() => {})); // session reminders also go out whenever the admin opens the dashboard
+  // Session reminders, "completed" marking and feedback emails also run whenever the admin opens the dashboard
+  after(async () => {
+    await sendDueReminders().catch(() => {});
+    await completePastBookings().catch(() => 0);
+    await sendDueFeedbackRequests().catch(() => 0);
+  });
   const today = todayInIndia();
 
   const weekAgo = daysAgoISO(7);

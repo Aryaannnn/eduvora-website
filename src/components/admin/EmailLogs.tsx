@@ -20,6 +20,8 @@ const KIND: Record<string, string> = {
   booking_cancelled: "Booking cancelled",
   booking_rescheduled: "Booking rescheduled",
   welcome: "Welcome",
+  meet_link: "Google Meet link",
+  feedback_request: "Feedback request",
   admin_payment: "Admin · new payment",
   admin_booking: "Admin · new booking",
   admin_enquiry: "Admin · new enquiry",

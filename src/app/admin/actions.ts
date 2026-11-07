@@ -430,6 +430,24 @@ export async function setReviewApproved(id: string, approved: boolean): Promise<
   return dbResult(error);
 }
 
+// ---------------------------------------------------------------- SESSION FEEDBACK
+/** "Publish as review" — only works when the student ticked the permission box (checked in Supabase too). */
+export async function publishFeedbackAsReview(feedbackId: string, shownName?: string): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const { error } = await s.supabase.rpc("publish_feedback_as_review", { p_feedback: feedbackId, p_name: shownName?.trim() || null });
+  updateTag("reviews");
+  if (error) return fail(/function/i.test(error.message) && /find/i.test(error.message) ? "Run supabase/feedback.sql in Supabase first." : error.message);
+  return { ok: true, message: "Published — it now shows on the Reviews page of the website (manage it in Admin → Reviews)." };
+}
+
+export async function deleteFeedback(feedbackId: string): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const { error } = await s.supabase.from("session_feedback").delete().eq("id", feedbackId);
+  return dbResult(error, "Feedback deleted.");
+}
+
 export async function deleteReview(id: string): Promise<ActionResult> {
   const s = await adminOrError();
   if (isError(s)) return s;

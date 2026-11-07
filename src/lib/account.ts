@@ -26,6 +26,11 @@ export async function deleteAccount(userId: string, requestedBy: "student" | "ad
   const name = ((p?.full_name as string | null) || "").split(" ")[0] || "there";
   if (p?.role === "admin") return { ok: false, error: "Admin accounts can't be deleted. Remove the admin role first." };
 
+  // Reviews published from their session feedback (not linked to the account) → delete too
+  const { data: pub } = await db.from("session_feedback").select("review_id").eq("user_id", userId).not("review_id", "is", null);
+  const pubIds = (pub ?? []).map((r) => r.review_id as string);
+  if (pubIds.length) await db.from("reviews").delete().in("id", pubIds);
+
   // Their calendar events contain name/phone → remove them after the data is deleted
   const { data: evs } = await db.from("bookings").select("calendar_event_id").eq("user_id", userId).not("calendar_event_id", "is", null);
   const eventIds = (evs ?? []).map((e) => e.calendar_event_id as string);
