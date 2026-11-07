@@ -668,3 +668,115 @@ export async function saveReferralSettings(input: { enabled: boolean; referred_d
   if (error && setupCoupons(error.message)) return fail("Run supabase/coupons-referrals.sql in Supabase first.");
   return dbResult(error, "Referral settings saved. New referrals use these amounts.");
 }
+
+// ---------------------------------------------------------------- IMPORTANT DATES & UPDATES (supabase/important-dates.sql)
+const DATE_CATEGORIES = ["application", "exam", "admit_card", "result", "counselling", "fees", "other"] as const;
+const isDay = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v);
+const needDatesSql = (m: string) => /important_dates|site_updates/.test(m) && /does not exist|schema cache|relation/.test(m);
+
+export type ImportantDateInput = {
+  id?: string; title: string; category: (typeof DATE_CATEGORIES)[number]; start_date: string; end_date?: string | null;
+  description?: string; official_link?: string; is_published: boolean;
+};
+
+export async function saveImportantDate(input: ImportantDateInput): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const title = input.title.trim();
+  if (title.length < 2) return fail("Please enter a title.");
+  if (!DATE_CATEGORIES.includes(input.category)) return fail("Please choose a type.");
+  if (!isDay(input.start_date)) return fail("Please choose the start date.");
+  const end = input.end_date && isDay(input.end_date) ? input.end_date : null;
+  if (end && end < input.start_date) return fail("The end date is before the start date.");
+  const link = input.official_link?.trim() || null;
+  if (link && !isUrl(link)) return fail("The official link must start with https://");
+  const row = {
+    title: title.slice(0, 150),
+    category: input.category,
+    start_date: input.start_date,
+    end_date: end && end !== input.start_date ? end : null,
+    description: input.description?.trim().slice(0, 600) || null,
+    official_link: link,
+    is_published: input.is_published,
+    is_sample: false, // anything saved by the admin is real
+    updated_at: new Date().toISOString(),
+  };
+  let res;
+  if (input.id) {
+    res = await s.supabase.from("important_dates").update(row).eq("id", input.id);
+  } else {
+    // new events go to the end of the list
+    const { data: last } = await s.supabase.from("important_dates").select("sort_order").order("sort_order", { ascending: false }).limit(1).maybeSingle();
+    res = await s.supabase.from("important_dates").insert({ ...row, sort_order: ((last?.sort_order as number | undefined) ?? 0) + 1 });
+  }
+  updateTag("important-dates");
+  if (res.error && needDatesSql(res.error.message)) return fail("Run supabase/important-dates.sql in Supabase first.");
+  return dbResult(res.error, input.id ? "Event saved." : "Event added.");
+}
+
+export async function deleteImportantDate(id: string): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const { error } = await s.supabase.from("important_dates").delete().eq("id", id);
+  updateTag("important-dates");
+  return dbResult(error, "Event deleted.");
+}
+
+/** Move an event one place up or down (renumbers the list 1, 2, 3…). */
+export async function moveImportantDate(id: string, dir: -1 | 1): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const { data, error } = await s.supabase.from("important_dates").select("id").order("sort_order").order("start_date");
+  if (error) return fail(friendlyDbError(error.message));
+  const ids = (data ?? []).map((r) => r.id as string);
+  const i = ids.indexOf(id);
+  const j = i + dir;
+  if (i < 0 || j < 0 || j >= ids.length) return { ok: true };
+  [ids[i], ids[j]] = [ids[j], ids[i]];
+  const results = await Promise.all(ids.map((x, n) => s.supabase.from("important_dates").update({ sort_order: n + 1 }).eq("id", x)));
+  updateTag("important-dates");
+  return dbResult(results.find((r) => r.error)?.error ?? null);
+}
+
+/** Put the whole list in date order (earliest first). */
+export async function sortImportantDatesByDate(): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const { data, error } = await s.supabase.from("important_dates").select("id").order("start_date").order("end_date", { nullsFirst: true });
+  if (error) return fail(friendlyDbError(error.message));
+  const results = await Promise.all((data ?? []).map((r, n) => s.supabase.from("important_dates").update({ sort_order: n + 1 }).eq("id", r.id)));
+  updateTag("important-dates");
+  return dbResult(results.find((r) => r.error)?.error ?? null, "Sorted by date.");
+}
+
+export type SiteUpdateInput = { id?: string; title: string; body?: string; link?: string; is_pinned: boolean; is_published: boolean; published_on?: string };
+
+export async function saveSiteUpdate(input: SiteUpdateInput): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const title = input.title.trim();
+  if (title.length < 2) return fail("Please enter a title.");
+  const link = input.link?.trim() || null;
+  if (link && !isUrl(link)) return fail("The link must start with https://");
+  const row = {
+    title: title.slice(0, 150),
+    body: input.body?.trim().slice(0, 1000) || null,
+    link,
+    is_pinned: input.is_pinned,
+    is_published: input.is_published,
+    // optional date (India time) — a future date shows the post from that day
+    ...(input.published_on && isDay(input.published_on) ? { published_at: new Date(`${input.published_on}T09:00:00+05:30`).toISOString() } : {}),
+  };
+  const res = input.id ? await s.supabase.from("site_updates").update(row).eq("id", input.id) : await s.supabase.from("site_updates").insert(row);
+  updateTag("important-dates");
+  if (res.error && needDatesSql(res.error.message)) return fail("Run supabase/important-dates.sql in Supabase first.");
+  return dbResult(res.error, input.id ? "Update saved." : "Update posted.");
+}
+
+export async function deleteSiteUpdate(id: string): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const { error } = await s.supabase.from("site_updates").delete().eq("id", id);
+  updateTag("important-dates");
+  return dbResult(error, "Update deleted.");
+}

@@ -26,6 +26,7 @@ export const isGroup = (i: NavItem): i is NavGroup => "children" in i;
 //   { href: "/blog", label: "Blog", hint: "Tips and guides", comingSoon: true },
 const resources: NavLink[] = [
   { href: "/free-resources", label: "Free Resources", hint: "Free tests, papers & PDF guides", free: true },
+  { href: "/important-dates", label: "Important Dates", hint: "Exam, results & counselling dates" },
   { href: "/study-material", label: "Study Material", hint: "Admission kits & notes" },
   { href: "/mock-tests", label: "Mock Tests", hint: "Full mocks & MCQ practice" },
   { href: "/previous-year-papers", label: "PYQ Papers", hint: "Previous year VITEEE papers" },

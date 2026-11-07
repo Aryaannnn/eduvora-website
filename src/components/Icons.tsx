@@ -64,3 +64,6 @@ export const WhatsAppIcon = ({ className = "h-6 w-6" }: P) => (
 export const TagIcon = ({ className = "h-5 w-5" }: P) => s(className, <><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z" /><circle cx="7.5" cy="7.5" r="1.5" /></>);
 export const GiftIcon = ({ className = "h-5 w-5" }: P) => s(className, <><rect x="3" y="8" width="18" height="4" rx="1" /><path d="M12 8v13M19 12v9H5v-9" /><path d="M7.5 8a2.5 2.5 0 0 1 0-5C10 3 12 8 12 8s2-5 4.5-5a2.5 2.5 0 0 1 0 5" /></>);
 export const CopyIcon = ({ className = "h-5 w-5" }: P) => s(className, <><rect x="9" y="9" width="12" height="12" rx="2" /><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" /></>);
+export const MegaphoneIcon = ({ className = "h-5 w-5" }: P) => s(className, <><path d="m3 11 15-6v14L3 13v-2Z" /><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" /></>);
+export const ArrowUpIcon = ({ className = "h-4 w-4" }: P) => s(className, <path d="M12 19V5M5 12l7-7 7 7" />);
+export const ArrowDownIcon = ({ className = "h-4 w-4" }: P) => s(className, <path d="M12 5v14M19 12l-7 7-7-7" />);

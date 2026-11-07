@@ -14,6 +14,7 @@ const links = [
   { href: "/admin/slots", label: "Slots", icon: ClockIcon },
   { href: "/admin/bookings", label: "Bookings", icon: CalendarIcon },
   { href: "/admin/enquiries", label: "Enquiries", icon: MailIcon },
+  { href: "/admin/important-dates", label: "Important Dates", icon: CalendarIcon },
   { href: "/admin/tests", label: "Tests", icon: ClipboardIcon },
   { href: "/admin/predictor", label: "Predictor", icon: TargetIcon },
   { href: "/admin/reviews", label: "Reviews", icon: StarIcon },

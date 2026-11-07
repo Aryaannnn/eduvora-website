@@ -20,10 +20,12 @@ import { faqs } from "@/data/misc";
 import PredictorGate from "@/components/predictor/PredictorGate";
 import { getApprovedReviews, getProducts, getUpcomingSlots } from "@/lib/data";
 import { getFreeResources } from "@/lib/free-resources";
+import { getNextDates } from "@/lib/important-dates";
+import { NextDatesList, OFFICIAL_NOTE } from "@/components/dates/DateBits";
 
 export default async function Home() {
   // All of this comes from Supabase (cached for a few minutes)
-  const [materials, courses, mockTests, papers, reviews, slots, free] = await Promise.all([
+  const [materials, courses, mockTests, papers, reviews, slots, free, nextDates] = await Promise.all([
     getProducts("study_material"),
     getProducts("crash_course"),
     getProducts("mock_test"),
@@ -31,6 +33,7 @@ export default async function Home() {
     getApprovedReviews(),
     getUpcomingSlots(6),
     getFreeResources(),
+    getNextDates(3),
   ]);
   // Up to 6 free items for the home page (tests first, then papers and guides)
   const freeItems = [
@@ -50,6 +53,16 @@ export default async function Home() {
 
       {/* 3. Book a call */}
       <BookCallSection slots={slots} />
+
+      {/* Next 3 important dates (hidden when there are none) */}
+      {nextDates.length > 0 && (
+        <section className="section" id="important-dates">
+          <div className="container-page">
+            <SectionHeader eyebrow="Important dates" title="Coming up next" subtitle={`Applications, exam, results and counselling deadlines. ${OFFICIAL_NOTE}`} href="/important-dates" linkText="All dates & updates" />
+            <Reveal className="mx-auto mt-10 max-w-3xl"><NextDatesList dates={nextDates} /></Reveal>
+          </div>
+        </section>
+      )}
 
       {/* Counselling packages (hidden when there are none) */}
       <section className="section bg-slate-50">

@@ -7,6 +7,7 @@ import Logo from "./Logo";
 
 const explore = [
   { href: "/free-resources", label: "Free Resources" },
+  { href: "/important-dates", label: "Important Dates" },
   { href: "/courses", label: "Crash Courses" },
   { href: "/predictor", label: "Rank & College Predictor" },
   { href: "/study-material", label: "Study Material" },

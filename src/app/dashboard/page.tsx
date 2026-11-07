@@ -7,6 +7,8 @@ import { displayName, getMyAttempts, getMyBookings, getMyPurchases, nextBooking,
 import { formatDate, formatTime } from "@/lib/format";
 import { welcomeIfNew } from "@/lib/email/notify";
 import { getCredits } from "@/lib/packages";
+import { getNextDates } from "@/lib/important-dates";
+import { NextDatesList, OFFICIAL_NOTE } from "@/components/dates/DateBits";
 import { claimReferralFromCookie } from "@/lib/pricing";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 
@@ -22,7 +24,7 @@ async function HomeContent() {
   const s = await requireUser("/dashboard");
   welcomeIfNew(s.user.id); // new students get a welcome email (once)
   await claimReferralFromCookie(getAdminSupabase(), s.user.id); // joined through a friend's link?
-  const [purchases, bookings, attempts, credits] = await Promise.all([getMyPurchases(s), getMyBookings(s), getMyAttempts(s, 1), getCredits(s.supabase)]);
+  const [purchases, bookings, attempts, credits, nextDates] = await Promise.all([getMyPurchases(s), getMyBookings(s), getMyAttempts(s, 1), getCredits(s.supabase), getNextDates(3)]);
   const paidCount = paidOnly(purchases).length;
   const upcoming = nextBooking(bookings);
   const latest = attempts[0];
@@ -66,6 +68,20 @@ async function HomeContent() {
           hint={latest?.tests?.title ?? "Take a free test"}
         />
       </div>
+
+      {/* Next 3 important dates */}
+      {nextDates.length > 0 && (
+        <section className="card p-5 sm:p-6">
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <h2 className="text-lg font-extrabold text-slate-900">Important dates</h2>
+              <p className="text-xs text-slate-500">{OFFICIAL_NOTE}</p>
+            </div>
+            <Link href="/important-dates" className="text-sm font-semibold text-brand-700 hover:underline">All dates →</Link>
+          </div>
+          <div className="mt-4"><NextDatesList dates={nextDates} /></div>
+        </section>
+      )}
 
       {/* Shortcuts */}
       <section className="card p-5 sm:p-6">
