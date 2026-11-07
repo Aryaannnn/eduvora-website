@@ -232,7 +232,7 @@ export default function BookingForm() {
         {/* Step 1: date */}
         <fieldset disabled={busy}>
           <legend className="text-lg font-extrabold text-slate-900">1. Pick a date</legend>
-          <div className="-mx-1 mt-4 flex gap-2 overflow-x-auto px-1 pb-2">
+          <div className="-mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-2 pt-1">
             {dates.map((d) => (
               <button
                 key={d}

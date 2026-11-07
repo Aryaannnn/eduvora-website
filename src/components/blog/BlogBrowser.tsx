@@ -34,7 +34,7 @@ export default function BlogBrowser({ posts }: { posts: PostCardData[] }) {
   return (
     <>
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div role="tablist" aria-label="Categories" className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+        <div role="tablist" aria-label="Categories" className="-mx-1 -my-1 flex gap-2 overflow-x-auto px-1 py-1">
           {(["all", ...BLOG_CATEGORIES] as const).map((c) => (
             <button
               key={c}
