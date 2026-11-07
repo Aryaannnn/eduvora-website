@@ -1,0 +1,93 @@
+# =====================================================================
+#  DAILY DATABASE BACKUP  (see BACKUPS.md for setup + how to restore)
+#  • Runs every day at 2:00 AM India time (and any time from the Actions tab).
+#  • Backs up the Supabase database (public tables + student logins + file
+#    records) with pg_dump, plus the list of files in the 'materials' bucket.
+#  • Everything is ENCRYPTED with your BACKUP_PASSPHRASE before it is saved,
+#    so the artifact is useless to anyone without the passphrase.
+#  • Kept as a workflow artifact for 30 days.
+#  Needs two repository secrets: SUPABASE_DB_URL and BACKUP_PASSPHRASE.
+# =====================================================================
+name: Daily database backup
+
+on:
+  schedule:
+    - cron: "30 20 * * *" # 20:30 UTC = 02:00 IST (GitHub may start it a few minutes late)
+  workflow_dispatch: {} # "Run workflow" button in the Actions tab
+
+permissions:
+  contents: read
+
+concurrency:
+  group: db-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+    steps:
+      - name: Check the secrets are set
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "::error::Add the repository secret SUPABASE_DB_URL (Supabase → Connect → Session pooler). See BACKUPS.md."
+            exit 1
+          fi
+          if [ "${#BACKUP_PASSPHRASE}" -lt 16 ]; then
+            echo "::error::Add the repository secret BACKUP_PASSPHRASE (16+ characters). Backups are never saved unencrypted. See BACKUPS.md."
+            exit 1
+          fi
+
+      - name: Install PostgreSQL 17 tools (pg_dump must be as new as the database)
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-17 > /dev/null
+          /usr/lib/postgresql/17/bin/pg_dump --version
+
+      - name: Back up the database and the file list
+        run: |
+          set -euo pipefail
+          BIN=/usr/lib/postgresql/17/bin
+          STAMP=$(TZ=Asia/Kolkata date +%Y-%m-%d_%H%M)
+          mkdir -p backup
+
+          # 1. Full backup: your tables (public), student logins (auth), file records (storage)
+          "$BIN/pg_dump" "$SUPABASE_DB_URL" --format=custom --compress=9 --no-owner --no-privileges \
+            --schema=public --schema=auth --schema=storage --file=backup/database.dump
+
+          # 2. Readable copy of your table structure (no data) — handy to look at
+          "$BIN/pg_dump" "$SUPABASE_DB_URL" --schema-only --no-owner --no-privileges \
+            --schema=public --file=backup/public-schema.sql
+
+          # 3. List of files in the 'materials' bucket (names, paths, sizes)
+          "$BIN/psql" "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -q -c "\copy (select name as path, regexp_replace(name, '^.*/', '') as file_name, (metadata->>'size')::bigint as size_bytes, metadata->>'mimetype' as type, created_at, updated_at from storage.objects where bucket_id = 'materials' order by name) to 'backup/materials-files.csv' with csv header"
+
+          # 4. How many rows each table had (to check a restore later)
+          "$BIN/psql" "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -q -A -F ',' -c "select relname as table_name, n_live_tup as approx_rows from pg_stat_user_tables where schemaname = 'public' order by relname" > backup/row-counts.csv
+
+          echo "EDUVORA backup made $(TZ=Asia/Kolkata date '+%d %b %Y %H:%M IST') by GitHub Actions run ${GITHUB_RUN_ID}" > backup/README.txt
+          (cd backup && sha256sum * > SHA256SUMS.txt)
+
+          # 5. Pack + ENCRYPT (AES-256). The passphrase goes through a pipe, never the command line.
+          tar -czf "eduvora-backup-$STAMP.tar.gz" -C backup .
+          printf '%s' "$BACKUP_PASSPHRASE" | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
+            --symmetric --cipher-algo AES256 --output "eduvora-backup-$STAMP.tar.gz.gpg" "eduvora-backup-$STAMP.tar.gz"
+          rm -rf backup "eduvora-backup-$STAMP.tar.gz"
+          ls -lh "eduvora-backup-$STAMP.tar.gz.gpg"
+          echo "BACKUP_NAME=eduvora-backup-$STAMP" >> "$GITHUB_ENV"
+
+      - name: Save the encrypted backup (kept 30 days)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.BACKUP_NAME }}
+          path: ${{ env.BACKUP_NAME }}.tar.gz.gpg
+          retention-days: 30
+          compression-level: 0 # already compressed + encrypted
+          if-no-files-found: error

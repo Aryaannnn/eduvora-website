@@ -57,6 +57,11 @@ Courses, study material, tests, slots, bookings, reviews and student accounts li
 👉 Follow **[DEPLOY.md](DEPLOY.md)**: environment variables, Supabase URLs, the Razorpay webhook,
 the automatic jobs (cron-job.org) and pre-launch mode (`src/config/launch.ts`).
 
+## Backups
+
+👉 **[BACKUPS.md](BACKUPS.md)**: the nightly encrypted database backup (GitHub Actions), the
+"Export all data" button (Admin → Settings) and how to restore.
+
 ## Before going live
 
 - Replace all placeholders (social links, results).

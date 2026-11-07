@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import CommunitySettingsForm from "@/components/admin/CommunitySettingsForm";
+import ExportDataCard from "@/components/admin/ExportDataCard";
 import ReferralSettingsForm from "@/components/admin/ReferralSettingsForm";
 import StatsManager from "@/components/admin/StatsManager";
 import { DashSkeleton } from "@/components/dashboard/ui";
@@ -30,7 +31,8 @@ async function Content() {
     const missing = error.code === "42P01" || error.code === "PGRST205";
     return (
       <>
-        {community}
+        <ExportDataCard />
+      {community}
         {referral}
         <p className="card p-6 text-red-600">{missing ? "Run supabase/stats-reviews.sql in Supabase → SQL Editor to turn on editable stats." : `Could not load settings: ${error.message}`}</p>
       </>
@@ -38,6 +40,7 @@ async function Content() {
   }
   return (
     <>
+      <ExportDataCard />
       {community}
       {referral}
       <StatsManager stats={(data ?? []) as SiteStat[]} />
