@@ -1,4 +1,7 @@
-// /sitemap.xml — tells Google which pages exist (including every published blog post).
+// /sitemap.xml — tells Google which PUBLIC pages exist: main pages, every course
+// page and every published blog post (sample posts excluded).
+// Private pages (dashboard, admin, parent links, payments, login, invoices) are
+// never listed — they also say "noindex".
 // While PRE_LAUNCH is on, pages still say "noindex", so nothing is shown in Google yet.
 import type { MetadataRoute } from "next";
 import { getPublishedPosts } from "@/lib/blog";

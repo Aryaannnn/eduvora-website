@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 import LegalPage from "@/components/LegalPage";
 import { emailLink, siteConfig } from "@/config/site";
 
-export const metadata: Metadata = {
-  title: "Refund & Cancellation Policy",
-  description: `How cancellations, rescheduling and refunds work at ${siteConfig.businessName}.`,
-};
+export const metadata: Metadata = pageMeta({ title: "Refund & Cancellation Policy", description: "How cancellations, rescheduling and refunds work for EDUVORA counselling sessions, courses and study material, with timelines and conditions.", path: "/refund-policy" });
 
 // ✏️ The numbers (24 hours, 7 days, 5–7 working days) come from
 //    src/config/site.ts → refunds. Change them there.
@@ -13,7 +11,7 @@ export default function RefundPolicyPage() {
   const r = siteConfig.refunds;
   const h = r.counsellingHours;
   return (
-    <LegalPage title="Refund & Cancellation Policy">
+    <LegalPage title="Refund & Cancellation Policy" path="/refund-policy">
       <p>
         We want you to feel confident when you pay us. This page explains, in simple words, when you can reschedule, cancel or get
         a refund.

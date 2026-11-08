@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import JsonLd from "@/components/seo/JsonLd";
+import { pageMeta, breadcrumbLd } from "@/lib/seo";
 import Link from "next/link";
 import CtaBanner from "@/components/CtaBanner";
 import { FreeProductCard, FreeTestCard } from "@/components/free/FreeResourceCard";
@@ -8,10 +10,7 @@ import Reveal from "@/components/Reveal";
 import SectionHeading from "@/components/SectionHeading";
 import { getFreeResources } from "@/lib/free-resources";
 
-export const metadata: Metadata = {
-  title: "Free VITEEE Resources",
-  description: "Free VITEEE mock tests, previous year papers and PDF guides. Sign up free to unlock them instantly.",
-};
+export const metadata: Metadata = pageMeta({ title: "Free VITEEE Mock Tests, Papers & Guides", description: "Free VITEEE resources: mock tests, previous year papers and PDF guides. Sign up free to unlock them instantly and track your scores.", path: "/free-resources" });
 
 // ✏️ Which items appear here: every product you mark "Free" in Admin → Products,
 //    plus every test marked "Free" in Admin → Tests.
@@ -24,6 +23,7 @@ export default async function FreeResourcesPage() {
 
   return (
     <>
+      <JsonLd data={breadcrumbLd([{ name: "Free Resources", path: "/free-resources" }])} />
       <PageHero eyebrow="100% free" title="Free VITEEE Resources" subtitle="Free mock tests, previous year papers and PDF guides. Sign up free and they unlock instantly in your dashboard.">
         <ul className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm font-semibold text-slate-200">
           {["No payment needed", "Unlocks instantly", "Saved in My Courses & Material"].map((t) => (

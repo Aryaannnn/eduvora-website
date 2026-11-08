@@ -1,17 +1,17 @@
 import type { Metadata } from "next";
+import JsonLd from "@/components/seo/JsonLd";
+import { pageMeta, breadcrumbLd } from "@/lib/seo";
 import BookingForm from "@/components/BookingForm";
 import PackageCards from "@/components/packages/PackageCards";
 import PageHero from "@/components/PageHero";
 import { siteConfig } from "@/config/site";
 
-export const metadata: Metadata = {
-  title: "Book a Counselling Slot",
-  description: `Book a one-to-one VITEEE counselling call with ${siteConfig.founder.name}.`,
-};
+export const metadata: Metadata = pageMeta({ title: "Book One-to-One VITEEE Counselling", description: "Book a one-to-one VITEEE counselling call with Utkarsh Shrivastava: rank review, campus and branch choice, fee categories and documents.", path: "/book-a-slot" });
 
 export default function BookASlotPage() {
   return (
     <>
+      <JsonLd data={breadcrumbLd([{ name: "Book Counselling", path: "/book-a-slot" }])} />
       <PageHero
         eyebrow="Book a slot"
         title="Book Your Counselling Slot"

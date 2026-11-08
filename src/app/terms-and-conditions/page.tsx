@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 import Link from "next/link";
 import LegalPage from "@/components/LegalPage";
 import { siteConfig as site } from "@/config/site";
 
-export const metadata: Metadata = { title: "Terms & Conditions" };
+export const metadata: Metadata = pageMeta({ title: "Terms & Conditions of Use", description: "The terms for using EDUVORA's VITEEE counselling, courses, study material, mock tests and rank predictor, including payments and accounts.", path: "/terms-and-conditions" });
 
 export default function TermsPage() {
   return (
-    <LegalPage title="Terms & Conditions">
+    <LegalPage title="Terms & Conditions" path="/terms-and-conditions">
       <p>
         By using the {site.businessName} website or enrolling in any of our courses, you agree to these terms. Please read
         them carefully.

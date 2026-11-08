@@ -1,4 +1,7 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import JsonLd from "@/components/seo/JsonLd";
+import { faqLd, pageMeta } from "@/lib/seo";
 import Accordion from "@/components/Accordion";
 import CourseCard from "@/components/cards/CourseCard";
 import MaterialCard from "@/components/cards/MaterialCard";
@@ -25,6 +28,13 @@ import { getFreeResources } from "@/lib/free-resources";
 import { getNextDates } from "@/lib/important-dates";
 import { NextDatesList, OFFICIAL_NOTE } from "@/components/dates/DateBits";
 
+export const metadata: Metadata = pageMeta({
+  title: "VITEEE Counselling & Rank Predictor | EDUVORA",
+  absolute: true,
+  description: "Expert VITEEE counselling and VIT counselling guidance: free VITEEE rank predictor, campus and branch choice, fee categories, crash courses and mock tests.",
+  path: "/",
+});
+
 export default async function Home() {
   // All of this comes from Supabase (cached for a few minutes)
   const [materials, courses, mockTests, papers, reviews, slots, free, nextDates, videos] = await Promise.all([
@@ -48,6 +58,8 @@ export default async function Home() {
 
   return (
     <>
+      {/* Google: the FAQ section below */}
+      <JsonLd data={faqLd(faqs)} />
       {/* 1. Hero slideshow */}
       <HeroSlider />
 

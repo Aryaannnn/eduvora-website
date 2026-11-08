@@ -12,11 +12,16 @@ import RefundNote from "@/components/RefundNote";
 import { phoneLink } from "@/config/site";
 import { getProductBySlug, getProducts } from "@/lib/data";
 import { discountPercent, formatPrice } from "@/lib/format";
+import JsonLd from "@/components/seo/JsonLd";
+import { breadcrumbLd, courseLd, pageMeta } from "@/lib/seo";
 
 export async function generateMetadata(props: PageProps<"/courses/[slug]">): Promise<Metadata> {
   const { slug } = await props.params;
   const course = await getProductBySlug(slug);
-  return course ? { title: course.title, description: course.details.short ?? course.description ?? undefined } : { title: "Course not found" };
+  if (!course) return { title: "Course not found", robots: { index: false } };
+  const raw = (course.details.short ?? course.description ?? "").trim();
+  const description = (raw.length >= 70 ? raw : `${course.title}: VITEEE crash course by EDUVORA with live classes, mock tests and doubt support. ${raw}`).slice(0, 158);
+  return pageMeta({ title: course.title, description, path: `/courses/${course.slug}`, ...(course.thumbnail_url ? { image: { url: course.thumbnail_url, alt: course.title } } : {}) });
 }
 
 // The course comes from Supabase. The page loads per visit (inside Suspense).
@@ -44,6 +49,13 @@ async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
 
   return (
     <>
+      {/* Google: course details (name, price in INR) + breadcrumbs */}
+      <JsonLd
+        data={[
+          courseLd({ name: course.title, description: (d.short ?? course.description ?? course.title).slice(0, 300), path: `/courses/${course.slug}`, price: course.price, image: course.thumbnail_url }),
+          breadcrumbLd([{ name: "Crash Courses", path: "/courses" }, { name: course.title, path: `/courses/${course.slug}` }]),
+        ]}
+      />
       <section className="hero-bg relative overflow-hidden text-white">
         <div className="grid-pattern absolute inset-0 opacity-40" aria-hidden />
         <div className="container-page relative animate-fade-up py-10 sm:py-14">

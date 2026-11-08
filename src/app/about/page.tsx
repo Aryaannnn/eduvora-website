@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import JsonLd from "@/components/seo/JsonLd";
+import { pageMeta, breadcrumbLd } from "@/lib/seo";
 import Link from "next/link";
 import CtaBanner from "@/components/CtaBanner";
 import Disclaimer from "@/components/Disclaimer";
@@ -12,10 +14,7 @@ import SectionHeading from "@/components/SectionHeading";
 import { siteConfig } from "@/config/site";
 import { founder } from "@/content/founder";
 
-export const metadata: Metadata = {
-  title: "About Us",
-  description: `The story of ${siteConfig.businessName} and our founder ${siteConfig.founder.name}.`,
-};
+export const metadata: Metadata = pageMeta({ title: "About EDUVORA – VITEEE Counselling Experts", description: "Meet EDUVORA: honest VITEEE counselling and VIT counselling guidance for students and parents, from rank planning to campus, branch and fee category choice.", path: "/about" });
 
 const values = [
   { icon: ShieldIcon, title: "Honest guidance", text: "We tell you what you need to hear, not what sells." },
@@ -28,6 +27,7 @@ const values = [
 export default function AboutPage() {
   return (
     <>
+      <JsonLd data={breadcrumbLd([{ name: "About", path: "/about" }])} />
       <PageHero eyebrow="About us" title={`About ${siteConfig.businessName}`} subtitle="Helping VITEEE students prepare smartly and choose confidently.">
         <p className="mt-5 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 text-sm font-semibold tracking-[0.2em] text-accent-300 ring-1 ring-white/15">{siteConfig.nameMeaning}</p>
       </PageHero>

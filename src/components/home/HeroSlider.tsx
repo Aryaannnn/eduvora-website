@@ -200,9 +200,12 @@ export default function HeroSlider() {
                   <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-slate-100 ring-1 ring-white/15">
                     <span className="h-2 w-2 animate-pulse rounded-full bg-accent-400" /> {s.eyebrow}
                   </span>
-                  <h1 className="mt-4 text-[2rem] font-extrabold leading-[1.1] tracking-tight [text-wrap:balance] sm:mt-5 sm:text-5xl lg:text-6xl">
-                    {s.title}
-                  </h1>
+                  {/* one <h1> per page (SEO): the first slide; the others look the same but are <h2> */}
+                  {i === 0 ? (
+                    <h1 className="mt-4 text-[2rem] font-extrabold leading-[1.1] tracking-tight [text-wrap:balance] sm:mt-5 sm:text-5xl lg:text-6xl">{s.title}</h1>
+                  ) : (
+                    <h2 className="mt-4 text-[2rem] font-extrabold leading-[1.1] tracking-tight [text-wrap:balance] sm:mt-5 sm:text-5xl lg:text-6xl">{s.title}</h2>
+                  )}
                   <p className="mt-4 max-w-xl text-base leading-relaxed text-slate-200 sm:mt-5 sm:text-lg">{s.text}</p>
 
                   {/* Small "Marks → Rank → College" strip on phones/tablets */}

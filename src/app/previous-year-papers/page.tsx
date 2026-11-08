@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import JsonLd from "@/components/seo/JsonLd";
+import { pageMeta, breadcrumbLd } from "@/lib/seo";
 import TestCard from "@/components/cards/TestCard";
 import CtaBanner from "@/components/CtaBanner";
 import { CheckIcon } from "@/components/Icons";
@@ -7,10 +9,7 @@ import Reveal from "@/components/Reveal";
 import EmptyState from "@/components/EmptyState";
 import { getProducts } from "@/lib/data";
 
-export const metadata: Metadata = {
-  title: "Previous Year Papers",
-  description: "Memory-based VITEEE previous year papers with step-by-step solutions.",
-};
+export const metadata: Metadata = pageMeta({ title: "VITEEE Previous Year Papers (PYQs)", description: "Memory-based VITEEE previous year question papers with step-by-step solutions — practise real exam patterns and improve your speed.", path: "/previous-year-papers" });
 
 const benefits = [
   "Understand the real difficulty level",
@@ -23,6 +22,7 @@ export default async function PreviousYearPapersPage() {
   const papers = await getProducts("previous_paper");
   return (
     <>
+      <JsonLd data={breadcrumbLd([{ name: "Previous Year Papers", path: "/previous-year-papers" }])} />
       <PageHero eyebrow="Previous year papers" title="VITEEE Previous Year Papers" subtitle="Memory-based papers from recent years with detailed solutions and topic-wise analysis." />
 
       <section className="container-page py-14 sm:py-20">

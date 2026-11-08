@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import JsonLd from "@/components/seo/JsonLd";
+import { pageMeta, breadcrumbLd } from "@/lib/seo";
 import Link from "next/link";
 import TestCard from "@/components/cards/TestCard";
 import CtaBanner from "@/components/CtaBanner";
@@ -9,10 +11,7 @@ import Reveal from "@/components/Reveal";
 import SectionHeading from "@/components/SectionHeading";
 import { getProducts } from "@/lib/data";
 
-export const metadata: Metadata = {
-  title: "Mock Tests & MCQ Practice",
-  description: "VITEEE full-length mock tests and chapter-wise MCQ practice with detailed solutions.",
-};
+export const metadata: Metadata = pageMeta({ title: "VITEEE Mock Tests & MCQ Practice", description: "VITEEE full-length mock tests and chapter-wise MCQ practice with instant results, subject-wise analysis and detailed solutions.", path: "/mock-tests" });
 
 export default async function MockTestsPage() {
   const all = await getProducts("mock_test");
@@ -22,6 +21,7 @@ export default async function MockTestsPage() {
 
   return (
     <>
+      <JsonLd data={breadcrumbLd([{ name: "Mock Tests", path: "/mock-tests" }])} />
       <PageHero eyebrow="Practice" title="Mock Tests & MCQ Practice" subtitle="Practise in the latest VITEEE pattern, find your weak topics and improve your speed.">
         <div className="mt-6 flex flex-wrap gap-3">
           <a href="#mock" className="btn-outline !py-2.5">Mock Tests</a>

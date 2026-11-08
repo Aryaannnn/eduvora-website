@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import JsonLd from "@/components/seo/JsonLd";
+import { pageMeta, breadcrumbLd } from "@/lib/seo";
 import Link from "next/link";
 import { Suspense } from "react";
 import CampusCompare from "@/components/fees/CampusCompare";
@@ -10,10 +12,7 @@ import { getSession } from "@/lib/dashboard";
 import { getFeeData } from "@/lib/fees";
 import { FEE_NOTE } from "@/lib/fees-shared";
 
-export const metadata: Metadata = {
-  title: "VIT Fee Calculator & Campus Comparison",
-  description: "Estimate your VIT fee category and tuition from your VITEEE rank, and compare VIT campuses side by side. Estimates only — confirm on the official VIT website.",
-};
+export const metadata: Metadata = pageMeta({ title: "VIT Fee Calculator & Campus Comparison", description: "Estimate your VIT fee category and 4-year tuition from your VITEEE rank, and compare VIT campuses side by side. Estimates — confirm on vit.ac.in.", path: "/fee-calculator" });
 
 // ✏️ Fee data and campus details: Admin → Settings → Fees & Campuses.
 export default async function FeeCalculatorPage({ searchParams }: PageProps<"/fee-calculator">) {
@@ -21,6 +20,7 @@ export default async function FeeCalculatorPage({ searchParams }: PageProps<"/fe
   const sample = campuses.some((c) => c.is_sample) || fees.some((f) => f.is_sample);
   return (
     <>
+      <JsonLd data={breadcrumbLd([{ name: "Fee Calculator", path: "/fee-calculator" }])} />
       <PageHero eyebrow="Plan your budget" title="Fee Calculator & Campus Comparison" subtitle="Enter your VITEEE rank to see your likely fee category and tuition, then compare campuses side by side." />
 
       <div className="container-page space-y-12 py-10 sm:py-14">

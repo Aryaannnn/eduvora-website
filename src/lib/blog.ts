@@ -54,7 +54,7 @@ const SAFE: sanitizeHtml.IOptions = {
   allowedTags: ["h2", "h3", "h4", "p", "br", "hr", "strong", "b", "em", "i", "u", "s", "a", "ul", "ol", "li", "blockquote", "code", "pre", "img", "table", "thead", "tbody", "tr", "th", "td", "colgroup", "col"],
   allowedAttributes: {
     a: ["href", "target", "rel"],
-    img: ["src", "alt", "title", "width", "height"],
+    img: ["src", "alt", "title", "width", "height", "loading", "decoding"],
     th: ["colspan", "rowspan"],
     td: ["colspan", "rowspan"],
   },
@@ -70,6 +70,8 @@ const SAFE: sanitizeHtml.IOptions = {
       return { tagName: "a", attribs: out };
     },
     h1: "h2", // only one H1 per page (the title)
+    // pictures inside articles load only when scrolled near (faster on phones)
+    img: (_tag, attribs) => ({ tagName: "img", attribs: { ...attribs, alt: attribs.alt ?? "", loading: "lazy", decoding: "async" } }),
   },
   // pictures must be full https:// links (uploaded pictures always are)
   exclusiveFilter: (frame) => frame.tag === "img" && !/^https:\/\//i.test(frame.attribs.src ?? ""),

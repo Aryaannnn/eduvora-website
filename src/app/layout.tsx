@@ -10,6 +10,8 @@ import SiteAnalytics from "@/components/analytics/SiteAnalytics";
 import ConsentPrompt from "@/components/privacy/ConsentPrompt";
 import CookieNotice from "@/components/privacy/CookieNotice";
 import MaintenanceBanner from "@/components/MaintenanceBanner";
+import JsonLd from "@/components/seo/JsonLd";
+import { organizationLd } from "@/lib/seo";
 import { communityHref, getCommunityLink } from "@/lib/community";
 import { Suspense } from "react";
 import PrivatePageGuard from "@/components/auth/PrivatePageGuard";
@@ -52,6 +54,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" data-scroll-behavior="smooth" className={`${jakarta.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col font-sans">
+        {/* Google: who we are (logo, social links) */}
+        <JsonLd data={organizationLd()} />
         {/* "Maintenance mode is ON" — only admins/counsellors ever see the site while it is on */}
         <Suspense fallback={null}>
           <MaintenanceBanner />

@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 import Link from "next/link";
 import LegalPage from "@/components/LegalPage";
 import { siteConfig as site } from "@/config/site";
 
-export const metadata: Metadata = { title: "Privacy Policy", description: `How ${site.businessName} collects, uses, shares and protects your personal data.` };
+export const metadata: Metadata = pageMeta({ title: "Privacy Policy – How We Protect Your Data", description: "How EDUVORA collects, uses, shares and protects your personal data, how long we keep it, and how to download or delete your account data.", path: "/privacy-policy" });
 
 // ⚠️ IMPORTANT: This policy is a well-meant starting point, NOT legal advice.
 //    Have it reviewed by a legal professional (India: Digital Personal Data
@@ -14,7 +15,7 @@ export const metadata: Metadata = { title: "Privacy Policy", description: `How $
 export default function PrivacyPolicyPage() {
   const founder = site.founder.name;
   return (
-    <LegalPage title="Privacy Policy">
+    <LegalPage title="Privacy Policy" path="/privacy-policy">
       <p>
         {site.businessName} (&ldquo;we&rdquo;, &ldquo;us&rdquo;, &ldquo;our&rdquo;) provides VITEEE counselling, courses, study material, tests and a
         rank predictor. This policy explains, in simple words, what personal data we collect, why, who we share it with, how long we keep

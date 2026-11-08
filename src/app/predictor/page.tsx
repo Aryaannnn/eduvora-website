@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import JsonLd from "@/components/seo/JsonLd";
+import { pageMeta, breadcrumbLd } from "@/lib/seo";
 import Accordion from "@/components/Accordion";
 import Disclaimer from "@/components/Disclaimer";
 import PageHero from "@/components/PageHero";
@@ -6,10 +8,7 @@ import PredictorGate from "@/components/predictor/PredictorGate";
 import Reveal from "@/components/Reveal";
 import SectionHeading from "@/components/SectionHeading";
 
-export const metadata: Metadata = {
-  title: "VITEEE Rank & College Predictor",
-  description: "Free VITEEE rank predictor: enter your marks and see your likely rank range. The full VIT campus & branch list is included with EDUVORA counselling.",
-};
+export const metadata: Metadata = pageMeta({ title: "VITEEE Rank Predictor – Marks vs Rank", description: "Free VITEEE rank predictor: enter your marks to see your likely rank range. Get your full VIT campus and branch list with EDUVORA counselling.", path: "/predictor" });
 
 const faqs = [
   { q: "Is the predictor free?", a: "Yes — the rank part is free. Log in or sign up and you can see your predicted VITEEE rank range for any marks. The full college & branch list (with chances, fee categories, filters and PDF download) is included when you book a counselling session." },
@@ -22,6 +21,7 @@ const faqs = [
 export default function PredictorPage() {
   return (
     <>
+      <JsonLd data={breadcrumbLd([{ name: "Rank Predictor", path: "/predictor" }])} />
       <PageHero eyebrow="Free rank predictor" title="VITEEE Rank & College Predictor" subtitle="Move the slider to your expected marks and see your likely rank range — free for every logged-in student. Your full college & branch list comes with counselling." />
       <section className="container-page py-10 sm:py-14">
         {/* Guest: log in to see rank · Logged in: free rank range · Paid counselling: full college list (checked on the server) */}

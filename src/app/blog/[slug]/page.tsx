@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import JsonLd from "@/components/seo/JsonLd";
+import { breadcrumbLd } from "@/lib/seo";
 import { Suspense } from "react";
 import { CategoryBadge, Cover } from "@/components/blog/PostCard";
 import PostCard from "@/components/blog/PostCard";
@@ -21,6 +23,7 @@ export async function generateMetadata(props: PageProps<"/blog/[slug]">): Promis
     title: { absolute: `${title} | ${siteConfig.businessName}` },
     description,
     alternates: { canonical: `/blog/${post.slug}` },
+    ...(post.is_sample ? { robots: { index: false, follow: true } } : {}), // sample posts are design previews — never in Google
     authors: [{ name: post.author_name }],
     // the share picture comes from ./opengraph-image.tsx (cover + title)
     openGraph: { type: "article", title, description, publishedTime: post.published_at, modifiedTime: post.updated_at, authors: [post.author_name], section: CATEGORY_NAME[post.category] },
@@ -59,7 +62,7 @@ async function Post({ params }: { params: Promise<{ slug: string }> }) {
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
+      <JsonLd data={[jsonLd, breadcrumbLd([{ name: "Blog", path: "/blog" }, { name: post.title, path: `/blog/${post.slug}` }])]} />
       {/* ---------- Header ---------- */}
       <header className="hero-bg relative overflow-hidden">
         <div className="grid-pattern absolute inset-0" aria-hidden />

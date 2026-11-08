@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import JsonLd from "@/components/seo/JsonLd";
+import { pageMeta, breadcrumbLd } from "@/lib/seo";
 import Link from "next/link";
 import { CATEGORY_LABEL, getImportantDates, getSiteUpdates } from "@/lib/important-dates";
 import { countdown, dateRange, EmptyDates, OFFICIAL_NOTE, OfficialLink, STATUS_STYLE, StatusBadge } from "@/components/dates/DateBits";
@@ -8,10 +10,7 @@ import PageHero from "@/components/PageHero";
 import Reveal from "@/components/Reveal";
 import { formatDayIST } from "@/lib/format";
 
-export const metadata: Metadata = {
-  title: "Important Dates & Updates",
-  description: "VITEEE application, exam, result, counselling and fee payment dates in one timeline, plus the latest updates from EDUVORA.",
-};
+export const metadata: Metadata = pageMeta({ title: "VITEEE Important Dates & Counselling Schedule", description: "VITEEE application, exam, result, VIT counselling and fee payment dates in one timeline, plus the latest updates from EDUVORA.", path: "/important-dates" });
 
 // ✏️ Edit events and updates in Admin → Important Dates.
 export default async function ImportantDatesPage() {
@@ -21,6 +20,7 @@ export default async function ImportantDatesPage() {
 
   return (
     <>
+      <JsonLd data={breadcrumbLd([{ name: "Important Dates", path: "/important-dates" }])} />
       <PageHero eyebrow="Stay on time" title="Important Dates & Updates" subtitle="Applications, exam, results, counselling phases and fee deadlines — in one simple timeline.">
         <div className="mt-6 flex flex-wrap gap-2">
           {(["ongoing", "upcoming", "completed"] as const).map((s) => (

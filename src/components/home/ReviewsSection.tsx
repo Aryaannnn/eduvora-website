@@ -65,7 +65,7 @@ export default function ReviewsSection({ reviews, showHeading = true }: { review
                   <div className="flex items-center gap-3">
                     {r.photo_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={r.photo_url} alt="" className="h-12 w-12 shrink-0 rounded-full object-cover" />
+                      <img src={r.photo_url} alt="" width={48} height={48} loading="lazy" decoding="async" className="h-12 w-12 shrink-0 rounded-full object-cover" />
                     ) : (
                       <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-full font-bold text-white ${tab === "student" ? "bg-gradient-to-br from-brand-500 to-brand-700" : "bg-gradient-to-br from-accent-400 to-accent-600"}`}>
                         {initials(r.name)}

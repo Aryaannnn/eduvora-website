@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import JsonLd from "@/components/seo/JsonLd";
+import { pageMeta, breadcrumbLd, personLd } from "@/lib/seo";
 import Link from "next/link";
 import BackButton from "@/components/BackButton";
 import FounderHighlights from "@/components/FounderHighlights";
@@ -8,17 +10,14 @@ import Reveal from "@/components/Reveal";
 import { siteConfig } from "@/config/site";
 import { founder } from "@/content/founder";
 
-export const metadata: Metadata = {
-  title: `${founder.name} — Founder Story`,
-  description: founder.summary,
-  openGraph: { title: `${founder.name} | Founder of ${siteConfig.businessName}`, description: founder.summary, images: [{ url: founder.photo, alt: founder.photoAlt }] },
-};
+export const metadata: Metadata = pageMeta({ title: "Utkarsh Shrivastava – VIT Counselling Mentor", description: "Utkarsh Shrivastava, founder of EDUVORA, guides VITEEE students and parents through VIT counselling: rank, campus, branch and fee category decisions.", path: "/founder", image: { url: founder.photo, alt: founder.photoAlt }, type: "profile" });
 
 // Full founder story. ✏️ Edit the text in src/content/founder.ts
 export default function FounderPage() {
   const firstName = founder.name.split(" ")[0];
   return (
     <>
+      <JsonLd data={[breadcrumbLd([{ name: "Founder", path: "/founder" }]), personLd({ name: founder.name, jobTitle: founder.shortTitle, description: founder.summary, image: founder.photo, path: "/founder" })]} />
       {/* Header band */}
       <section className="hero-bg relative overflow-hidden text-white">
         <div className="grid-pattern absolute inset-0 opacity-40" aria-hidden />

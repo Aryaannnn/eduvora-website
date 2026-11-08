@@ -3,7 +3,6 @@
 // Shown instead of a broken page when something fails while loading a page
 // (the header and footer still show). The error goes to Sentry (if switched on),
 // cleaned of personal data.
-import * as Sentry from "@sentry/nextjs";
 import Link from "next/link";
 import { useEffect } from "react";
 import { siteConfig } from "@/config/site";
@@ -11,7 +10,8 @@ import { siteConfig } from "@/config/site";
 export default function Error({ error, retry }: { error: unknown; retry: () => void }) {
   const digest = error instanceof Error ? (error as Error & { digest?: string }).digest : undefined;
   useEffect(() => {
-    Sentry.captureException(error);
+    // Sentry is loaded only now (keeps normal pages fast); off without a DSN
+    if (process.env.NEXT_PUBLIC_SENTRY_DSN) void import("@sentry/nextjs").then((Sentry) => Sentry.captureException(error)).catch(() => {});
   }, [error]);
 
   return (

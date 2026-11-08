@@ -11,6 +11,7 @@ import Logo from "@/components/Logo";
 export const metadata: Metadata = {
   title: "Sign In / Sign Up",
   description: "Sign in or create your student account with your phone number or Google account.",
+  robots: { index: false, follow: true },
 };
 
 const benefits = [

@@ -6,6 +6,7 @@ import TestRunner from "@/components/TestRunner";
 export const metadata: Metadata = {
   title: "Take a Test",
   description: "VITEEE practice test with instant results and explanations.",
+  robots: { index: false, follow: true }, // needs a login — the product pages are the ones to find on Google
 };
 
 export default function TestPage(props: PageProps<"/tests/[id]">) {

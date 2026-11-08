@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import JsonLd from "@/components/seo/JsonLd";
+import { pageMeta, breadcrumbLd } from "@/lib/seo";
 import Accordion from "@/components/Accordion";
 import MaterialCard from "@/components/cards/MaterialCard";
 import CtaBanner from "@/components/CtaBanner";
@@ -9,10 +11,7 @@ import SectionHeading from "@/components/SectionHeading";
 import EmptyState from "@/components/EmptyState";
 import { getProducts } from "@/lib/data";
 
-export const metadata: Metadata = {
-  title: "Study Material",
-  description: "Campus-wise VIT admission kits for VIT Vellore, VIT Chennai, VIT-AP and VIT Bhopal.",
-};
+export const metadata: Metadata = pageMeta({ title: "VIT Admission Kits & VITEEE Study Material", description: "Campus-wise VIT admission kits for VIT Vellore, Chennai, AP and Bhopal: rank trends, fees, branches and checklists for VIT counselling.", path: "/study-material" });
 
 const perks = [
   { icon: ZapIcon, title: "Instant access", text: "PDF kits are sent right after payment." },
@@ -30,6 +29,7 @@ export default async function StudyMaterialPage() {
   const materials = await getProducts("study_material");
   return (
     <>
+      <JsonLd data={breadcrumbLd([{ name: "Study Material", path: "/study-material" }])} />
       <PageHero eyebrow="Study material" title="Campus-wise Admission Kits" subtitle="Clear, updated guides for each VIT campus — so you can make smart choices during counselling." />
 
       <section className="container-page py-14 sm:py-20">

@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import JsonLd from "@/components/seo/JsonLd";
+import { pageMeta, breadcrumbLd } from "@/lib/seo";
 import ReviewsSection from "@/components/home/ReviewsSection";
 import PageHero from "@/components/PageHero";
 import Reveal from "@/components/Reveal";
@@ -6,15 +8,13 @@ import Link from "next/link";
 import { getApprovedReviews, getVideoTestimonials } from "@/lib/data";
 import VideoTestimonials from "@/components/reviews/VideoTestimonials";
 
-export const metadata: Metadata = {
-  title: "Reviews",
-  description: "What students and parents say about our VITEEE counselling and coaching.",
-};
+export const metadata: Metadata = pageMeta({ title: "Student Reviews of Our VITEEE Counselling", description: "Real reviews from students and parents about EDUVORA's VITEEE counselling, VIT counselling guidance, crash courses and mock tests.", path: "/reviews" });
 
 export default async function ReviewsPage() {
   const [reviews, videos] = await Promise.all([getApprovedReviews(), getVideoTestimonials()]);
   return (
     <>
+      <JsonLd data={breadcrumbLd([{ name: "Reviews", path: "/reviews" }])} />
       <PageHero eyebrow="Reviews" title="Student & Parent Reviews" subtitle="Honest feedback from the families we've guided through VITEEE and VIT counselling." />
       {/* Video testimonials first (hidden when there are none) */}
       <VideoTestimonials videos={videos} className="!pb-0" />

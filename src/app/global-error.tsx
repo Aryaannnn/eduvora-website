@@ -2,14 +2,14 @@
 
 // Last-resort error page (when even the main layout fails). It replaces the whole
 // page, so it has its own <html>/<body> and simple inline styles.
-import * as Sentry from "@sentry/nextjs";
 import { useEffect } from "react";
 import { siteConfig } from "@/config/site";
 
 export default function GlobalError({ error, retry }: { error: unknown; retry: () => void }) {
   const digest = error instanceof Error ? (error as Error & { digest?: string }).digest : undefined;
   useEffect(() => {
-    Sentry.captureException(error);
+    // Sentry is loaded only now (keeps normal pages fast); off without a DSN
+    if (process.env.NEXT_PUBLIC_SENTRY_DSN) void import("@sentry/nextjs").then((Sentry) => Sentry.captureException(error)).catch(() => {});
   }, [error]);
 
   const btn: React.CSSProperties = { display: "inline-block", padding: "12px 22px", borderRadius: 999, fontWeight: 700, fontSize: 15, textDecoration: "none", cursor: "pointer" };
