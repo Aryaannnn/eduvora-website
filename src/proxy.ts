@@ -1,7 +1,13 @@
 // Runs before each page request and keeps the student's login session fresh.
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { maintenanceAction, maintenanceHtml } from "@/lib/maintenance";
 import { SUPABASE_ANON_KEY, SUPABASE_URL, isSupabaseConfigured } from "@/lib/supabase/env";
+
+// Maintenance mode (Admin → Settings): remembered for 15 seconds per server,
+// so turning it on/off takes effect within ~15 seconds.
+let maintenanceCache: { enabled: boolean; message: string; until: number } | null = null;
+const MAINTENANCE_TTL_MS = 15_000;
 
 // Pages only for logged-in users
 const PRIVATE_PATHS = ["/dashboard", "/admin", "/admin-verify", "/invoice", "/payment-success", "/booking-confirmed"];
@@ -28,6 +34,36 @@ export async function proxy(request: NextRequest) {
 
   // Refreshes the login token if it has expired. Do not remove.
   const { data } = await supabase.auth.getUser();
+
+  // ---------- Maintenance mode ----------
+  if (!maintenanceCache || maintenanceCache.until < Date.now()) {
+    const { data: m, error } = await supabase.from("maintenance_settings").select("enabled,message").eq("id", 1).maybeSingle();
+    // table missing / Supabase hiccup → treat as OFF (never lock everyone out by accident)
+    maintenanceCache = { enabled: !error && !!m?.enabled, message: m?.message ?? "", until: Date.now() + MAINTENANCE_TTL_MS };
+  }
+  // Emergency switch without the database: MAINTENANCE_MODE=on in Vercel (then redeploy)
+  if (process.env.MAINTENANCE_MODE === "on") maintenanceCache.enabled = true;
+  if (maintenanceCache.enabled) {
+    let isStaff = false;
+    if (data.user) {
+      const { data: p } = await supabase.from("profiles").select("role").eq("id", data.user.id).maybeSingle();
+      isStaff = p?.role === "admin" || p?.role === "counsellor";
+    }
+    const action = maintenanceAction(request.nextUrl.pathname, isStaff);
+    if (action !== "allow") {
+      const headers = {
+        "Retry-After": "1800", // "temporarily unavailable — try again in ~30 minutes"
+        "Cache-Control": "no-store, max-age=0",
+        "X-Robots-Tag": "noindex",
+      };
+      const out =
+        action === "api"
+          ? NextResponse.json({ error: "We're updating the website. Please try again shortly." }, { status: 503, headers })
+          : new NextResponse(maintenanceHtml(maintenanceCache.message), { status: 503, headers: { ...headers, "Content-Type": "text/html; charset=utf-8" } });
+      response.cookies.getAll().forEach((c) => out.cookies.set(c)); // keep a refreshed login
+      return out;
+    }
+  }
 
   // Private areas: send logged-out visitors to the login page first
   // (every private page ALSO checks the login itself on the server)

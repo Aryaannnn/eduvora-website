@@ -1224,3 +1224,26 @@ export async function copyFeeYear(fromYear: number, toYear: number): Promise<Act
   if (e2 && /campus_fees_unique|duplicate key/.test(e2.message)) return fail(`${toYear} already has fee rows. Delete them first or edit them.`);
   return dbResult(e2, `${data.length} rows copied to ${toYear}. Now update the numbers.`);
 }
+
+// ---------------------------------------------------------------- MAINTENANCE MODE
+/** Switch maintenance mode on/off and set the message (supabase/maintenance.sql). */
+export async function saveMaintenance(enabled: boolean, message: string): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const text = message.trim();
+  if (!text) return fail("Please write a short message for visitors.");
+  if (text.length > 500) return fail("Please keep the message under 500 characters.");
+  const { data, error } = await s.supabase.from("maintenance_settings").update({ enabled, message: text }).eq("id", 1).select("id");
+  updateTag("maintenance");
+  if (error) return fail(/maintenance_settings/.test(error.message) ? "Run supabase/maintenance.sql in Supabase first." : friendlyDbError(error.message));
+  if (!data?.length) return fail("Run supabase/maintenance.sql in Supabase first.");
+  await s.supabase
+    .rpc("log_admin_event", { p_action: enabled ? "maintenance.on" : "maintenance.off", p_summary: enabled ? "Turned maintenance mode ON" : "Turned maintenance mode OFF", p_details: {} })
+    .then(() => undefined, () => undefined);
+  return {
+    ok: true,
+    message: enabled
+      ? "Maintenance mode is ON. Within ~15 seconds visitors and students see the maintenance page; you (and counsellors) can still use the site."
+      : "Maintenance mode is OFF. The website is open to everyone again (within ~15 seconds).",
+  };
+}

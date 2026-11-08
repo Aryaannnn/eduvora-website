@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import CommunitySettingsForm from "@/components/admin/CommunitySettingsForm";
 import ExportDataCard from "@/components/admin/ExportDataCard";
 import GoogleCalendarCard from "@/components/admin/GoogleCalendarCard";
+import MaintenanceCard, { type MaintenanceState } from "@/components/admin/MaintenanceCard";
 import ReferralSettingsForm from "@/components/admin/ReferralSettingsForm";
 import StatsManager from "@/components/admin/StatsManager";
 import { DashSkeleton } from "@/components/dashboard/ui";
@@ -24,12 +25,14 @@ export default function SettingsPage() {
 
 async function Content() {
   const s = await requireAdmin("/admin/settings");
-  const [{ data, error }, ref, wc, cal] = await Promise.all([
+  const [{ data, error }, ref, wc, cal, mt] = await Promise.all([
     s.supabase.from("site_stats").select("id,label,value,suffix,sort_order").order("sort_order"),
     s.supabase.from("referral_settings").select("enabled,referred_discount,referrer_reward").eq("id", 1).maybeSingle(),
     s.supabase.from("community_settings").select("whatsapp_link").eq("id", 1).maybeSingle(),
     getCalendarConnection(),
+    s.supabase.from("maintenance_settings").select("enabled,message,updated_at").eq("id", 1).maybeSingle(),
   ]);
+  const maintenance = <MaintenanceCard state={mt.error || !mt.data ? null : (mt.data as MaintenanceState)} />;
   const calendar = (
     <>
       <GoogleCalendarCard status={cal} expectedEmail={siteConfig.email} />
@@ -48,6 +51,7 @@ async function Content() {
     const missing = error.code === "42P01" || error.code === "PGRST205";
     return (
       <>
+        {maintenance}
         <ExportDataCard />
         {calendar}
         {community}
@@ -58,6 +62,7 @@ async function Content() {
   }
   return (
     <>
+      {maintenance}
       <ExportDataCard />
       {calendar}
       {community}

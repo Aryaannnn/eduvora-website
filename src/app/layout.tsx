@@ -9,6 +9,7 @@ import CompleteProfilePrompt from "@/components/auth/CompleteProfilePrompt";
 import SiteAnalytics from "@/components/analytics/SiteAnalytics";
 import ConsentPrompt from "@/components/privacy/ConsentPrompt";
 import CookieNotice from "@/components/privacy/CookieNotice";
+import MaintenanceBanner from "@/components/MaintenanceBanner";
 import { communityHref, getCommunityLink } from "@/lib/community";
 import { Suspense } from "react";
 import PrivatePageGuard from "@/components/auth/PrivatePageGuard";
@@ -51,6 +52,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" data-scroll-behavior="smooth" className={`${jakarta.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col font-sans">
+        {/* "Maintenance mode is ON" — only admins/counsellors ever see the site while it is on */}
+        <Suspense fallback={null}>
+          <MaintenanceBanner />
+        </Suspense>
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />
