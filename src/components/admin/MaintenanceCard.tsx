@@ -67,9 +67,16 @@ export default function MaintenanceCard({ state }: { state: MaintenanceState }) 
             <button type="button" onClick={() => setMessage(DEFAULT_MAINTENANCE_MESSAGE)} className="mt-1 text-xs font-semibold text-brand-700 underline">Use the default message</button>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <button type="button" onClick={save} disabled={pending || !changed || !message.trim()} className={`disabled:opacity-50 ${enabled ? "btn-accent" : "btn-primary"}`}>
-              {pending ? "Saving…" : "Save"}
-            </button>
+            {changed || pending ? (
+              <button type="button" onClick={save} disabled={pending || !message.trim()} className={`disabled:cursor-wait disabled:opacity-70 ${enabled ? "btn-accent" : "btn-primary"}`}>
+                {pending ? "Saving…" : enabled && !state?.enabled ? "Save — turn ON" : !enabled && state?.enabled ? "Save — turn OFF" : "Save changes"}
+              </button>
+            ) : (
+              // Nothing new to save → a clear "saved" badge instead of a faded button
+              <span role="status" className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-4 py-2.5 text-sm font-bold text-emerald-700 ring-1 ring-emerald-200">
+                ✓ Saved
+              </span>
+            )}
             <a href="/admin/settings/maintenance-preview" target="_blank" className="text-sm font-semibold text-brand-700 underline">Preview the page</a>
           </div>
         </div>
