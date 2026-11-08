@@ -2,15 +2,20 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
-import { bulkAddQuestions, deleteQuestion, deleteTest, saveQuestion, saveTest, type QuestionInput } from "@/app/admin/actions";
+import { bulkAddQuestions, deleteQuestion, deleteTest, moveQuestion, saveQuestion, saveTest, setAllQuestionMarks, type QuestionInput, type TestInput } from "@/app/admin/actions";
+import { uploadPublicImage } from "@/lib/upload-image";
 import { parseCsv } from "@/lib/csv";
 import { formatDuration } from "@/lib/format";
 import { normaliseSubject, SUBJECTS } from "@/lib/subjects";
-import { DownloadIcon, EditIcon, PlusIcon, TrashIcon, UploadIcon } from "../Icons";
+import { ArrowDownIcon, ArrowUpIcon, DownloadIcon, EditIcon, PlusIcon, TrashIcon, UploadIcon } from "../Icons";
 import { AdminHeader, Label, Modal, Notice, Pill, Toggle } from "./ui";
 
-export type AdminTest = { id: string; title: string; type: "mock" | "mcq"; duration_minutes: number; total_marks: number; is_free: boolean; is_active: boolean; product_id: string | null; created_at: string };
-export type AdminQuestion = { id: string; test_id: string; question: string; options: string[]; correct_option: number; explanation: string | null; marks: number; sort_order: number; subject?: string | null; topic?: string | null };
+export type AdminTest = {
+  id: string; title: string; type: "mock" | "mcq"; duration_minutes: number; total_marks: number; is_free: boolean; is_active: boolean; product_id: string | null; created_at: string;
+  // supabase/test-system.sql
+  subjects?: string[]; marks_per_correct?: number; negative_marks?: number; max_attempts?: number | null; instructions?: string | null; is_sample?: boolean;
+};
+export type AdminQuestion = { id: string; test_id: string; question: string; options: string[]; correct_option: number; explanation: string | null; marks: number; sort_order: number; subject?: string | null; topic?: string | null; image_url?: string | null };
 export type TestStats = {
   test_id: string; attempts: number; students: number; avg_score: number; avg_percent: number; avg_seconds: number;
   missed: { question_id: string; question: string; subject: string | null; topic: string | null; wrong: number; skipped: number; wrong_percent: number }[];
@@ -20,7 +25,7 @@ type Msg = { kind: "error" | "success"; text: string } | null;
 
 const LETTERS = ["A", "B", "C", "D"];
 
-export default function TestsManager({ tests, questions, products, stats = [], subjectsReady = true }: { tests: AdminTest[]; questions: AdminQuestion[]; products: Product[]; stats?: TestStats[]; subjectsReady?: boolean }) {
+export default function TestsManager({ tests, questions, products, stats = [], subjectsReady = true, systemReady = true }: { tests: AdminTest[]; questions: AdminQuestion[]; products: Product[]; stats?: TestStats[]; subjectsReady?: boolean; systemReady?: boolean }) {
   const router = useRouter();
   const [selectedId, setSelectedId] = useState<string | null>(tests[0]?.id ?? null);
   const [testForm, setTestForm] = useState<AdminTest | "new" | null>(null);
@@ -88,6 +93,15 @@ export default function TestsManager({ tests, questions, products, stats = [], s
                     <Pill on={selected.is_active} onLabel="Visible" offLabel="Hidden" />
                   </p>
                   {!selected.is_free && <p className="mt-1 text-xs text-slate-500">Unlocked by buying: <strong>{productTitle(selected.product_id) ?? "— no product linked —"}</strong></p>}
+                  {systemReady && (
+                    <p className="mt-1 flex flex-wrap gap-1.5 text-xs">
+                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 font-semibold text-emerald-700">+{selected.marks_per_correct ?? 1} correct</span>
+                      <span className="rounded-full bg-red-50 px-2 py-0.5 font-semibold text-red-700">−{Number(selected.negative_marks ?? 0)} wrong</span>
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5 font-semibold text-slate-700">{selected.max_attempts ? `max ${selected.max_attempts} attempt${selected.max_attempts === 1 ? "" : "s"}` : "unlimited attempts"}</span>
+                      {(selected.subjects ?? []).map((x) => <span key={x} className="rounded-full bg-brand-50 px-2 py-0.5 font-semibold text-brand-700">{x}</span>)}
+                      {selected.is_sample && <span className="rounded-full bg-red-600 px-2 py-0.5 font-extrabold text-white">SAMPLE</span>}
+                    </p>
+                  )}
                 </div>
                 <div className="flex gap-2">
                   <a href={`/tests/${selected.id}`} target="_blank" className="btn-light !px-3 !py-1.5 text-xs">Preview</a>
@@ -115,10 +129,16 @@ export default function TestsManager({ tests, questions, products, stats = [], s
                       <div className="flex items-start justify-between gap-3">
                         <p className="font-semibold text-slate-900">{i + 1}. {q.question}</p>
                         <div className="flex shrink-0 gap-1">
+                          <button type="button" onClick={() => run(() => moveQuestion(q.id, "up"))} disabled={i === 0 || pending} className="btn-light !px-2 !py-1 text-xs disabled:opacity-30" aria-label="Move question up"><ArrowUpIcon className="h-3.5 w-3.5" /></button>
+                          <button type="button" onClick={() => run(() => moveQuestion(q.id, "down"))} disabled={i === qs.length - 1 || pending} className="btn-light !px-2 !py-1 text-xs disabled:opacity-30" aria-label="Move question down"><ArrowDownIcon className="h-3.5 w-3.5" /></button>
                           <button type="button" onClick={() => setQForm(q)} className="btn-light !px-2.5 !py-1 text-xs" aria-label="Edit question"><EditIcon /></button>
                           <button type="button" onClick={() => confirm("Delete this question?") && run(() => deleteQuestion(q.id))} className="btn-light !px-2.5 !py-1 text-xs !text-red-600" aria-label="Delete question"><TrashIcon /></button>
                         </div>
                       </div>
+                      {q.image_url && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={q.image_url} alt="" loading="lazy" className="mt-2 max-h-40 rounded-lg ring-1 ring-slate-200" />
+                      )}
                       <ul className="mt-2 grid gap-1 text-sm sm:grid-cols-2">
                         {q.options.map((o, j) => (
                           <li key={j} className={j === q.correct_option ? "font-bold text-green-700" : "text-slate-600"}>{LETTERS[j]}. {o}{j === q.correct_option && " ✓"}</li>
@@ -145,11 +165,20 @@ export default function TestsManager({ tests, questions, products, stats = [], s
           products={products}
           pending={pending}
           onClose={() => setTestForm(null)}
+          systemReady={systemReady}
           onSubmit={(v) =>
             start(async () => {
               const res = await saveTest(v);
               if (!res.ok) return setMsg({ kind: "error", text: res.error });
               setMsg({ kind: "success", text: res.message ?? "Saved." });
+              // Marks per correct changed → offer to update the existing questions too
+              const old = testForm === "new" ? null : testForm;
+              const mpc = Number(v.marks_per_correct);
+              if (old && v.marks_per_correct !== undefined && mpc !== (old.marks_per_correct ?? 1) && countFor(old.id) > 0 &&
+                  confirm(`Also give all ${countFor(old.id)} existing questions ${mpc} mark${mpc === 1 ? "" : "s"} each?`)) {
+                const r2 = await setAllQuestionMarks(old.id, mpc);
+                if (!r2.ok) setMsg({ kind: "error", text: r2.error });
+              }
               setTestForm(null);
               if (res.data?.id) setSelectedId(res.data.id);
               router.refresh();
@@ -162,6 +191,8 @@ export default function TestsManager({ tests, questions, products, stats = [], s
           question={qForm === "new" ? null : qForm}
           testId={selected.id}
           nextOrder={(qs.at(-1)?.sort_order ?? 0) + 1}
+          defaultMarks={selected.marks_per_correct ?? 1}
+          imagesReady={systemReady}
           pending={pending}
           onClose={() => setQForm(null)}
           onSubmit={(v) => run(() => saveQuestion(v), () => setQForm(null))}
@@ -172,17 +203,27 @@ export default function TestsManager({ tests, questions, products, stats = [], s
   );
 }
 
-function TestForm({ test, products, pending, onClose, onSubmit }: {
-  test: AdminTest | null; products: Product[]; pending: boolean; onClose: () => void;
-  onSubmit: (v: { id?: string; title: string; type: "mock" | "mcq"; duration_minutes: string; is_free: boolean; is_active: boolean; product_id: string | null }) => void;
+function TestForm({ test, products, pending, onClose, onSubmit, systemReady }: {
+  test: AdminTest | null; products: Product[]; pending: boolean; onClose: () => void; systemReady: boolean;
+  onSubmit: (v: TestInput) => void;
 }) {
   const [v, setV] = useState({
     title: test?.title ?? "", type: test?.type ?? ("mock" as "mock" | "mcq"), duration_minutes: String(test?.duration_minutes ?? 30),
     is_free: test?.is_free ?? false, is_active: test?.is_active ?? true, product_id: test?.product_id ?? "",
+    subjects: test?.subjects ?? ([] as string[]), marks_per_correct: String(test?.marks_per_correct ?? 1), negative_marks: String(test?.negative_marks ?? 0),
+    max_attempts: test?.max_attempts ? String(test.max_attempts) : "", instructions: test?.instructions ?? "",
   });
+  const toggleSubject = (x: string) => setV({ ...v, subjects: v.subjects.includes(x) ? v.subjects.filter((y) => y !== x) : [...v.subjects, x] });
   return (
     <Modal title={test ? "Edit test" : "New test"} onClose={onClose}>
-      <form onSubmit={(e) => { e.preventDefault(); onSubmit({ ...v, id: test?.id, product_id: v.product_id || null }); }} className="space-y-4">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          const { subjects, marks_per_correct, negative_marks, max_attempts, instructions, ...base } = v;
+          onSubmit({ ...base, id: test?.id, product_id: v.product_id || null, ...(systemReady ? { subjects, marks_per_correct, negative_marks, max_attempts, instructions } : {}) });
+        }}
+        className="space-y-4"
+      >
         <div><Label htmlFor="tf-title">Title *</Label><input id="tf-title" value={v.title} onChange={(e) => setV({ ...v, title: e.target.value })} className="input" required /></div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
@@ -193,6 +234,29 @@ function TestForm({ test, products, pending, onClose, onSubmit }: {
           </div>
           <div><Label htmlFor="tf-dur">Duration (minutes)</Label><input id="tf-dur" type="number" min={1} max={600} value={v.duration_minutes} onChange={(e) => setV({ ...v, duration_minutes: e.target.value })} className="input" required /></div>
         </div>
+        {systemReady ? (
+          <>
+            <fieldset>
+              <legend className="mb-1.5 text-sm font-semibold text-slate-700">Subjects in this test</legend>
+              <div className="flex flex-wrap gap-2">
+                {SUBJECTS.map((x) => (
+                  <button key={x} type="button" onClick={() => toggleSubject(x)} aria-pressed={v.subjects.includes(x)} className={`rounded-full px-3 py-1.5 text-sm font-semibold ring-1 ${v.subjects.includes(x) ? "bg-brand-600 text-white ring-brand-600" : "bg-white text-slate-700 ring-slate-200"}`}>
+                    {v.subjects.includes(x) ? "✓ " : ""}{x}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div><Label htmlFor="tf-mpc">Marks per correct answer</Label><input id="tf-mpc" type="number" min={1} max={100} value={v.marks_per_correct} onChange={(e) => setV({ ...v, marks_per_correct: e.target.value })} className="input" required /></div>
+              <div><Label htmlFor="tf-neg">Negative marks per wrong answer</Label><input id="tf-neg" type="number" min={0} max={100} step={0.25} value={v.negative_marks} onChange={(e) => setV({ ...v, negative_marks: e.target.value })} className="input" required /><p className="mt-1 text-xs text-slate-500">0 = no negative marking</p></div>
+              <div><Label htmlFor="tf-max">Maximum attempts</Label><input id="tf-max" type="number" min={1} max={100} value={v.max_attempts} onChange={(e) => setV({ ...v, max_attempts: e.target.value })} className="input" placeholder="Unlimited" /><p className="mt-1 text-xs text-slate-500">Empty = unlimited</p></div>
+            </div>
+            <div><Label htmlFor="tf-inst">Instructions (shown before the test starts)</Label><textarea id="tf-inst" rows={3} maxLength={3000} value={v.instructions} onChange={(e) => setV({ ...v, instructions: e.target.value })} className="input" placeholder="Optional — e.g. Use a rough sheet. Calculators are not allowed." /></div>
+            <p className="text-xs text-slate-500">Total marks are added up automatically from the questions.</p>
+          </>
+        ) : (
+          <p className="text-xs text-amber-700">Run supabase/test-system.sql in Supabase to add subjects, marking scheme, attempt limits and instructions.</p>
+        )}
         <div className="flex flex-wrap gap-6">
           <Toggle checked={v.is_free} onChange={(x) => setV({ ...v, is_free: x })} label="Free for everyone" />
           <Toggle checked={v.is_active} onChange={(x) => setV({ ...v, is_active: x })} label="Visible" />
@@ -213,24 +277,67 @@ function TestForm({ test, products, pending, onClose, onSubmit }: {
   );
 }
 
-function QuestionForm({ question, testId, nextOrder, pending, onClose, onSubmit, subjectsReady }: {
+function QuestionForm({ question, testId, nextOrder, pending, onClose, onSubmit, subjectsReady, defaultMarks = 1, imagesReady = false }: {
   question: AdminQuestion | null; testId: string; nextOrder: number; pending: boolean; onClose: () => void; onSubmit: (v: QuestionInput) => void; subjectsReady: boolean;
+  defaultMarks?: number; imagesReady?: boolean;
 }) {
   const [v, setV] = useState({
     question: question?.question ?? "", options: question?.options ?? ["", "", "", ""], correct_option: question?.correct_option ?? 0,
-    explanation: question?.explanation ?? "", marks: String(question?.marks ?? 1), subject: question?.subject ?? "", topic: question?.topic ?? "",
+    explanation: question?.explanation ?? "", marks: String(question?.marks ?? defaultMarks), subject: question?.subject ?? "", topic: question?.topic ?? "",
+    image_url: question?.image_url ?? "",
   });
+  const [uploading, setUploading] = useState(false);
+  const [imgErr, setImgErr] = useState("");
   return (
     <Modal title={question ? "Edit question" : "Add question"} onClose={onClose} wide>
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          const { subject, topic, ...rest } = v;
-          onSubmit({ ...rest, ...(subjectsReady ? { subject, topic } : {}), id: question?.id, test_id: testId, sort_order: question?.sort_order ?? nextOrder });
+          const { subject, topic, image_url, ...rest } = v;
+          onSubmit({ ...rest, ...(subjectsReady ? { subject, topic } : {}), ...(imagesReady ? { image_url } : {}), id: question?.id, test_id: testId, sort_order: question?.sort_order ?? nextOrder });
         }}
         className="space-y-4"
       >
         <div><Label htmlFor="qf-q">Question *</Label><textarea id="qf-q" rows={3} value={v.question} onChange={(e) => setV({ ...v, question: e.target.value })} className="input" required /></div>
+        {imagesReady && (
+          <div>
+            <Label htmlFor="qf-img">Picture (optional) — diagram, graph or figure</Label>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <input id="qf-img" type="url" value={v.image_url} onChange={(e) => setV({ ...v, image_url: e.target.value })} className="input" placeholder="https://… or upload →" />
+              <label className={`btn-light shrink-0 cursor-pointer !px-3 !py-2 text-sm ${uploading ? "opacity-60" : ""}`}>
+                <UploadIcon /> {uploading ? "Uploading…" : "Upload"}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="sr-only"
+                  disabled={uploading}
+                  onChange={async (e) => {
+                    const f = e.target.files?.[0];
+                    e.target.value = "";
+                    if (!f) return;
+                    setImgErr("");
+                    setUploading(true);
+                    try {
+                      setV((cur) => ({ ...cur, image_url: "" }));
+                      const url = await uploadPublicImage(f, "tests");
+                      setV((cur) => ({ ...cur, image_url: url }));
+                    } catch (err) {
+                      setImgErr(err instanceof Error ? err.message : "Upload failed.");
+                    } finally {
+                      setUploading(false);
+                    }
+                  }}
+                />
+              </label>
+              {v.image_url && <button type="button" onClick={() => setV({ ...v, image_url: "" })} className="text-xs font-semibold text-red-600 underline">Remove</button>}
+            </div>
+            {imgErr && <p role="alert" className="mt-1 text-xs font-semibold text-red-600">{imgErr}</p>}
+            {v.image_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={v.image_url} alt="Question picture preview" className="mt-2 max-h-48 rounded-lg ring-1 ring-slate-200" />
+            )}
+          </div>
+        )}
         <fieldset>
           <legend className="mb-1.5 text-sm font-semibold text-slate-700">Options * (tick the correct one)</legend>
           <div className="space-y-2">
@@ -296,7 +403,7 @@ function CsvUpload({ testId, onDone }: { testId: string; onDone: (m: Msg) => voi
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="font-bold text-slate-900">Bulk upload questions (CSV)</p>
-          <p className="text-xs text-slate-500">Columns: question, option_a, option_b, option_c, option_d, correct_option (A–D), explanation, marks, subject, topic</p>
+          <p className="text-xs text-slate-500">Columns: question, option_a, option_b, option_c, option_d, correct_option (A–D), explanation, marks, subject, topic, image_url</p>
           <p className="text-xs text-slate-400">subject = {SUBJECTS.join(" / ")} (optional) · topic = any short text (optional)</p>
         </div>
         <button type="button" onClick={() => input.current?.click()} className="btn-light !px-4 !py-2 text-sm"><UploadIcon /> Choose CSV file</button>
@@ -347,6 +454,7 @@ function csvToQuestions(text: string, testId: string): QuestionInput[] {
       marks: header.includes("marks") && col(r, "marks") ? col(r, "marks") : 1,
       ...(header.includes("subject") ? { subject: normaliseSubject(col(r, "subject")) || (col(r, "subject") ? `?${col(r, "subject")}` : "") } : {}),
       ...(header.includes("topic") ? { topic: col(r, "topic").slice(0, 100) } : {}),
+      ...(header.includes("image_url") ? { image_url: col(r, "image_url") } : {}),
     };
   });
 }

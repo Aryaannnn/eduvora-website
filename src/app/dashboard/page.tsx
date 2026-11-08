@@ -27,7 +27,7 @@ async function HomeContent() {
   const s = await requireUser("/dashboard");
   welcomeIfNew(s.user.id); // new students get a welcome email (once)
   await claimReferralFromCookie(getAdminSupabase(), s.user.id); // joined through a friend's link?
-  const [purchases, bookings, attempts, credits, nextDates] = await Promise.all([getMyPurchases(s), getMyBookings(s), getMyAttempts(s, 1), getCredits(s.supabase), getNextDates(3)]);
+  const [purchases, bookings, attempts, credits, nextDates] = await Promise.all([getMyPurchases(s), getMyBookings(s), getMyAttempts(s, 1, true), getCredits(s.supabase), getNextDates(3)]);
   const paidCount = paidOnly(purchases).length;
   const upcoming = nextBooking(bookings);
   const latest = attempts[0];

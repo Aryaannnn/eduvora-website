@@ -32,9 +32,13 @@ async function TestsContent() {
     }
   }
 
-  // Best score per test (for the test cards)
+  // Best score, number of attempts and an unfinished attempt per test (for the test cards)
+  const done = attempts.filter((a) => a.submitted_at);
+  const open = new Map(attempts.filter((a) => !a.submitted_at).map((a) => [a.test_id, a]));
   const best = new Map<string, number>();
-  for (const a of attempts) best.set(a.test_id, Math.max(best.get(a.test_id) ?? 0, a.score));
+  const count = new Map<string, number>();
+  for (const a of done) best.set(a.test_id, Math.max(best.get(a.test_id) ?? -Infinity, a.score));
+  for (const a of attempts) count.set(a.test_id, (count.get(a.test_id) ?? 0) + 1);
 
   return (
     <>
@@ -61,7 +65,12 @@ async function TestsContent() {
                     <ClockIcon className="h-3.5 w-3.5" /> {t.duration_minutes} min · {t.total_marks} marks
                     {best.has(t.id) && <span className="ml-1 font-semibold text-brand-700">· Best: {best.get(t.id)}/{t.total_marks}</span>}
                   </p>
-                  <Link href={`/tests/${t.id}`} className="btn-accent mt-4 !py-2.5">{best.has(t.id) ? "Retake test" : "Start test"}</Link>
+                  {count.has(t.id) && <p className="mt-0.5 text-xs text-slate-500">{count.get(t.id)} attempt{count.get(t.id) === 1 ? "" : "s"}</p>}
+                  {open.has(t.id) ? (
+                    <Link href={`/tests/${t.id}`} className="btn-primary mt-4 !bg-violet-600 !py-2.5 hover:!bg-violet-700">▶ Resume test</Link>
+                  ) : (
+                    <Link href={`/tests/${t.id}`} className="btn-accent mt-4 !py-2.5">{best.has(t.id) ? "Retake test" : "Start test"}</Link>
+                  )}
                 </li>
               ))}
             </ul>
@@ -78,7 +87,18 @@ async function TestsContent() {
             <ul className="divide-y divide-slate-100">
               {attempts.map((a) => {
                 const total = a.tests?.total_marks ?? 0;
-                const pct = total ? Math.round((a.score / total) * 100) : 0;
+                const pct = total ? Math.max(0, Math.round((a.score / total) * 100)) : 0;
+                if (!a.submitted_at) {
+                  return (
+                    <li key={a.id} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold text-slate-900">{a.tests?.title ?? "Test"}</p>
+                        <p className="text-xs font-semibold text-violet-700">In progress — your answers are saved{a.ends_at ? ` · ends ${formatDateTime(a.ends_at)}` : ""}</p>
+                      </div>
+                      <Link href={`/tests/${a.test_id}`} className="btn-primary shrink-0 !bg-violet-600 !px-4 !py-2 text-sm hover:!bg-violet-700">Resume</Link>
+                    </li>
+                  );
+                }
                 return (
                   <li key={a.id} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
                     <div className="min-w-0">

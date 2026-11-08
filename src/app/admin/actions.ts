@@ -317,7 +317,11 @@ export async function deleteEnquiry(id: string): Promise<ActionResult> {
 }
 
 // ---------------------------------------------------------------- TESTS & QUESTIONS
-export type TestInput = { id?: string; title: string; type: "mock" | "mcq"; duration_minutes: number | string; is_free: boolean; is_active: boolean; product_id?: string | null };
+export type TestInput = {
+  id?: string; title: string; type: "mock" | "mcq"; duration_minutes: number | string; is_free: boolean; is_active: boolean; product_id?: string | null;
+  /** supabase/test-system.sql — sent only when that SQL has been run */
+  subjects?: string[]; marks_per_correct?: number | string; negative_marks?: number | string; max_attempts?: number | string | null; instructions?: string;
+};
 
 export async function saveTest(input: TestInput): Promise<ActionResult<{ id: string }>> {
   const s = await adminOrError();
@@ -329,15 +333,62 @@ export async function saveTest(input: TestInput): Promise<ActionResult<{ id: str
   if (!duration || duration < 1 || duration > 600) return fail("Duration must be between 1 and 600 minutes.");
   if (!input.is_free && !input.product_id) return fail("A paid test must be linked to a product (so buyers can open it). Or tick Free.");
 
-  const row = { title, type: input.type, duration_minutes: duration, is_free: input.is_free, is_active: input.is_active, product_id: input.product_id || null };
+  const row: Record<string, unknown> = { title, type: input.type, duration_minutes: duration, is_free: input.is_free, is_active: input.is_active, product_id: input.product_id || null };
+  // Marking scheme, attempts, subjects, instructions (supabase/test-system.sql)
+  if (input.marks_per_correct !== undefined) {
+    const mpc = int(input.marks_per_correct);
+    if (!mpc || mpc < 1 || mpc > 100) return fail("Marks per correct answer must be between 1 and 100.");
+    const neg = Number(String(input.negative_marks ?? "0").replace(",", "."));
+    if (!Number.isFinite(neg) || neg < 0 || neg > 100) return fail("Negative marks must be 0 or more (e.g. 0, 0.25, 1).");
+    const maxA = input.max_attempts === "" || input.max_attempts === null || input.max_attempts === undefined ? null : int(input.max_attempts);
+    if (maxA !== null && (Number.isNaN(maxA) || maxA < 1 || maxA > 100)) return fail("Maximum attempts must be 1–100 (or empty for unlimited).");
+    const subjects = (input.subjects ?? []).filter((x) => (SUBJECTS as readonly string[]).includes(x));
+    const instructions = (input.instructions ?? "").trim();
+    if (instructions.length > 3000) return fail("Instructions must be under 3000 characters.");
+    Object.assign(row, { marks_per_correct: mpc, negative_marks: Math.round(neg * 100) / 100, max_attempts: maxA, subjects, instructions: instructions || null });
+  }
+  const setup = (e: { message: string } | null) => (e && /marks_per_correct|negative_marks|max_attempts|subjects|instructions/.test(e.message) ? fail("Run supabase/test-system.sql in Supabase first.") : null);
   if (input.id) {
     const { error } = await s.supabase.from("tests").update(row).eq("id", input.id);
     updateTag("products");
-    return error ? fail(friendlyDbError(error.message)) : { ok: true, data: { id: input.id }, message: "Test saved." };
+    return setup(error) ?? (error ? fail(friendlyDbError(error.message)) : { ok: true, data: { id: input.id }, message: "Test saved." });
   }
   const { data, error } = await s.supabase.from("tests").insert(row).select("id").single();
   updateTag("products");
-  return error ? fail(friendlyDbError(error.message)) : { ok: true, data: { id: data.id as string }, message: "Test created." };
+  return setup(error) ?? (error ? fail(friendlyDbError(error.message)) : { ok: true, data: { id: data.id as string }, message: "Test created." });
+}
+
+/** Give every question of a test the same marks (e.g. after changing the marking scheme). */
+export async function setAllQuestionMarks(testId: string, marks: number): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const m = int(marks);
+  if (!m || m < 1 || m > 100) return fail("Marks must be between 1 and 100.");
+  const { error } = await s.supabase.from("questions").update({ marks: m }).eq("test_id", testId);
+  updateTag("products");
+  return dbResult(error, `All questions now give ${m} mark${m === 1 ? "" : "s"}.`);
+}
+
+/** Move a question one place up or down. */
+export async function moveQuestion(id: string, direction: "up" | "down"): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const { data: q } = await s.supabase.from("questions").select("id,test_id").eq("id", id).maybeSingle();
+  if (!q) return fail("Question not found.");
+  const { data: list, error } = await s.supabase.from("questions").select("id").eq("test_id", q.test_id).order("sort_order").order("created_at");
+  if (error || !list) return dbResult(error);
+  const ids = list.map((x) => x.id as string);
+  const i = ids.indexOf(id);
+  const j = direction === "up" ? i - 1 : i + 1;
+  if (i < 0 || j < 0 || j >= ids.length) return { ok: true };
+  [ids[i], ids[j]] = [ids[j], ids[i]];
+  // renumber 1..n so the order is always clean
+  for (let k = 0; k < ids.length; k++) {
+    const { error: e } = await s.supabase.from("questions").update({ sort_order: k + 1 }).eq("id", ids[k]);
+    if (e) return dbResult(e);
+  }
+  updateTag("products");
+  return { ok: true };
 }
 
 export async function deleteTest(id: string): Promise<ActionResult> {
@@ -352,6 +403,8 @@ export type QuestionInput = {
   id?: string; test_id: string; question: string; options: string[]; correct_option: number; explanation?: string; marks: number | string; sort_order?: number;
   /** Physics, Chemistry, Mathematics, Biology, English, Aptitude (or empty) */
   subject?: string; topic?: string;
+  /** optional picture (https), supabase/test-system.sql */
+  image_url?: string;
 };
 
 function validateQuestion(q: QuestionInput): string | null {
@@ -362,6 +415,7 @@ function validateQuestion(q: QuestionInput): string | null {
   if (!marks || marks < 1) return "Marks must be 1 or more.";
   if (q.subject && !(SUBJECTS as readonly string[]).includes(q.subject)) return `Subject must be one of: ${SUBJECTS.join(", ")} (or empty).`;
   if ((q.topic ?? "").trim().length > 100) return "Topic must be under 100 characters.";
+  if (q.image_url && (!/^https:\/\/\S+$/.test(q.image_url.trim()) || q.image_url.length > 500)) return "Picture must be a full https:// link (or empty).";
   return null;
 }
 
@@ -376,9 +430,11 @@ const questionRow = (q: QuestionInput) => ({
   // only sent when given, so saving still works before supabase/test-analytics.sql is run
   ...(q.subject !== undefined ? { subject: q.subject || null } : {}),
   ...(q.topic !== undefined ? { topic: q.topic.trim() || null } : {}),
+  ...(q.image_url !== undefined ? { image_url: q.image_url.trim() || null } : {}),
 });
 const subjectSetup = (e: { message: string } | null) =>
-  e && /subject|topic/.test(e.message) && /column|schema/.test(e.message) ? fail("Run supabase/test-analytics.sql in Supabase first (adds subject and topic).") : null;
+  e && /image_url/.test(e.message) ? fail("Run supabase/test-system.sql in Supabase first (adds question pictures).")
+  : e && /subject|topic/.test(e.message) && /column|schema/.test(e.message) ? fail("Run supabase/test-analytics.sql in Supabase first (adds subject and topic).") : null;
 
 export async function saveQuestion(q: QuestionInput): Promise<ActionResult> {
   const s = await adminOrError();

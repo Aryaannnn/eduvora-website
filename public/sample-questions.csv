@@ -1,5 +1,5 @@
-question,option_a,option_b,option_c,option_d,correct_option,explanation,marks,subject,topic
-What is the derivative of x^2 at x = 3?,3,6,9,12,B,"d/dx (x^2) = 2x, so at x = 3 it is 6.",1,Mathematics,Calculus
-What is the SI unit of electric charge?,Ampere,Volt,Coulomb,Ohm,C,Electric charge is measured in coulombs (C).,1,Physics,Electrostatics
-"Which of these is a noble gas?",Oxygen,Nitrogen,Argon,Hydrogen,C,"Argon is in group 18, the noble gases.",1,Chemistry,Periodic table
-Choose the word closest in meaning to 'ABUNDANT'.,Scarce,Plentiful,Tiny,Empty,B,Abundant means existing in large quantities.,1,English,Vocabulary
+question,option_a,option_b,option_c,option_d,correct_option,explanation,marks,subject,topic,image_url
+What is the derivative of x^2 at x = 3?,3,6,9,12,B,"d/dx (x^2) = 2x, so at x = 3 it is 6.",1,Mathematics,Calculus,
+What is the SI unit of electric charge?,Ampere,Volt,Coulomb,Ohm,C,Electric charge is measured in coulombs (C).,1,Physics,Electrostatics,
+"Which of these is a noble gas?",Oxygen,Nitrogen,Argon,Hydrogen,C,"Argon is in group 18, the noble gases.",1,Chemistry,Periodic table,
+Choose the word closest in meaning to 'ABUNDANT'.,Scarce,Plentiful,Tiny,Empty,B,Abundant means existing in large quantities.,1,English,Vocabulary,

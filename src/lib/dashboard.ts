@@ -59,7 +59,7 @@ export type BookingRow = {
   created_at: string;
   slots: { date: string; start_time: string; end_time: string; price: number } | null;
 };
-export type AttemptRow = { id: string; test_id: string; score: number; submitted_at: string | null; tests: { title: string; total_marks: number } | null };
+export type AttemptRow = { id: string; test_id: string; score: number; submitted_at: string | null; started_at?: string; ends_at?: string | null; tests: { title: string; total_marks: number } | null };
 
 export async function getMyPurchases(s: Session): Promise<PurchaseRow[]> {
   const { data, error } = await s.supabase
@@ -86,15 +86,22 @@ export async function getMyBookings(s: Session): Promise<BookingRow[]> {
   return (data ?? []) as unknown as BookingRow[];
 }
 
-export async function getMyAttempts(s: Session, limit = 50): Promise<AttemptRow[]> {
-  const { data, error } = await s.supabase
-    .from("test_attempts")
-    .select("id,test_id,score,submitted_at,tests(title,total_marks)")
-    .eq("user_id", s.user.id)
-    .order("submitted_at", { ascending: false })
-    .limit(limit);
+/** Finished attempts (newest first) + unfinished ones (submitted_at = null → "Resume"). */
+export async function getMyAttempts(s: Session, limit = 50, finishedOnly = false): Promise<AttemptRow[]> {
+  // Tests whose time ran out while the student was away → submitted with their last autosave
+  await s.supabase.rpc("finalize_my_expired_attempts").then(() => null, () => null);
+  const cols = "id,test_id,score,submitted_at,started_at,tests(title,total_marks)";
+  let q = s.supabase.from("test_attempts").select(`${cols},ends_at`).eq("user_id", s.user.id);
+  if (finishedOnly) q = q.not("submitted_at", "is", null);
+  const first = await q.order("started_at", { ascending: false }).limit(limit);
+  let data: unknown[] | null = first.data;
+  let error = first.error;
+  if (error?.code === "42703") {
+    // before supabase/test-system.sql
+    ({ data, error } = await s.supabase.from("test_attempts").select(cols).eq("user_id", s.user.id).not("submitted_at", "is", null).order("submitted_at", { ascending: false }).limit(limit));
+  }
   if (error) console.warn("getMyAttempts:", error.message);
-  return (data ?? []) as unknown as AttemptRow[];
+  return ((data ?? []) as unknown as AttemptRow[]).map((a) => ({ ...a, score: Number(a.score) }));
 }
 
 export async function getFreeTests(s: Session): Promise<TestInfo[]> {
