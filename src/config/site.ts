@@ -95,7 +95,7 @@ export const siteConfig = {
   //    • WhatsApp CHAT: open to everyone (the server adds the number)
   //    • Direct CALL + the full number on screen: only students who paid, and admins
   //    Only the masked version below is shown to everyone else:
-  phoneMasked: "+91 93440 XXXXX",
+  phoneMasked: "+91 88719 XXXXX",
   whatsappMessage: "Hi, I need help with VITEEE counselling",
   // ✏️ Shown on the contact page and in the footer
   contactNote: "Chat with us on WhatsApp anytime. Direct call support is available for enrolled students.",

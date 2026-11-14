@@ -2,7 +2,7 @@
 //  DIRECT CALL BOX (+ WhatsApp chat for everyone)
 //  Runs on the SERVER. It asks src/lib/contact.ts whether this visitor has
 //  paid. Only then is the full number + Call button put into the page.
-//  Everyone else gets the masked number ("+91 93440 XXXXX") and the unlock
+//  Everyone else gets the masked number ("+91 88719 XXXXX") and the unlock
 //  message — plus a WhatsApp chat button, which is open to all.
 // =====================================================================
 import Link from "next/link";
