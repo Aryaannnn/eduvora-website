@@ -24,13 +24,18 @@ const nextConfig: NextConfig = {
       ...(supabaseHost ? [{ protocol: "https" as const, hostname: supabaseHost, pathname: "/storage/v1/object/public/blog-images/**" }] : []),
     ],
   },
-  // The small logo is read from disk when building PDF invoices (server routes)
+  // Files read from disk when building PDF invoices on the server: the small logo and
+  // the signature (private-assets/ — server only, never served as a web file).
+  // Invoices are made in API routes (downloads, payment webhooks, emails), admin
+  // actions, and the pages that send the confirmation email.
   outputFileTracingIncludes: {
-    "/api/**": ["./public/logo-email.png"],
-    "/admin/**": ["./public/logo-email.png"],
-    "/booking-confirmed": ["./public/logo-email.png"],
-    "/payment-failed": ["./public/logo-email.png"],
-    "/dashboard/**": ["./public/logo-email.png"],
+    "/api/**": ["./public/logo-email.png", "./private-assets/**"],
+    "/admin/**": ["./public/logo-email.png", "./private-assets/**"],
+    "/invoice/**": ["./public/logo-email.png", "./private-assets/**"],
+    "/booking-confirmed": ["./public/logo-email.png", "./private-assets/**"],
+    "/payment-success": ["./public/logo-email.png", "./private-assets/**"],
+    "/payment-failed": ["./public/logo-email.png", "./private-assets/**"],
+    "/dashboard/**": ["./public/logo-email.png", "./private-assets/**"],
   },
   // Pre-launch: also tell search engines "noindex" in a header (covers PDFs and images too)
   async headers() {

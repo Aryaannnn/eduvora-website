@@ -1,6 +1,6 @@
 import { siteConfig } from "@/config/site";
 import { stateFromGstin } from "@/lib/invoice-math";
-import { loadSignature, SIGNATURE_BUCKET, SIGNATURE_FILE } from "@/lib/invoices";
+import { loadSignatureInfo, SIGNATURE_BUCKET, SIGNATURE_FILE, SIGNATURE_PATH } from "@/lib/invoices";
 import { ReceiptIcon } from "../Icons";
 
 function Row({ ok, children }: { ok: boolean | null; children: React.ReactNode }) {
@@ -17,7 +17,8 @@ function Row({ ok, children }: { ok: boolean | null; children: React.ReactNode }
 /** Admin → Settings → Invoices: status of the signature / GST / address + "Preview sample invoice". */
 export default async function InvoiceSettingsCard() {
   const c = siteConfig.invoice;
-  const signature = c.showSignature ? await loadSignature() : null;
+  const sig = await loadSignatureInfo();
+  const signature = sig.bytes;
   const gstin = c.gstin.trim();
   const gstState = gstin ? stateFromGstin(gstin) : null;
   return (
@@ -41,8 +42,8 @@ export default async function InvoiceSettingsCard() {
           {!c.showSignature
             ? "switched off (src/config/site.ts → invoice.showSignature)."
             : signature
-              ? "found — printed above “Authorised Signatory”."
-              : <>not found — upload <code className="rounded bg-slate-100 px-1">{SIGNATURE_FILE}</code> to the PRIVATE bucket <code className="rounded bg-slate-100 px-1">{SIGNATURE_BUCKET}</code> in Supabase → Storage. Until then invoices are made without it.</>}
+              ? <>found ({sig.source === "file" ? <code className="rounded bg-slate-100 px-1">{SIGNATURE_PATH}</code> : <>private bucket <code className="rounded bg-slate-100 px-1">{SIGNATURE_BUCKET}</code></>}) — printed above &ldquo;Authorised Signatory&rdquo;.</>
+              : <>not found — add <code className="rounded bg-slate-100 px-1">{SIGNATURE_PATH}</code> to the project, or upload <code className="rounded bg-slate-100 px-1">{SIGNATURE_FILE}</code> to the PRIVATE Supabase bucket <code className="rounded bg-slate-100 px-1">{SIGNATURE_BUCKET}</code>. Until then invoices are made without it.</>}
         </Row>
         <Row ok={gstin ? !!gstState : null}>
           <strong>GST:</strong>{" "}

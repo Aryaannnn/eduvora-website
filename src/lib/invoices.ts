@@ -259,26 +259,50 @@ export function sampleInvoice(withGst = false): InvoiceData {
 // ---------------------------------------------------------------------
 export const SIGNATURE_BUCKET = "assets";
 export const SIGNATURE_FILE = "signature.png";
+/** Server-only folder in the project (NOT "public", so Next.js never serves it as a web page/file). */
+export const SIGNATURE_PATH = "private-assets/signature.png";
 
-let sigCache: { at: number; bytes: Uint8Array | null } | null = null;
+export type SignatureSource = "file" | "bucket" | null;
+let sigCache: { at: number; bytes: Uint8Array | null; source: SignatureSource } | null = null;
+
+const isImage = (b: Uint8Array) => b.length > 8 && ((b[0] === 0x89 && b[1] === 0x50) || (b[0] === 0xff && b[1] === 0xd8));
+
 /**
- * Reads signature.png from the PRIVATE Supabase Storage bucket "assets" with the
- * server-only key. Cached for 10 minutes. Missing / broken file → null (the invoice
- * is simply made without a signature). It is never given a public link.
+ * The signature image, read on the SERVER only (cached for 10 minutes):
+ *   1. the project file private-assets/signature.png (bundled for Vercel in next.config.ts)
+ *   2. otherwise the PRIVATE Supabase Storage bucket "assets" → signature.png
+ * Switched off, missing or broken → null, and the invoice is made without a signature.
+ * It is never given a public link.
  */
-export async function loadSignature(): Promise<Uint8Array | null> {
-  if (!siteConfig.invoice.showSignature) return null;
-  if (sigCache && Date.now() - sigCache.at < 10 * 60_000) return sigCache.bytes;
+export async function loadSignatureInfo(): Promise<{ bytes: Uint8Array | null; source: SignatureSource }> {
+  if (!siteConfig.invoice.showSignature) return { bytes: null, source: null };
+  if (sigCache && Date.now() - sigCache.at < 10 * 60_000) return sigCache;
   let bytes: Uint8Array | null = null;
+  let source: SignatureSource = null;
   try {
-    const db = getAdminSupabase();
-    const { data } = db ? await db.storage.from(SIGNATURE_BUCKET).download(SIGNATURE_FILE) : { data: null };
-    if (data && data.size > 0 && data.size < 2_000_000) bytes = new Uint8Array(await data.arrayBuffer());
+    const b = new Uint8Array(await readFile(path.join(process.cwd(), SIGNATURE_PATH)));
+    if (b.length < 2_000_000 && isImage(b)) [bytes, source] = [b, "file"];
   } catch {
-    bytes = null;
+    /* no file in the project → try the private bucket */
   }
-  sigCache = { at: Date.now(), bytes };
-  return bytes;
+  if (!bytes) {
+    try {
+      const db = getAdminSupabase();
+      const { data } = db ? await db.storage.from(SIGNATURE_BUCKET).download(SIGNATURE_FILE) : { data: null };
+      if (data && data.size > 0 && data.size < 2_000_000) {
+        const b = new Uint8Array(await data.arrayBuffer());
+        if (isImage(b)) [bytes, source] = [b, "bucket"];
+      }
+    } catch {
+      /* not there either → no signature */
+    }
+  }
+  sigCache = { at: Date.now(), bytes, source };
+  return sigCache;
+}
+
+export async function loadSignature(): Promise<Uint8Array | null> {
+  return (await loadSignatureInfo()).bytes;
 }
 
 let logoBytes: Uint8Array | null | undefined;
@@ -547,7 +571,7 @@ export async function buildInvoicePdf(inv: InvoiceData, opts: InvoicePdfOptions 
   // Green "PAID" stamp (rotated), to the right of the payment box
   {
     const cx = M + 300 + (R - M - 300) / 2;
-    const cy = Math.min(pt + payH / 2, footTop - 44 - 92); // never over the signature
+    const cy = Math.min(pt + payH / 2, footTop - 44 - 100); // never over the signature
     const sw = 128, sh = 52;
     const rad = (-12 * Math.PI) / 180;
     // bottom-left corner of the rotated box so that its centre is (cx, cy)
@@ -567,12 +591,13 @@ export async function buildInvoicePdf(inv: InvoiceData, opts: InvoicePdfOptions 
   const lineT = footTop - 44; // signature line
   const sig = await embedImage(pdf, opts.signatureBytes !== undefined ? opts.signatureBytes : await loadSignature());
   if (sig) {
-    const maxW = 150, maxH = 46;
+    // about 45 mm wide (1 mm = 2.835 pt), kept in proportion; very tall images are limited in height
+    const maxW = 45 * 2.835, maxH = 56;
     const k = Math.min(maxW / sig.width, maxH / sig.height);
     const w = sig.width * k, h = sig.height * k;
     page.drawImage(sig, { x: sigX + (sigW - w) / 2, y: Y(lineT - 2), width: w, height: h });
   }
-  label(`For ${s.name}`, sigX + (sigW - width(`FOR ${s.name.toUpperCase()}`, 7.5, bold)) / 2, lineT - 54, GREY);
+  label(`For ${s.name}`, sigX + (sigW - width(`FOR ${s.name.toUpperCase()}`, 7.5, bold)) / 2, lineT - 60, GREY);
   hr(lineT, sigX, R, DARK, 0.8);
   const sn = siteConfig.invoice.signatory;
   text(sn.name, sigX + (sigW - width(sn.name, 9.5, bold)) / 2, lineT + 13, 9.5, bold, NAVY);
