@@ -2,41 +2,48 @@ import Link from "next/link";
 import { siteConfig } from "@/config/site";
 import { formatDate, formatPrice, formatTime } from "@/lib/format";
 import type { Slot } from "@/lib/types";
-import { ArrowRightIcon, CalendarIcon, CheckIcon, HeadsetIcon } from "../Icons";
+import { ArrowRightIcon, CalendarIcon, CheckIcon, GraduationIcon, HeadsetIcon, TargetIcon } from "../Icons";
 import NoSlotsMessage from "../NoSlotsMessage";
 import Reveal from "../Reveal";
 import SectionHeading from "../SectionHeading";
 
+// ✏️ The 3 steps (text + where each button goes)
 const steps = [
-  "Pick a date and time that suits you",
-  "Pay securely and get confirmation",
-  "Get a one-to-one call with our counsellor (parents welcome)",
-  "Receive your personal campus & branch plan",
+  { icon: TargetIcon, title: "Predict your rank", text: "Enter your expected marks in the free Rank Predictor and see your likely VITEEE rank range.", href: "/predictor", cta: "Try the free predictor" },
+  { icon: CalendarIcon, title: "Book a session", text: "Pick a time for a private one-to-one video call. Parents are welcome to join.", href: "/book-a-slot", cta: "Book counselling" },
+  { icon: GraduationIcon, title: "Get your college plan", text: "Leave with a clear plan: which VIT campus, branch and fee category to aim for — and your choice list.", href: "/book-a-slot", cta: "" },
 ];
 
-// Slots come from Supabase → slots table
-export default function BookCallSection({ slots }: { slots: Slot[] }) {
+// "How it works" (3 steps) + the next open counselling slots (from Supabase → slots table)
+export default function HowItWorks({ slots }: { slots: Slot[] }) {
   const minPrice = slots.length ? Math.min(...slots.map((s) => s.price)) : null;
 
   return (
-    <section className="section bg-slate-50">
-      <div className="container-page grid gap-12 lg:grid-cols-2 lg:items-center">
+    <section className="section bg-slate-50" id="how-it-works">
+      <div className="container-page grid gap-10 lg:grid-cols-[1.1fr_1fr] lg:items-center lg:gap-12">
         <div>
-          <SectionHeading
-            eyebrow="Book a call"
-            title="One-to-one counselling, made simple"
-            subtitle="A private call where we look at your rank, budget and interests, and build a clear plan for VIT counselling — no confusion, no pressure."
-          />
-          <Reveal delay={100}>
-            <ol className="mt-8 space-y-4">
-              {steps.map((s, i) => (
-                <li key={s} className="flex items-start gap-4">
-                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand-600 text-sm font-bold text-white">{i + 1}</span>
-                  <span className="pt-1 text-slate-700">{s}</span>
-                </li>
-              ))}
-            </ol>
-          </Reveal>
+          <SectionHeading eyebrow="How it works" title="From marks to the right VIT college in 3 steps" />
+          <ol className="mt-8 space-y-4">
+            {steps.map((s, i) => (
+              <li key={s.title}>
+                <Reveal delay={i * 80} className="flex items-start gap-4 rounded-2xl bg-white p-4 ring-1 ring-slate-200 sm:p-5">
+                  <span className="relative grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-brand-600 text-white">
+                    <s.icon className="h-6 w-6" />
+                    <span className="absolute -right-1.5 -top-1.5 grid h-6 w-6 place-items-center rounded-full bg-accent-400 text-xs font-black text-brand-950 ring-2 ring-white">{i + 1}</span>
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-lg font-extrabold text-slate-900">{s.title}</span>
+                    <span className="mt-0.5 block text-sm leading-relaxed text-slate-600">{s.text}</span>
+                    {s.cta && (
+                      <Link href={s.href} className="mt-1.5 inline-flex items-center gap-1 text-sm font-bold text-brand-700 hover:underline">
+                        {s.cta} <ArrowRightIcon className="h-4 w-4" />
+                      </Link>
+                    )}
+                  </span>
+                </Reveal>
+              </li>
+            ))}
+          </ol>
         </div>
 
         <Reveal delay={150}>

@@ -7,6 +7,7 @@
 //  Videos are added in Admin → Reviews → Video testimonials (with consent).
 //  The whole section hides itself when there are no videos.
 // =====================================================================
+import MobileViewAll, { hideOnPhone } from "../MobileViewAll";
 import Image from "next/image";
 import { useState } from "react";
 import type { VideoTestimonial } from "@/lib/data";
@@ -14,7 +15,7 @@ import { youtubeEmbed, youtubeThumb } from "@/lib/youtube";
 import Reveal from "../Reveal";
 import SectionHeading from "../SectionHeading";
 
-export default function VideoTestimonials({ videos, heading = true, className = "" }: { videos: VideoTestimonial[]; heading?: boolean; className?: string }) {
+export default function VideoTestimonials({ videos, heading = true, className = "", mobileShort = false }: { videos: VideoTestimonial[]; heading?: boolean; className?: string; mobileShort?: boolean }) {
   if (videos.length === 0) return null;
   return (
     <section className={`section ${className}`} aria-labelledby={heading ? "video-testimonials-title" : undefined}>
@@ -26,11 +27,12 @@ export default function VideoTestimonials({ videos, heading = true, className = 
         )}
         <div className={`grid gap-6 sm:grid-cols-2 lg:grid-cols-3 ${heading ? "mt-10" : ""} ${videos.length === 1 ? "mx-auto max-w-md sm:grid-cols-1 lg:grid-cols-1" : ""}`}>
           {videos.map((v, i) => (
-            <Reveal key={v.id} delay={(i % 3) * 80}>
+            <Reveal key={v.id} delay={(i % 3) * 80} className={mobileShort ? hideOnPhone(i) : ""}>
               <VideoCard v={v} />
             </Reveal>
           ))}
         </div>
+        {mobileShort && <MobileViewAll total={videos.length} href="/reviews" label="View all videos" />}
       </div>
     </section>
   );

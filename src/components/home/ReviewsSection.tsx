@@ -1,5 +1,6 @@
 "use client";
 
+import MobileViewAll, { hideOnPhone } from "../MobileViewAll";
 import { useState } from "react";
 import { initials } from "@/lib/format";
 import type { Review } from "@/lib/types";
@@ -15,7 +16,8 @@ const tabs: { id: Review["type"]; label: string }[] = [
 ];
 
 // Reviews come from Supabase (only approved ones are shown)
-export default function ReviewsSection({ reviews, showHeading = true }: { reviews: Review[]; showHeading?: boolean }) {
+/** mobileShort: on phones show only 3 reviews + "View all reviews" (home page) */
+export default function ReviewsSection({ reviews, showHeading = true, mobileShort = false }: { reviews: Review[]; showHeading?: boolean; mobileShort?: boolean }) {
   const [tab, setTab] = useState<Review["type"]>("student");
   const list = reviews.filter((r) => r.type === tab);
   const avg = reviews.length ? Math.round((reviews.reduce((s, r) => s + r.rating, 0) / reviews.length) * 10) / 10 : 0;
@@ -61,7 +63,7 @@ export default function ReviewsSection({ reviews, showHeading = true }: { review
             <div id="review-panel" role="tabpanel" aria-labelledby={`tab-${tab}`} className="mt-8 grid gap-5 md:grid-cols-3">
               {list.length === 0 && <p className="text-center text-slate-500 md:col-span-3">No {tab} reviews yet.</p>}
               {list.map((r, i) => (
-                <figure key={r.id} style={{ animationDelay: `${i * 90}ms` }} className="card animate-fade-up flex flex-col p-6">
+                <figure key={r.id} style={{ animationDelay: `${i * 90}ms` }} className={`card animate-fade-up flex flex-col p-6 ${mobileShort ? hideOnPhone(i, "md") : ""}`}>
                   <div className="flex items-center gap-3">
                     {r.photo_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -86,6 +88,7 @@ export default function ReviewsSection({ reviews, showHeading = true }: { review
                 </figure>
               ))}
             </div>
+            {mobileShort && <MobileViewAll total={list.length} href="/reviews" label="View all reviews" bp="md" />}
           </>
         )}
       </div>

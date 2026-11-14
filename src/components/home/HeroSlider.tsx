@@ -11,7 +11,6 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   ClipboardIcon,
-  FileIcon,
   GraduationIcon,
   RocketIcon,
   TargetIcon,
@@ -30,19 +29,22 @@ type Slide = {
   eyebrow: string;
   title: string;
   text: string;
-  cta: { label: string; href: string };
+  cta: { label: string; href: string }; // the ONE main button
+  link?: { label: string; href: string }; // optional small text link next to it
   icon: typeof CalendarIcon;
   color: string;
   points: string[];
 };
 
+// 4 slides, ONE main button each (a second, quieter text link is optional)
 const slides: Slide[] = [
   {
     brandLine: true,
     eyebrow: "One-to-one counselling",
     title: "Book Your Counselling Slot",
     text: "Get personal guidance on VIT campus, branch and fee category choices — based on your rank and budget.",
-    cta: { label: "Book a Slot", href: "/book-a-slot" },
+    cta: { label: "Book Counselling", href: "/book-a-slot" },
+    link: { label: "Try the free predictor", href: "/predictor" },
     icon: CalendarIcon,
     color: "from-brand-500 to-brand-700",
     points: ["Rank-based campus plan", "Fee category guidance", "Parents can join"],
@@ -74,33 +76,6 @@ const slides: Slide[] = [
     icon: RocketIcon,
     color: "from-accent-400 to-accent-600",
     points: ["Live + recorded classes", "Daily doubt solving", "Weekly mock tests"],
-  },
-  {
-    eyebrow: "Real exam practice",
-    title: "Mock Tests",
-    text: "Full-length tests in the latest VITEEE pattern with detailed solutions and all-India ranking.",
-    cta: { label: "Take a Mock Test", href: "/mock-tests" },
-    icon: ClipboardIcon,
-    color: "from-emerald-500 to-teal-600",
-    points: ["Latest pattern", "Step-by-step solutions", "Performance reports"],
-  },
-  {
-    eyebrow: "Know the exam",
-    title: "Previous Year Exam Papers",
-    text: "Memory-based VITEEE papers with solutions and topic-wise analysis so you know exactly what to expect.",
-    cta: { label: "View Papers", href: "/previous-year-papers" },
-    icon: FileIcon,
-    color: "from-amber-500 to-orange-600",
-    points: ["Last 5 years", "Detailed solutions", "Topic-wise analysis"],
-  },
-  {
-    eyebrow: "Practice every day",
-    title: "MCQ Practice Tests",
-    text: "Thousands of chapter-wise MCQs for Maths, Physics, Chemistry, English and Aptitude.",
-    cta: { label: "Practice MCQs", href: "/mock-tests#mcq" },
-    icon: TargetIcon,
-    color: "from-rose-500 to-red-600",
-    points: ["Chapter-wise", "Easy → hard levels", "Short explanations"],
   },
 ];
 
@@ -211,14 +186,15 @@ export default function HeroSlider() {
                   {/* Small "Marks → Rank → College" strip on phones/tablets */}
                   {s.visual === "predictor" && <PredictorFlowCompact />}
 
-                  <div className="mt-7 flex flex-col gap-3 sm:mt-8 sm:flex-row">
-                    <Link href={s.cta.href} className="btn-accent !px-6 !py-3.5 text-base" tabIndex={active ? 0 : -1}>
+                  <div className="mt-7 flex flex-col items-start gap-4 sm:mt-8 sm:flex-row sm:items-center sm:gap-6">
+                    <Link href={s.cta.href} className="btn-accent w-full !px-7 !py-3.5 text-base sm:w-auto" tabIndex={active ? 0 : -1}>
                       {s.cta.label} <ArrowRightIcon className="h-4 w-4" />
                     </Link>
-                    {/* The enquiry form really is free (a counselling slot is paid) */}
-                    <Link href="/contact#enquiry" className="btn-outline !py-3.5" tabIndex={active ? 0 : -1}>
-                      Send a Free Enquiry
-                    </Link>
+                    {s.link && (
+                      <Link href={s.link.href} className="inline-flex items-center gap-1 self-center text-sm font-bold text-accent-300 underline decoration-accent-400/50 underline-offset-4 hover:text-accent-200 sm:self-auto" tabIndex={active ? 0 : -1}>
+                        {s.link.label} <ArrowRightIcon className="h-3.5 w-3.5" />
+                      </Link>
+                    )}
                   </div>
                 </div>
 
