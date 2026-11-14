@@ -78,6 +78,33 @@ body {
 }
 
 /* ---------- Scroll-in animation (used by <Reveal>) ---------- */
+/* Always keep room for the page scrollbar, so pages never jump sideways when
+   a scrollbar appears or disappears (e.g. while content loads). */
+html { scrollbar-gutter: stable; }
+
+/* ---------- Admin + student dashboards (desktop): two independent columns ----------
+   Header is 82px tall on desktop (80px + 2px border). The sidebar keeps a fixed
+   260px width and scrolls on its own; the content scrolls on its own and keeps
+   space for its scrollbar. Nothing on hover can change either column's size. */
+@media (min-width: 1024px) {
+  .dash-shell { height: calc(100dvh - 82px); }
+  .dash-sidebar,
+  .dash-content {
+    height: calc(100dvh - 82px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+    padding-block: 2rem;
+  }
+  .dash-sidebar { width: 260px; scrollbar-width: thin; }
+  .dash-content { padding-inline-end: 0.25rem; }
+  /* the dashboards fill the screen like an app — the website footer isn't shown there */
+  body:has(.dash-shell) > footer { display: none; }
+}
+@media print {
+  .dash-shell, .dash-content { height: auto !important; overflow: visible !important; }
+}
+
 /* Keyboard focus: a clear two-tone ring (gold outside, navy inside) so it shows on
    white AND on navy backgrounds. Only for keyboard users (:focus-visible), not mouse clicks. */
 :where(a, button, summary, select, [role="button"], [role="tab"], [tabindex]:not([tabindex="-1"])):focus-visible {

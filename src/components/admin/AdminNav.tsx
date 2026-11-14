@@ -43,8 +43,9 @@ export default function AdminNav({ role }: { role: "admin" | "counsellor" }) {
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hidden w-60 shrink-0 lg:block">
-        <nav aria-label="Admin" className="sticky top-24 rounded-[1.25rem] bg-slate-900 p-3 text-slate-300 shadow-xl">
+      {/* fixed 260px column, scrolls on its own; hover only changes colours */}
+      <aside className="dash-sidebar hidden lg:block">
+        <nav aria-label="Admin" className="rounded-[1.25rem] bg-slate-900 p-3 text-slate-300 shadow-xl">
           <div className="mb-3 flex justify-center rounded-xl bg-white p-2"><Logo size="sidebar" /></div>
           <p className="px-3 pb-2 pt-1 text-xs font-bold uppercase tracking-wider text-accent-300">{role === "admin" ? "Admin panel" : "Counsellor panel"}</p>
           <ul className="space-y-1">
@@ -53,7 +54,7 @@ export default function AdminNav({ role }: { role: "admin" | "counsellor" }) {
                 <Link
                   href={l.href}
                   aria-current={active(l.href) ? "page" : undefined}
-                  className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${active(l.href) ? "bg-white text-slate-900" : "hover:bg-white/10 hover:text-white"}`}
+                  className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors ${active(l.href) ? "bg-white text-slate-900" : "hover:bg-white/10 hover:text-white"}`}
                 >
                   <l.icon className="h-5 w-5" /> {l.label}
                 </Link>
@@ -61,10 +62,10 @@ export default function AdminNav({ role }: { role: "admin" | "counsellor" }) {
             ))}
           </ul>
           <div className="mt-3 space-y-1 border-t border-white/10 pt-3">
-            <Link href="/dashboard" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold hover:bg-white/10 hover:text-white">
+            <Link href="/dashboard" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors hover:bg-white/10 hover:text-white">
               <GridIcon /> Student view
             </Link>
-            <button type="button" onClick={logout} disabled={loggingOut} aria-busy={loggingOut} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-red-300 hover:bg-red-500/10 disabled:cursor-wait disabled:opacity-70">
+            <button type="button" onClick={logout} disabled={loggingOut} aria-busy={loggingOut} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-red-300 transition-colors hover:bg-red-500/10 disabled:cursor-wait disabled:opacity-70">
               {loggingOut ? <><Spinner /> Logging out…</> : <><LogoutIcon /> Logout</>}
             </button>
           </div>
@@ -79,7 +80,7 @@ export default function AdminNav({ role }: { role: "admin" | "counsellor" }) {
               <Link
                 href={l.href}
                 aria-current={active(l.href) ? "page" : undefined}
-                className={`flex items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold ring-1 ${active(l.href) ? "bg-slate-900 text-white ring-slate-900" : "bg-white text-slate-600 ring-slate-200"}`}
+                className={`flex min-h-11 items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold ring-1 transition-colors ${active(l.href) ? "bg-slate-900 text-white ring-slate-900" : "bg-white text-slate-600 ring-slate-200 hover:bg-slate-50"}`}
               >
                 <l.icon className="h-4 w-4" /> {l.label}
               </Link>
