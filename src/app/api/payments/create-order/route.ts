@@ -5,6 +5,7 @@
 // 4. Paid item → works out the price ON THE SERVER (coupon, referral ₹ off,
 //    reward credit — src/lib/pricing.ts), creates the Razorpay order for
 //    that amount + saves a 'created' purchase with the discount details
+import { countEnrolled, seatLimitOf } from "@/lib/seats";
 import { after, NextResponse, type NextRequest } from "next/server";
 import { getSession } from "@/lib/dashboard";
 import { welcomeIfNew } from "@/lib/email/notify";
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest) {
 
   const { data: product } = await admin
     .from("products")
-    .select("id,title,slug,price,is_free,is_active,category")
+    .select("id,title,slug,price,is_free,is_active,category,details")
     .eq("id", productId)
     .maybeSingle();
   if (!product || !product.is_active) return json({ error: "This item is not available." }, 404);
@@ -47,6 +48,13 @@ export async function POST(request: NextRequest) {
   if (owned) {
     const redirect = product.category === "counselling_package" ? "/book-a-slot" : product.is_free ? `/dashboard/courses?unlocked=${product.id}#item-${product.id}` : "/dashboard/courses";
     return json({ owned: true, redirect });
+  }
+
+  // Batch full? (seat limit set in Admin → Products; counts real, paid enrolments)
+  const limit = seatLimitOf(product.details as { seat_limit?: unknown } | null);
+  if (limit) {
+    const taken = await countEnrolled(admin, product.id);
+    if (taken !== null && taken >= limit) return json({ error: "Sorry, this batch is full. Message us on WhatsApp to join the waiting list or the next batch." }, 409);
   }
 
   // FREE items unlock immediately (amount 0, no Razorpay)

@@ -19,6 +19,13 @@ export type ProductDetails = {
   test_type?: "mock" | "mcq";
   questions_count?: number;
   duration_label?: string;
+  // ---- course page (Admin → Products → "Course page") ----
+  who_for?: string[]; // "Who this is for"
+  learn?: string[]; // "What you will learn"
+  schedule?: string[]; // "Schedule and timings", one line each
+  delivery?: { live?: string; recording?: string; pdf?: string }; // "How classes are delivered"
+  after_payment?: string[]; // "What you get after payment"
+  seat_limit?: number; // empty = no limit (nothing shown)
 };
 
 export type TestSummary = {

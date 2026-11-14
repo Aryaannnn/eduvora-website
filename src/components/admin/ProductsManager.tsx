@@ -1,5 +1,6 @@
 "use client";
 
+import CourseContentEditor from "./CourseContentEditor";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
@@ -267,6 +268,16 @@ function ProductForm({ product, defaultCategory, onClose, onSaved, onChanged }: 
           </div>
           <p className="mt-1 text-xs text-slate-500">These links are private: only students who paid can see them.</p>
         </div>
+
+        {/* Crash courses: every section of the public course page */}
+        {f.category === "crash_course" && (
+          <details className="rounded-2xl bg-brand-50/60 p-4 ring-1 ring-brand-100" open={!productId}>
+            <summary className="cursor-pointer text-sm font-bold text-brand-800">Course page — start date, duration, seats, who it&apos;s for, schedule, delivery, FAQ…</summary>
+            <div className="mt-4">
+              <CourseContentEditor key={productId ?? "new"} json={f.details} onChange={(v) => set("details", v)} />
+            </div>
+          </details>
+        )}
 
         <details className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
           <summary className="cursor-pointer text-sm font-bold text-slate-700">Advanced: web name, order & extra display info</summary>

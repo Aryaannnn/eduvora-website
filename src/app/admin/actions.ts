@@ -70,6 +70,11 @@ export async function saveProduct(input: ProductInput): Promise<ActionResult<{ i
       return fail("Extra display info is not valid JSON. Check commas and quotes.");
     }
   }
+  if (details) {
+    const clean = cleanCourseFields(details);
+    if (typeof clean === "string") return fail(clean);
+    details = clean;
+  }
 
   const row = {
     title,
@@ -99,6 +104,43 @@ export async function saveProduct(input: ProductInput): Promise<ActionResult<{ i
   updateTag("products");
   if (error) return fail(friendlyDbError(error.message));
   return { ok: true, data: { id: created.id as string }, message: "Product added — now you can add its files below." };
+}
+
+/** Course page fields (Admin → Products → "Course page"): trims, drops empty items, checks the seat limit. */
+function cleanCourseFields(d: Record<string, unknown>): Record<string, unknown> | string {
+  const out: Record<string, unknown> = { ...d };
+  const list = (k: string, max = 20, len = 300) => {
+    if (out[k] === undefined) return;
+    const v = Array.isArray(out[k]) ? (out[k] as unknown[]).map((x) => String(x ?? "").trim().slice(0, len)).filter(Boolean).slice(0, max) : [];
+    if (v.length) out[k] = v;
+    else delete out[k];
+  };
+  for (const k of ["who_for", "learn", "schedule", "after_payment", "features", "includes"]) list(k);
+  if (out.seat_limit !== undefined && out.seat_limit !== null && out.seat_limit !== "") {
+    const n = Number(out.seat_limit);
+    if (!Number.isInteger(n) || n < 1 || n > 100000) return "Seat limit must be a whole number like 60 (or empty for no limit).";
+    out.seat_limit = n;
+  } else delete out.seat_limit;
+  if (out.delivery !== undefined) {
+    const src = (out.delivery && typeof out.delivery === "object" ? out.delivery : {}) as Record<string, unknown>;
+    const dl: Record<string, string> = {};
+    for (const k of ["live", "recording", "pdf"]) {
+      const t = String(src[k] ?? "").trim().slice(0, 200);
+      if (t) dl[k] = t;
+    }
+    if (Object.keys(dl).length) out.delivery = dl;
+    else delete out.delivery;
+  }
+  if (out.faqs !== undefined) {
+    const f = (Array.isArray(out.faqs) ? out.faqs : [])
+      .map((x) => ({ q: String((x as { q?: unknown })?.q ?? "").trim().slice(0, 200), a: String((x as { a?: unknown })?.a ?? "").trim().slice(0, 1200) }))
+      .filter((x) => x.q && x.a)
+      .slice(0, 15);
+    if (f.length) out.faqs = f;
+    else delete out.faqs;
+  }
+  if (typeof out.start_date === "string" && !out.start_date.trim()) delete out.start_date;
+  return out;
 }
 
 export async function setProductFlag(id: string, field: "is_active" | "is_free", value: boolean): Promise<ActionResult> {

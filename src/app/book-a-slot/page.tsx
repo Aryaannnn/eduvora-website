@@ -3,6 +3,7 @@ import JsonLd from "@/components/seo/JsonLd";
 import { pageMeta, breadcrumbLd } from "@/lib/seo";
 import BookingForm from "@/components/BookingForm";
 import PackageCards from "@/components/packages/PackageCards";
+import PackageComparison from "@/components/packages/PackageComparison";
 import PageHero from "@/components/PageHero";
 import { siteConfig } from "@/config/site";
 
@@ -26,6 +27,8 @@ export default function BookASlotPage() {
       <section className="bg-slate-50 py-14 sm:py-20">
         <div className="container-page">
           <PackageCards />
+          {/* What's included in each package (only with 2+ packages) */}
+          <PackageComparison />
         </div>
       </section>
       <section id="book" className="container-page scroll-mt-24 py-10 sm:py-14">

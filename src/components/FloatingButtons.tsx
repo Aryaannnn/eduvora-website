@@ -34,7 +34,9 @@ export default function FloatingButtons() {
 function Buttons() {
   const pathname = usePathname();
   if (on(pathname, NONE)) return null;
-  const showBar = !on(pathname, NO_BAR);
+  // Course pages have their own "Enroll Now – ₹price" bar on phones (with WhatsApp)
+  const coursePage = /^\/courses\/[^/]+/.test(pathname);
+  const showBar = !on(pathname, NO_BAR) && !coursePage;
 
   // The link already mentions the page; on a click we add the page heading too
   // (e.g. the course name), read from the page itself.
@@ -52,7 +54,7 @@ function Buttons() {
         href={href}
         {...waProps}
         aria-label="Chat with us on WhatsApp"
-        className={`fixed bottom-5 right-4 z-50 h-14 w-14 place-items-center rounded-full bg-[#25D366] text-white shadow-xl shadow-black/25 transition hover:scale-110 active:scale-95 sm:right-6 print:hidden ${showBar ? "hidden md:grid" : "grid"}`}
+        className={`fixed bottom-5 right-4 z-50 h-14 w-14 place-items-center rounded-full bg-[#25D366] text-white shadow-xl shadow-black/25 transition hover:scale-110 active:scale-95 sm:right-6 print:hidden ${showBar || coursePage ? "hidden md:grid" : "grid"}`}
       >
         <span className="absolute inset-0 animate-ping rounded-full bg-[#25D366] opacity-30 motion-reduce:hidden" />
         <WhatsAppIcon className="relative h-7 w-7" />
