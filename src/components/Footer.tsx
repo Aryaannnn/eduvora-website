@@ -19,6 +19,7 @@ const explore = [
 const company = [
   { href: "/about", label: "About Us" },
   { href: "/founder", label: "Founder Story" },
+  { href: "/parents", label: "For Parents" },
   { href: "/reviews", label: "Reviews" },
   { href: "/contact", label: "Contact" },
   ...legalLinks,

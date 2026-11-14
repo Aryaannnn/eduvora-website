@@ -22,6 +22,7 @@ import { getBrowserSupabase } from "@/lib/supabase/client";
 import type { Slot } from "@/lib/types";
 import { Spinner } from "./Spinner";
 import { Field } from "./ContactForm";
+import { parentsPage } from "@/content/parents";
 import NoSlotsMessage from "./NoSlotsMessage";
 import RefundNote from "./RefundNote";
 import { CheckIcon, LockIcon, ShieldIcon, UserIcon } from "./Icons";
@@ -44,7 +45,12 @@ export default function BookingForm() {
   const [user, setUser] = useState<User | null>(null);
   const [date, setDate] = useState("");
   const [slotId, setSlotId] = useState("");
-  const [form, setForm] = useState<Form>({ name: "", phone: "", email: "", classYear: "Class 12", expectedMarks: "", message: "" });
+  // From the "For Parents" page (/book-a-slot?with=parents): note that parents will join.
+  // (The form only appears after the slots load in the browser, so reading the address here is safe.)
+  const [form, setForm] = useState<Form>(() => ({
+    name: "", phone: "", email: "", classYear: "Class 12", expectedMarks: "",
+    message: typeof window !== "undefined" && new URLSearchParams(window.location.search).get("with") === "parents" ? parentsPage.buttons.bookingNote : "",
+  }));
   const [phase, setPhase] = useState<Phase>("idle");
   const [notice, setNotice] = useState<Notice>(null);
   const [formError, setFormError] = useState("");

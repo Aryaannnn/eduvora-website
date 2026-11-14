@@ -10,7 +10,7 @@ import { SITE_URL } from "@/lib/site-url";
 
 const STATIC = [
   "", "/courses", "/study-material", "/mock-tests", "/previous-year-papers", "/free-resources", "/predictor", "/book-a-slot",
-  "/important-dates", "/fee-calculator", "/blog", "/reviews", "/about", "/founder", "/contact", "/privacy-policy", "/terms-and-conditions", "/refund-policy",
+  "/important-dates", "/fee-calculator", "/blog", "/reviews", "/about", "/founder", "/parents", "/contact", "/privacy-policy", "/terms-and-conditions", "/refund-policy",
 ];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
