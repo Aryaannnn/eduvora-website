@@ -9,6 +9,7 @@ import CompleteProfilePrompt from "@/components/auth/CompleteProfilePrompt";
 import SiteAnalytics from "@/components/analytics/SiteAnalytics";
 import ConsentPrompt from "@/components/privacy/ConsentPrompt";
 import CookieNotice from "@/components/privacy/CookieNotice";
+import GuidePopupLoader from "@/components/guide/GuidePopupLoader";
 import MaintenanceBanner from "@/components/MaintenanceBanner";
 import JsonLd from "@/components/seo/JsonLd";
 import { organizationLd } from "@/lib/seo";
@@ -72,6 +73,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         {/* Privacy: one-time consent for accounts without it + small cookie notice (shown once) */}
         <ConsentPrompt />
         <CookieNotice />
+        {/* Free guide popup (after 60% scroll or 30 s, once per visitor) — Admin → Settings → Lead capture */}
+        <Suspense fallback={null}>
+          <GuidePopupLoader />
+        </Suspense>
         {/* Vercel Analytics + Speed Insights (+ Google Analytics if NEXT_PUBLIC_GA_ID is set) */}
         <Suspense fallback={null}>
           <SiteAnalytics />

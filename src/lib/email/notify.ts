@@ -189,6 +189,36 @@ ${meetBlock(b)}
     };
   },
 
+  // ---------- visitor: the free guide (popup) ----------
+  async free_guide(db, id) {
+    const { data: r } = await db.from("guide_requests").select("id,name,email,created_at,products(title)").eq("id", id).maybeSingle();
+    if (!r?.email) return null;
+    const title = (r.products as unknown as { title?: string } | null)?.title ?? "VITEEE Counselling Checklist";
+    const first = String(r.name ?? "").split(" ")[0] || "there";
+    return {
+      to: r.email as string,
+      subject: `Your free ${title} 📘`,
+      html: layout({
+        preheader: `Here is your free ${title}. Download it any time in the next 30 days.`,
+        title: "Your free guide is ready 📘",
+        body: `<p>Hi ${esc(first)},</p>
+<p>Thank you for your interest in EDUVORA! Here is your free <strong>${esc(title)}</strong>:</p>
+<p>${button("Download the guide (PDF)", url(`/api/guide/${r.id}`))}</p>
+<p style="font-size:13px;color:#64748b">The link works for 30 days.</p>
+${note(`<strong>Want help with your own rank, campus or branch?</strong><br>Send us a free enquiry and our team will call you back — no payment needed.<br><br>${button("Book a free enquiry call", url("/contact#enquiry"), "navy")}`, "gold")}
+<p style="font-size:12px;color:#94a3b8">You're getting this email because you asked for the free guide on our website. You won't get marketing emails unless you sign up.</p>`,
+      }),
+    };
+  },
+
+  // ---------- student: "You left something behind" (2 h and 24 h after an unfinished payment) ----------
+  async checkout_reminder_2h(db, id) {
+    return checkoutReminder(db, id, "2h");
+  },
+  async checkout_reminder_24h(db, id) {
+    return checkoutReminder(db, id, "24h");
+  },
+
   // ---------- student: welcome ----------
   async welcome(db, userId) {
     const { data: p } = await db.from("profiles").select("full_name,email").eq("id", userId).maybeSingle();
@@ -345,6 +375,146 @@ ${b.meet_link ? "" : `<p>${button("Add to Google Calendar", googleCalendarUrl(b.
 ${which === "24h" ? `<p style="font-size:13px;color:#64748b">Can't make it? Reply to this email as soon as possible. ${esc(siteConfig.refunds.counsellingNote)}</p>` : ""}`,
     }),
   };
+}
+
+// Where to send someone back to finish buying (by product type)
+const PRODUCT_PAGE: Record<string, (slug: string) => string> = {
+  crash_course: (slug) => `/courses/${slug}`,
+  study_material: () => "/study-material",
+  previous_paper: () => "/previous-year-papers",
+  mock_test: () => "/mock-tests",
+  counselling_package: () => "/book-a-slot#packages",
+};
+
+/** One friendly reminder about an unfinished payment — only if they still haven't paid. */
+async function checkoutReminder(db: SupabaseClient, id: string, which: "2h" | "24h"): Promise<Email | null> {
+  let item = "", link = "", price = 0, email = "", name = "";
+  const { data: pu } = await db.from("purchases").select("id,user_id,status,amount,product_id,products(title,slug,category,price)").eq("id", id).maybeSingle();
+  if (pu) {
+    if (pu.status === "paid" || pu.status === "refunded" || !pu.user_id) return null;
+    const { count } = await db.from("purchases").select("id", { count: "exact", head: true }).eq("user_id", pu.user_id).eq("product_id", pu.product_id).eq("status", "paid");
+    if ((count ?? 0) > 0) return null; // bought it in the meantime
+    const pr = pu.products as unknown as { title: string; slug: string; category: string; price: number } | null;
+    if (!pr) return null;
+    const { data: prof } = await db.from("profiles").select("full_name,email,role").eq("id", pu.user_id).maybeSingle();
+    if (!prof?.email || prof.role === "admin" || prof.role === "counsellor") return null;
+    item = pr.title;
+    price = Number(pr.price ?? pu.amount ?? 0);
+    link = (PRODUCT_PAGE[pr.category] ?? (() => "/"))(pr.slug);
+    email = prof.email as string;
+    name = String(prof.full_name ?? "");
+  } else {
+    const b = await loadBooking(db, id);
+    if (!b || !b.user_id || b.payment_status === "paid" || !b.email) return null;
+    const { count } = await db.from("bookings").select("id", { count: "exact", head: true }).eq("user_id", b.user_id).eq("payment_status", "paid");
+    if ((count ?? 0) > 0) return null; // booked a session in the meantime
+    item = "One-to-one counselling session";
+    price = Number(b.amount ?? b.slots?.price ?? 0);
+    link = "/book-a-slot";
+    email = b.email;
+    name = b.name;
+  }
+  const first = name.split(" ")[0] || "there";
+  const later = which === "24h";
+  return {
+    to: email,
+    subject: later ? "You left something behind 👀" : `Still thinking about ${item}?`,
+    html: layout({
+      preheader: later ? `Your ${item} is still waiting for you.` : `You started a payment for ${item} but didn't finish. Need any help?`,
+      title: later ? "You left something behind" : "Need a hand finishing up?",
+      body: `<p>Hi ${esc(first)},</p>
+<p>${later ? "Just a gentle reminder —" : "We noticed"} you started a payment for <strong>${esc(item)}</strong>${price > 0 ? ` (${esc(formatPrice(price))})` : ""} but it wasn't completed. No money was taken.</p>
+<p>${button(link.startsWith("/book-a-slot") && !link.includes("#") ? "Pick a time again" : "Complete my purchase", url(link))}</p>
+<p>Had a problem with the payment, or have a question first? Just reply to this email or ${button("Message us on WhatsApp", url("/go/whatsapp"), "green")}</p>
+<p style="font-size:12px;color:#94a3b8">${later ? "This is our last reminder about it — we won't email you about this again." : "You're getting this because you started a payment on our website."}</p>`,
+    }),
+  };
+}
+
+// ---------------------------------------------------------------------
+//  "YOU LEFT SOMETHING BEHIND" — run by /api/cron/reminders (every 15 min).
+//  Only when switched ON in Admin → Settings. For each unfinished payment
+//  started after it was switched on: ONE email after 2 hours and ONE after
+//  24 hours, newest attempt only per student + item, never if they paid,
+//  never for payments older than 3 days.
+// ---------------------------------------------------------------------
+export async function sendCheckoutReminders(): Promise<{ r2h: number; r24h: number }> {
+  const out = { r2h: 0, r24h: 0 };
+  const db = getAdminSupabase();
+  if (!db) return out;
+  const { data: g } = await db.from("growth_settings").select("abandoned_reminders,abandoned_enabled_at").eq("id", 1).maybeSingle();
+  if (!g?.abandoned_reminders || !g.abandoned_enabled_at) return out;
+  const now = Date.now();
+  const since = new Date(Math.max(new Date(g.abandoned_enabled_at as string).getTime(), now - 3 * 86_400_000)).toISOString();
+  const twoHoursAgo = new Date(now - 2 * 3_600_000).toISOString();
+
+  type Row = { id: string; user_id: string | null; created_at: string; nudge_2h_at: string | null; nudge_24h_at: string | null; key: string; table: "purchases" | "bookings" };
+  const rows: Row[] = [];
+  const pu = await db
+    .from("purchases")
+    .select("id,user_id,product_id,created_at,nudge_2h_at,nudge_24h_at,amount")
+    .in("status", ["created", "pending", "failed", "abandoned"])
+    .gt("amount", 0)
+    .not("user_id", "is", null)
+    .gte("created_at", since)
+    .lte("created_at", twoHoursAgo)
+    .is("nudge_24h_at", null)
+    .order("created_at", { ascending: false })
+    .limit(300);
+  if (pu.error) {
+    console.warn("[email] checkout reminders skipped (run supabase/lead-capture.sql?):", pu.error.message);
+    return out;
+  }
+  for (const r of pu.data ?? []) rows.push({ ...(r as unknown as Row), key: `${r.user_id}|${r.product_id}`, table: "purchases" });
+  const bk = await db
+    .from("bookings")
+    .select("id,user_id,created_at,nudge_2h_at,nudge_24h_at,status,payment_status")
+    .neq("payment_status", "paid")
+    .in("status", ["expired", "cancelled", "awaiting_payment"])
+    .not("user_id", "is", null)
+    .gte("created_at", since)
+    .lte("created_at", twoHoursAgo)
+    .is("nudge_24h_at", null)
+    .order("created_at", { ascending: false })
+    .limit(300);
+  for (const r of bk.error ? [] : bk.data ?? []) {
+    // a booking the student or admin cancelled after paying isn't "unfinished"
+    if ((r as { status: string }).status === "cancelled" && (r as { payment_status: string }).payment_status !== "failed") continue;
+    rows.push({ ...(r as unknown as Row), key: `${r.user_id}|booking`, table: "bookings" });
+  }
+  rows.sort((a, b) => b.created_at.localeCompare(a.created_at));
+
+  const seen = new Set<string>();
+  for (const r of rows) {
+    const stamp = new Date().toISOString();
+    // Only the newest attempt per student + item; older ones are quietly closed
+    if (seen.has(r.key)) {
+      await db.from(r.table).update({ nudge_2h_at: r.nudge_2h_at ?? stamp, nudge_24h_at: stamp }).eq("id", r.id);
+      continue;
+    }
+    seen.add(r.key);
+    const age = now - new Date(r.created_at).getTime();
+    if (age >= 24 * 3_600_000) {
+      if (await claim(db, r.table, "nudge_24h_at", r.id)) {
+        if (!r.nudge_2h_at) await db.from(r.table).update({ nudge_2h_at: stamp }).eq("id", r.id); // too late for the 2-hour one
+        if (await sendKind("checkout_reminder_24h", r.id)) out.r24h++;
+      }
+    } else if (!r.nudge_2h_at) {
+      if (await claim(db, r.table, "nudge_2h_at", r.id)) {
+        if (await sendKind("checkout_reminder_2h", r.id)) out.r2h++;
+      }
+    }
+  }
+  return out;
+}
+
+/** Free guide popup → email the download link (in the background). */
+export function notifyFreeGuide(requestId: string) {
+  inBackground(async () => {
+    if (await sendKind("free_guide", requestId)) {
+      await getAdminSupabase()?.from("guide_requests").update({ emailed_at: new Date().toISOString() }).eq("id", requestId);
+    }
+  });
 }
 
 // ---------------------------------------------------------------------

@@ -31,6 +31,7 @@ const SOURCES: Record<string, string> = {
   enquiry: "Enquiry",
   predictor: "Predictor",
   free_resource: "Free resource",
+  free_guide: "Free guide",
   abandoned_payment: "Abandoned payment",
   booking: "Booking",
 };
@@ -50,6 +51,8 @@ function whatsappText(l: AdminLead, founderFirst: string, business: string) {
       ? `I saw you checked your rank on our Rank Predictor${l.predicted_rank ? ` (${l.predicted_rank})` : ""}. Would you like help choosing the right VIT campus and branch?`
       : l.sources.includes("enquiry")
         ? "Thank you for your enquiry. When is a good time to talk about your VITEEE counselling?"
+        : l.sources.includes("free_guide")
+          ? "Thanks for downloading our free VITEEE Counselling Checklist! Do you have any questions about your rank, campus or branch?"
         : l.sources.includes("free_resource")
           ? "Hope the free study resource is helping! Would you like guidance for VITEEE and VIT counselling?"
           : "Thank you for signing up. Would you like help with VITEEE preparation or VIT counselling?";

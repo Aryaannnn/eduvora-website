@@ -10,6 +10,7 @@ import StatsManager from "@/components/admin/StatsManager";
 import WhySettingsForm from "@/components/admin/WhySettingsForm";
 import PriceLabelsCard from "@/components/admin/PriceLabelsCard";
 import InvoiceSettingsCard from "@/components/admin/InvoiceSettingsCard";
+import LeadCaptureCard, { type LeadCaptureState } from "@/components/admin/LeadCaptureCard";
 import { DashSkeleton } from "@/components/dashboard/ui";
 import { siteConfig } from "@/config/site";
 import { requireAdmin } from "@/lib/admin";
@@ -29,7 +30,7 @@ export default function SettingsPage() {
 
 async function Content() {
   const s = await requireAdmin("/admin/settings");
-  const [{ data, error }, ref, wc, cal, mt, wy, ds] = await Promise.all([
+  const [{ data, error }, ref, wc, cal, mt, wy, ds, gs, fp] = await Promise.all([
     s.supabase.from("site_stats").select("id,label,value,suffix,sort_order").order("sort_order"),
     s.supabase.from("referral_settings").select("enabled,referred_discount,referrer_reward").eq("id", 1).maybeSingle(),
     s.supabase.from("community_settings").select("whatsapp_link").eq("id", 1).maybeSingle(),
@@ -37,7 +38,15 @@ async function Content() {
     s.supabase.from("maintenance_settings").select("enabled,message,updated_at").eq("id", 1).maybeSingle(),
     s.supabase.from("why_settings").select("enabled,title,cards").eq("id", 1).maybeSingle(),
     s.supabase.from("display_settings").select("show_original_price").eq("id", 1).maybeSingle(),
+    s.supabase.from("growth_settings").select("guide_enabled,guide_product_id,abandoned_reminders").eq("id", 1).maybeSingle(),
+    s.supabase.from("products").select("id,title,file_path,product_files(id)").eq("is_free", true).order("sort_order"),
   ]);
+  const freeProducts = ((fp.data ?? []) as unknown as { id: string; title: string; file_path: string | null; product_files: { id: string }[] | null }[]).map((p) => ({
+    id: p.id,
+    title: p.title,
+    hasFile: !!p.file_path || (p.product_files ?? []).length > 0,
+  }));
+  const leadCapture = <LeadCaptureCard initial={gs.error || !gs.data ? null : (gs.data as LeadCaptureState)} freeProducts={freeProducts} />;
   const priceLabels = <PriceLabelsCard initial={ds.data?.show_original_price !== false} setupMissing={!!ds.error || !ds.data} />;
   const whyCards = wy.data ? cleanWhyCards(wy.data.cards) : null;
   const whyInitial: WhySettings = wy.data
@@ -64,6 +73,7 @@ async function Content() {
     return (
       <>
         {maintenance}
+        {leadCapture}
         <ExportDataCard />
         {calendar}
         {community}
@@ -78,6 +88,7 @@ async function Content() {
   return (
     <>
       {maintenance}
+      {leadCapture}
       <ExportDataCard />
       {calendar}
       {community}

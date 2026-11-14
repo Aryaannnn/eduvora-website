@@ -1162,6 +1162,36 @@ export async function saveCommunityLink(link: string): Promise<ActionResult> {
   return dbResult(error, v ? "Saved — the WhatsApp community banner is now shown." : "Link removed — the banner is hidden everywhere.");
 }
 
+// ---------------------------------------------------------------- LEAD CAPTURE (supabase/lead-capture.sql)
+/** Free guide popup (on/off + which free product) and "You left something behind" emails (on/off). */
+export async function saveGrowthSettings(input: { guide_enabled: boolean; guide_product_id: string | null; abandoned_reminders: boolean }): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const guideId = input.guide_product_id || null;
+  if (guideId) {
+    if (!/^[0-9a-f-]{36}$/i.test(guideId)) return fail("Please choose the guide again.");
+    const { data: p } = await s.supabase.from("products").select("id,is_free").eq("id", guideId).maybeSingle();
+    if (!p) return fail("That product no longer exists.");
+    if (!p.is_free) return fail("The guide must be a FREE product (tick “Free” in Admin → Products).");
+  }
+  const { data, error } = await s.supabase
+    .from("growth_settings")
+    .update({ guide_enabled: !!input.guide_enabled, guide_product_id: guideId, abandoned_reminders: !!input.abandoned_reminders })
+    .eq("id", 1)
+    .select("id");
+  updateTag("settings"); // the popup updates on the next page load
+  if (error) return fail(/growth_settings/.test(error.message) ? "Run supabase/lead-capture.sql in Supabase first." : friendlyDbError(error.message));
+  if (!data?.length) return fail("Run supabase/lead-capture.sql in Supabase first.");
+  await s.supabase
+    .rpc("log_admin_event", {
+      p_action: "settings.lead_capture",
+      p_summary: `Lead capture: guide popup ${input.guide_enabled && guideId ? "ON" : "OFF"}, checkout reminders ${input.abandoned_reminders ? "ON" : "OFF"}`,
+      p_details: {},
+    })
+    .then(() => undefined, () => undefined);
+  return { ok: true, message: "Saved. Changes show on the website within a minute." };
+}
+
 // ---------------------------------------------------------------- PRICE LABELS (supabase/price-labels.sql)
 /** Show or hide the crossed-out "original price" and "% off" labels on the whole website. */
 export async function saveShowOriginalPrice(show: boolean): Promise<ActionResult> {
