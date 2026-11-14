@@ -2,25 +2,20 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import BackButton from "@/components/BackButton";
 import { DashSkeleton } from "@/components/dashboard/ui";
-import PrintButton from "@/components/dashboard/PrintButton";
-import { siteConfig } from "@/config/site";
+import { hasAdmin2fa } from "@/lib/admin";
 import { requireUser } from "@/lib/dashboard";
-import { formatDate, formatDateTime, formatPrice, formatTime } from "@/lib/format";
+import { getInvoiceData } from "@/lib/invoices";
+import { getAdminSupabase } from "@/lib/supabase/admin";
 
 export const metadata: Metadata = { title: "Invoice", robots: { index: false } };
 
-type Row = {
-  id: string; user_id: string; amount: number; status: string; invoice_number: string | null; razorpay_order_id: string | null;
-  razorpay_payment_id: string | null; created_at: string; paid_at?: string | null; products: { title: string; category: string } | null;
-};
-
-// Printable invoice. All dates and times are in Indian Standard Time (IST).
-// Students see only their own invoices (Row Level Security); admins see all.
+// Shows the REAL PDF invoice (the same one that is emailed and downloaded).
+// Students see only their own invoices; admins (with 2-step login) see any.
 export default function InvoicePage(props: PageProps<"/invoice/[id]">) {
   return (
-    <section className="min-h-[60vh] bg-slate-50 py-8 sm:py-12 print:bg-white print:py-0">
+    <section className="min-h-[60vh] bg-slate-50 py-8 sm:py-12">
       <div className="container-page">
-        <Suspense fallback={<div className="mx-auto max-w-2xl"><DashSkeleton /></div>}>
+        <Suspense fallback={<div className="mx-auto max-w-3xl"><DashSkeleton /></div>}>
           {props.params.then(({ id }) => <Invoice id={id} />)}
         </Suspense>
       </div>
@@ -28,124 +23,40 @@ export default function InvoicePage(props: PageProps<"/invoice/[id]">) {
   );
 }
 
+const notAvailable = (
+  <p className="card mx-auto max-w-2xl p-8 text-center text-slate-600">
+    Invoice not available. Invoices are created once a payment is confirmed.
+  </p>
+);
+
 async function Invoice({ id }: { id: string }) {
   const s = await requireUser(`/invoice/${id}`);
-  const valid = /^[0-9a-f-]{36}$/i.test(id);
-  const { data } = valid
-    ? await s.supabase
-        .from("purchases")
-        .select("id,user_id,amount,status,invoice_number,razorpay_order_id,razorpay_payment_id,created_at,paid_at,products(title,category)")
-        .eq("id", id)
-        .maybeSingle()
-    : { data: null };
-  let p = data as unknown as Row | null;
+  const db = getAdminSupabase();
+  if (!db || !/^[0-9a-f-]{36}$/i.test(id)) return notAvailable;
+  const inv = await getInvoiceData(db, id);
+  if (!inv) return notAvailable;
+  const own = !!inv.userId && inv.userId === s.user.id;
+  const admin = s.profile?.role === "admin" && (await hasAdmin2fa(s));
+  if (!own && !admin) return notAvailable; // never reveal someone else's invoice
 
-  // Not a product purchase? It may be a paid counselling booking.
-  if (!p && valid) {
-    const { data: bk } = await s.supabase
-      .from("bookings")
-      .select("id,user_id,amount,payment_status,invoice_number,razorpay_order_id,razorpay_payment_id,created_at,paid_at,slots(date,start_time,end_time)")
-      .eq("id", id)
-      .maybeSingle();
-    const b = bk as unknown as (Omit<Row, "status" | "products"> & { payment_status: string; slots: { date: string; start_time: string; end_time: string } | null }) | null;
-    if (b) {
-      p = {
-        ...b,
-        status: b.payment_status,
-        products: {
-          title: `One-to-one counselling session${b.slots ? ` — ${formatDate(b.slots.date, true)}, ${formatTime(b.slots.start_time)}–${formatTime(b.slots.end_time)} IST` : ""}`,
-          category: "counselling",
-        },
-      };
-    }
-  }
-
-  if (!p || p.status !== "paid") {
-    return <p className="card mx-auto max-w-2xl p-8 text-center text-slate-600">Invoice not available. Invoices are created once a payment is confirmed.</p>;
-  }
-
-  // Buyer details (their own profile; admins can read any)
-  const { data: buyer } = await s.supabase.from("profiles").select("full_name,email,phone").eq("id", p.user_id).maybeSingle();
-
-  // Discounts (coupon / referral / reward credit) — columns from supabase/coupons-referrals.sql
-  const { data: disc } = await s.supabase
-    .from(p.products?.category === "counselling" ? "bookings" : "purchases")
-    .select("original_amount,coupon_code,coupon_discount,referral_discount,reward_used")
-    .eq("id", p.id)
-    .maybeSingle();
-  const d = disc as { original_amount: number | null; coupon_code: string | null; coupon_discount: number; referral_discount: number; reward_used: number } | null;
-  const subtotal = d?.original_amount && d.original_amount > p.amount ? d.original_amount : null;
-  const discountRows: [string, number][] = subtotal
-    ? ([
-        [`Coupon discount (${d!.coupon_code ?? "code"})`, d!.coupon_discount],
-        ["Referral discount (first payment)", d!.referral_discount],
-        ["Reward credit used", d!.reward_used],
-      ] as [string, number][]).filter(([, v]) => v > 0)
-    : [];
-
+  const src = `/api/invoices/${id}`;
   return (
-    <div className="mx-auto max-w-2xl">
-      <div className="mb-4 flex items-center justify-between gap-3 print:hidden">
+    <div className="mx-auto max-w-3xl">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <BackButton />
-        <span className="flex gap-2">
-          <a href={`/api/invoices/${p.id}`} download className="btn-accent !px-4 !py-2.5 text-sm">Download PDF</a>
-          <PrintButton label="Print" />
+        <span className="flex flex-wrap gap-2">
+          <a href={src} download className="btn-accent !px-4 !py-2.5 text-sm">Download PDF</a>
+          <a href={`${src}?view=1`} target="_blank" rel="noopener" className="btn-light !px-4 !py-2.5 text-sm">Open / Print</a>
         </span>
       </div>
-      <article className="card p-6 sm:p-10 print:shadow-none print:ring-0">
-        <header className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 pb-6">
-          <div>
-            <p className="text-2xl font-extrabold text-brand-700">{siteConfig.billingName}</p>
-            {siteConfig.showAddress && <p className="mt-1 max-w-xs text-sm text-slate-500">{siteConfig.invoice.address}</p>}
-            <p className={`${siteConfig.showAddress ? "" : "mt-1 "}text-sm text-slate-500`}>{siteConfig.email}</p>
-            {siteConfig.invoice.gstin.trim() && <p className="text-sm text-slate-500">GSTIN: {siteConfig.invoice.gstin.trim()}</p>}
-          </div>
-          <div className="text-right">
-            <p className="text-sm font-bold uppercase tracking-wider text-slate-500">Invoice</p>
-            <p className="text-lg font-extrabold text-slate-900">{p.invoice_number ?? "—"}</p>
-            <p className="mt-1 text-sm text-slate-600">Date: {formatDateTime(p.paid_at ?? p.created_at)}</p>
-          </div>
-        </header>
-
-        <section className="grid gap-4 py-6 sm:grid-cols-2">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Billed to</p>
-            <p className="mt-1 font-semibold text-slate-900">{buyer?.full_name || "Student"}</p>
-            {buyer?.email && <p className="text-sm text-slate-600">{buyer.email}</p>}
-            {buyer?.phone && <p className="text-sm text-slate-600">+{String(buyer.phone).replace(/^\+/, "")}</p>}
-          </div>
-          <div className="sm:text-right">
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Payment</p>
-            <p className="mt-1 text-sm text-slate-600">{p.amount === 0 ? "Free item" : p.razorpay_payment_id ? "Online (Razorpay)" : "Recorded by EDUVORA"}</p>
-            {p.razorpay_payment_id && <p className="break-all text-xs text-slate-500">Payment ID: {p.razorpay_payment_id}</p>}
-            {p.razorpay_order_id && <p className="break-all text-xs text-slate-500">Order ID: {p.razorpay_order_id}</p>}
-            <p className="text-xs text-slate-500">Ordered: {formatDateTime(p.created_at)}</p>
-          </div>
-        </section>
-
-        <table className="w-full text-left text-sm">
-          <thead className="border-y border-slate-200 bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
-            <tr><th className="px-3 py-2">Item</th><th className="px-3 py-2 text-right">Amount</th></tr>
-          </thead>
-          <tbody>
-            <tr className="border-b border-slate-100">
-              <td className="px-3 py-3 font-semibold text-slate-900">{p.products?.title ?? "Purchase"}</td>
-              <td className="px-3 py-3 text-right font-semibold text-slate-900">{formatPrice(subtotal ?? p.amount).replace("Free", "₹0")}</td>
-            </tr>
-            {discountRows.map(([k, v]) => (
-              <tr key={k} className="border-b border-slate-100 text-emerald-700">
-                <td className="px-3 py-2 text-sm">{k}</td>
-                <td className="px-3 py-2 text-right text-sm font-semibold">− ₹{v.toLocaleString("en-IN")}</td>
-              </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr><td className="px-3 py-3 text-right font-bold text-slate-700">Total paid</td><td className="px-3 py-3 text-right text-lg font-extrabold text-brand-700">{formatPrice(p.amount).replace("Free", "₹0")}</td></tr>
-          </tfoot>
-        </table>
-
-        <p className="mt-8 text-xs text-slate-500">All dates and times are in Indian Standard Time (IST, UTC+5:30). This is a computer-generated invoice.</p>
-      </article>
+      <p className="mb-3 text-sm text-slate-600">
+        Invoice <strong className="text-slate-900">{inv.invoiceNumber}</strong> · {inv.itemTitle}
+      </p>
+      <div className="card overflow-hidden p-0">
+        {/* A4 shape; phones that can't show PDFs inside a page get the buttons above */}
+        <iframe src={`${src}?view=1#view=FitH`} title={`Invoice ${inv.invoiceNumber}`} className="aspect-[1/1.414] w-full bg-white" />
+      </div>
+      <p className="mt-3 text-center text-xs text-slate-500">Can&apos;t see the invoice? Use &ldquo;Download PDF&rdquo; above.</p>
     </div>
   );
 }

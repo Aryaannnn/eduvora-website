@@ -9,6 +9,7 @@ import ReferralSettingsForm from "@/components/admin/ReferralSettingsForm";
 import StatsManager from "@/components/admin/StatsManager";
 import WhySettingsForm from "@/components/admin/WhySettingsForm";
 import PriceLabelsCard from "@/components/admin/PriceLabelsCard";
+import InvoiceSettingsCard from "@/components/admin/InvoiceSettingsCard";
 import { DashSkeleton } from "@/components/dashboard/ui";
 import { siteConfig } from "@/config/site";
 import { requireAdmin } from "@/lib/admin";
@@ -68,6 +69,7 @@ async function Content() {
         {community}
         {why}
         {priceLabels}
+        <InvoiceSettingsCard />
         {referral}
         <p className="card p-6 text-red-600">{missing ? "Run supabase/stats-reviews.sql in Supabase → SQL Editor to turn on editable stats." : `Could not load settings: ${error.message}`}</p>
       </>
@@ -81,6 +83,7 @@ async function Content() {
       {community}
       {why}
       {priceLabels}
+      <InvoiceSettingsCard />
       {referral}
       <StatsManager stats={(data ?? []) as SiteStat[]} />
     </>

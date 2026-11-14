@@ -36,13 +36,23 @@ export const siteConfig = {
   billingName: "EDUVORA",
 
   // ---------- Invoices (PDF) ----------
+  // Shown ONLY on invoices (never on the website). Leave a value EMPTY ("") to hide that line.
   invoice: {
-    // ✏️ Your business address as it should appear on invoices
-    //    (only printed when showAddress below is true)
-    address: "Your business address, City, State, PIN",
-    // ✏️ Your GST number. Leave EMPTY ("") if you don't have one — the GST line is then hidden.
+    // ✏️ Your business address (one line, commas are fine). Empty = not printed.
+    address: "",
+    // ✏️ Your GST number. When it's filled in, invoices say "TAX INVOICE" and show the GST
+    //    breakup (prices already INCLUDE GST). Empty = "INVOICE / RECEIPT", no GST lines.
     gstin: "",
-    footerNote: "Thank you for choosing EDUVORA. This is a computer-generated invoice.",
+    gstRatePercent: 18, // GST rate included in your prices (only used when gstin is set)
+    sac: "999293", // service code shown with GST (999293 = commercial training & coaching)
+    // ✏️ Your Udyam (MSME) registration number, e.g. "UDYAM-TN-00-0000000". Empty = hidden.
+    udyam: "",
+    // Signature at the bottom right ("Authorised Signatory").
+    // The image is read from the PRIVATE Supabase Storage bucket "assets" → signature.png
+    // (never from the public folder). Missing file → the invoice is made without it.
+    showSignature: true,
+    signatory: { name: founderContent.name, title: "Founder & CEO, EDUVORA" },
+    footerNote: "This is a computer-generated invoice.",
   },
 
   // ---------- Product files (PDF / ZIP uploads) ----------
