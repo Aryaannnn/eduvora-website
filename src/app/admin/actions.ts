@@ -1120,6 +1120,22 @@ export async function saveCommunityLink(link: string): Promise<ActionResult> {
   return dbResult(error, v ? "Saved — the WhatsApp community banner is now shown." : "Link removed — the banner is hidden everywhere.");
 }
 
+// ---------------------------------------------------------------- PRICE LABELS (supabase/price-labels.sql)
+/** Show or hide the crossed-out "original price" and "% off" labels on the whole website. */
+export async function saveShowOriginalPrice(show: boolean): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const { data, error } = await s.supabase.from("display_settings").update({ show_original_price: !!show }).eq("id", 1).select("id");
+  updateTag("settings"); // every product card and page updates immediately
+  updateTag("products");
+  if (error) return fail(/display_settings/.test(error.message) ? "Run supabase/price-labels.sql in Supabase first." : friendlyDbError(error.message));
+  if (!data?.length) return fail("Run supabase/price-labels.sql in Supabase first.");
+  await s.supabase
+    .rpc("log_admin_event", { p_action: "settings.price_labels", p_summary: show ? "Showed original prices and % off labels" : "Hid original prices and % off labels", p_details: {} })
+    .then(() => undefined, () => undefined);
+  return { ok: true, message: show ? "Original prices and \"% off\" labels are shown on the website now." : "Original prices and \"% off\" labels are hidden on the website now." };
+}
+
 // ---------------------------------------------------------------- "WHY EDUVORA?" (supabase/why-eduvora.sql)
 /** Home page "Why EDUVORA?" cards: show/hide, heading and up to 4 cards. */
 export async function saveWhySettings(input: { enabled: boolean; title: string; cards: unknown }): Promise<ActionResult> {

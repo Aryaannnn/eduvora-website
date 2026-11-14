@@ -8,6 +8,7 @@ import MaintenanceCard, { type MaintenanceState } from "@/components/admin/Maint
 import ReferralSettingsForm from "@/components/admin/ReferralSettingsForm";
 import StatsManager from "@/components/admin/StatsManager";
 import WhySettingsForm from "@/components/admin/WhySettingsForm";
+import PriceLabelsCard from "@/components/admin/PriceLabelsCard";
 import { DashSkeleton } from "@/components/dashboard/ui";
 import { siteConfig } from "@/config/site";
 import { requireAdmin } from "@/lib/admin";
@@ -27,14 +28,16 @@ export default function SettingsPage() {
 
 async function Content() {
   const s = await requireAdmin("/admin/settings");
-  const [{ data, error }, ref, wc, cal, mt, wy] = await Promise.all([
+  const [{ data, error }, ref, wc, cal, mt, wy, ds] = await Promise.all([
     s.supabase.from("site_stats").select("id,label,value,suffix,sort_order").order("sort_order"),
     s.supabase.from("referral_settings").select("enabled,referred_discount,referrer_reward").eq("id", 1).maybeSingle(),
     s.supabase.from("community_settings").select("whatsapp_link").eq("id", 1).maybeSingle(),
     getCalendarConnection(),
     s.supabase.from("maintenance_settings").select("enabled,message,updated_at").eq("id", 1).maybeSingle(),
     s.supabase.from("why_settings").select("enabled,title,cards").eq("id", 1).maybeSingle(),
+    s.supabase.from("display_settings").select("show_original_price").eq("id", 1).maybeSingle(),
   ]);
+  const priceLabels = <PriceLabelsCard initial={ds.data?.show_original_price !== false} setupMissing={!!ds.error || !ds.data} />;
   const whyCards = wy.data ? cleanWhyCards(wy.data.cards) : null;
   const whyInitial: WhySettings = wy.data
     ? { enabled: wy.data.enabled !== false, title: String(wy.data.title || DEFAULT_WHY.title).slice(0, WHY_LIMITS.heading), cards: whyCards?.ok ? whyCards.cards : DEFAULT_WHY.cards }
@@ -64,6 +67,7 @@ async function Content() {
         {calendar}
         {community}
         {why}
+        {priceLabels}
         {referral}
         <p className="card p-6 text-red-600">{missing ? "Run supabase/stats-reviews.sql in Supabase → SQL Editor to turn on editable stats." : `Could not load settings: ${error.message}`}</p>
       </>
@@ -76,6 +80,7 @@ async function Content() {
       {calendar}
       {community}
       {why}
+      {priceLabels}
       {referral}
       <StatsManager stats={(data ?? []) as SiteStat[]} />
     </>

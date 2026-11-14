@@ -6,6 +6,8 @@
 //  • Credits are counted in Supabase: session_credits() (supabase/packages.sql)
 //    = sessions from paid packages + admin adjustments − bookings made with a credit.
 // =====================================================================
+import { applyPriceLabels } from "./price-labels";
+import { withoutSamples } from "./sample";
 import { cacheLife, cacheTag } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { PRODUCT_COLUMNS } from "./data";
@@ -23,7 +25,7 @@ export type Credits = { total: number; used: number; remaining: number; unlimite
 /** Active packages for the pricing cards (cached; empty until packages.sql is run). */
 export async function getPackages(): Promise<Package[]> {
   "use cache";
-  cacheTag("products");
+  cacheTag("products", "settings");
   const supabase = getPublicSupabase();
   if (!supabase) return (cacheLife("minutes"), []);
   const { data, error } = await supabase
@@ -39,7 +41,7 @@ export async function getPackages(): Promise<Package[]> {
     return [];
   }
   cacheLife("minutes");
-  return (data ?? []) as unknown as Package[];
+  return applyPriceLabels(withoutSamples((data ?? []) as unknown as Package[])); // SAMPLE items hidden once Live
 }
 
 /** "3 sessions" / "1 session" / "Unlimited sessions" */

@@ -4,6 +4,7 @@
 //  🔒 Article HTML is cleaned with an allow-list (cleanArticleHtml) when it
 //     is saved AND again when it is shown, so no scripts can ever run.
 // =====================================================================
+import { hiddenSample, withoutSamples } from "./sample";
 import "server-only";
 import sanitizeHtml from "sanitize-html";
 import { cacheLife, cacheTag } from "next/cache";
@@ -32,7 +33,7 @@ export async function getPublishedPosts(): Promise<BlogPostSummary[]> {
     return [];
   }
   cacheLife({ stale: 300, revalidate: 900, expire: 86400 }); // scheduled posts appear within ~15 min
-  return (data ?? []) as BlogPostSummary[];
+  return withoutSamples((data ?? []) as BlogPostSummary[]); // SAMPLE posts hidden once Live
 }
 
 export async function getPostBySlug(slug: string): Promise<BlogPost | null> {
@@ -46,7 +47,8 @@ export async function getPostBySlug(slug: string): Promise<BlogPost | null> {
     return null;
   }
   cacheLife({ stale: 300, revalidate: 900, expire: 86400 });
-  return (data as BlogPost | null) ?? null;
+  const post = (data as BlogPost | null) ?? null;
+  return post && hiddenSample(post.title) ? null : post;
 }
 
 // ---------------------------------------------------------------- safe HTML

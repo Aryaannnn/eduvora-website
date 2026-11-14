@@ -33,7 +33,9 @@ export default function Header() {
 }
 
 function HeaderWithPath() {
-  return <HeaderBar pathname={usePathname()} />;
+  // When the home page is built ahead of time, Next.js reports it as "/index" — treat it as "/"
+  const p = usePathname();
+  return <HeaderBar pathname={p === "/index" ? "/" : p} />;
 }
 
 const isActiveFor = (pathname: string) => (href: string) => (href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`));
@@ -56,8 +58,8 @@ function HeaderBar({ pathname }: { pathname: string }) {
   const [open, setOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const isActive = isActiveFor(pathname);
-  // After logging in, come back to this page (home / login pages → dashboard)
-  const loginHref = !pathname || pathname === "/" || pathname.startsWith("/login") || pathname.startsWith("/auth") ? "/login" : `/login?next=${encodeURIComponent(pathname)}`;
+  // After logging in, come back to this page (home → "/"; login pages → dashboard)
+  const loginHref = !pathname || pathname.startsWith("/login") || pathname.startsWith("/auth") ? "/login" : pathname === "/" ? "/login?next=/" : `/login?next=${encodeURIComponent(pathname)}`;
 
   // When signed in, show the user menu (Dashboard / Admin Panel / Logout) instead of "Login".
   // Visitors who aren't logged in never download the login library (faster pages).

@@ -197,6 +197,8 @@ export async function signOut() {
 /** Where to go after login: ?next=/something (only paths on this site) */
 export function nextPathFromUrl(fallback = "/dashboard"): string {
   if (typeof window === "undefined") return fallback;
-  const next = new URLSearchParams(window.location.search).get("next");
-  return next && next.startsWith("/") && !next.startsWith("//") ? next : fallback;
+  let next = new URLSearchParams(window.location.search).get("next");
+  // Old links said next=/index — that's the home page
+  if (next && /^\/index(?=$|[?#])/.test(next)) next = "/" + next.slice("/index".length).replace(/^\//, "");
+  return next && next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/\\") ? next : fallback;
 }

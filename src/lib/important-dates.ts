@@ -6,6 +6,7 @@
 //    today between start and end      → Ongoing
 //    today after the end (or the day) → Completed
 // =====================================================================
+import { withoutSamples } from "./sample";
 import { cacheLife, cacheTag } from "next/cache";
 import { todayInIndia } from "./format";
 import { getPublicSupabase } from "./supabase/public";
@@ -50,7 +51,8 @@ export async function getImportantDates(): Promise<ImportantDate[]> {
   }
   cacheLife({ stale: 300, revalidate: 3600, expire: 86400 }); // status can change at midnight
   const today = todayInIndia();
-  return ((data ?? []) as Omit<ImportantDate, "status" | "daysToGo">[]).map((d) => ({
+  // SAMPLE dates are hidden once the website is Live (src/lib/sample.ts)
+  return withoutSamples((data ?? []) as Omit<ImportantDate, "status" | "daysToGo">[]).map((d) => ({
     ...d,
     status: statusFor(d.start_date, d.end_date, today),
     daysToGo: dayNumber(d.start_date) - dayNumber(today),
@@ -83,5 +85,5 @@ export async function getSiteUpdates(limit = 20): Promise<SiteUpdate[]> {
     return [];
   }
   cacheLife({ stale: 300, revalidate: 900, expire: 86400 }); // scheduled posts appear within ~15 min
-  return (data ?? []) as SiteUpdate[];
+  return withoutSamples((data ?? []) as SiteUpdate[]);
 }

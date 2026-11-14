@@ -3,13 +3,14 @@ import { pageMeta } from "@/lib/seo";
 import LegalPage from "@/components/LegalPage";
 import { emailLink, siteConfig } from "@/config/site";
 
-export const metadata: Metadata = pageMeta({ title: "Refund & Cancellation Policy", description: "How cancellations, rescheduling and refunds work for EDUVORA counselling sessions, courses and study material, with timelines and conditions.", path: "/refund-policy" });
+export const metadata: Metadata = pageMeta({ title: "Refund & Cancellation Policy", description: "How cancellations, rescheduling and refunds work for EDUVORA counselling sessions, live crash courses and study material, with timelines and conditions.", path: "/refund-policy" });
 
-// ✏️ The numbers (24 hours, 7 days, 5–7 working days) come from
+// ✏️ The numbers (24 hours, 3 days, 7 days, 5–7 working days) come from
 //    src/config/site.ts → refunds. Change them there.
 export default function RefundPolicyPage() {
   const r = siteConfig.refunds;
   const h = r.counsellingHours;
+  const d = r.liveBatchDays;
   return (
     <LegalPage title="Refund & Cancellation Policy" path="/refund-policy">
       <p>
@@ -20,7 +21,8 @@ export default function RefundPolicyPage() {
       <h2>In short</h2>
       <ul>
         <li><strong>Counselling session:</strong> free reschedule or full refund up to {h} hours before your slot.</li>
-        <li><strong>Courses, study material, papers and mock tests:</strong> non-refundable once you get access (they are digital products).</li>
+        <li><strong>Live crash courses / batches:</strong> refund up to {d} days before the batch starts; full refund if we cancel the batch. Once classes begin, no refund.</li>
+        <li><strong>Study material (PDFs), previous year papers and mock test packs:</strong> non-refundable once you get access (they are digital products).</li>
         <li><strong>Can&apos;t access what you paid for?</strong> We fix it or refund you within {r.techIssueDays} days.</li>
         <li><strong>Refunds</strong> go back to your original payment method within {r.processingTime}.</li>
       </ul>
@@ -34,22 +36,29 @@ export default function RefundPolicyPage() {
         <li>If <strong>we</strong> have to cancel your session, you can choose a new time or a full refund.</li>
       </ul>
 
-      <h2>2. Crash courses, study material, previous year papers and mock tests</h2>
+      <h2>2. Live crash courses and batches</h2>
       <ul>
-        <li>These are <strong>digital products</strong>. Once you get access (to the course, the files or the tests), they are <strong>non-refundable</strong>.</li>
+        <li><strong>Cancel {d} or more days before the batch starts</strong>: you get a <strong>full refund</strong>.</li>
+        <li><strong>Less than {d} days before</strong> the start, or <strong>once classes have begun</strong>: <strong>no refund</strong>.</li>
+        <li>If <strong>we</strong> cancel the batch, you get a <strong>full refund</strong> (or you can move to the next batch if you prefer).</li>
+      </ul>
+
+      <h2>3. Study material, previous year papers and mock test packs</h2>
+      <ul>
+        <li>These are <strong>digital products</strong>. Once you get access (to the files or the tests), they are <strong>non-refundable</strong>.</li>
         <li>
           <strong>Technical problem?</strong> If you paid but cannot open or download the content, tell us. We will fix the problem
           or give you a full refund <strong>within {r.techIssueDays} days</strong>.
         </li>
       </ul>
 
-      <h2>3. How refunds are paid</h2>
+      <h2>4. How refunds are paid</h2>
       <p>
         Approved refunds are sent back to your <strong>original payment method</strong> (the same UPI, card or bank account, through
         Razorpay) within <strong>{r.processingTime}</strong>. Your bank may take a little longer to show it.
       </p>
 
-      <h2>4. How to ask for a refund</h2>
+      <h2>5. How to ask for a refund</h2>
       <p>
         Email us at <a href={emailLink}>{siteConfig.email}</a> and include:
       </p>
@@ -60,7 +69,7 @@ export default function RefundPolicyPage() {
       </ul>
       <p>We reply within 2 working days.</p>
 
-      <h2>5. When we cannot give a refund</h2>
+      <h2>6. When we cannot give a refund</h2>
       <ul>
         <li>The request is made after the time limits above.</li>
         <li>Your access was stopped because the Terms &amp; Conditions were broken (for example, sharing paid content).</li>

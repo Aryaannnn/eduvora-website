@@ -13,6 +13,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatDuration } from "@/lib/format";
+import { hiddenSample } from "@/lib/sample";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 import { ClockIcon, CloseIcon, GridIcon } from "../Icons";
 import TestRunner from "../TestRunner";
@@ -57,7 +58,13 @@ export default function ExamRunner({ testId }: { testId: string }) {
         setError(/buy/i.test(e.message) ? "This is a paid test. Please buy it to start." : "Sorry, this test could not be found.");
         return setPhase("error");
       }
-      setOverview(data as Overview);
+      const ov = data as Overview;
+      if (hiddenSample(ov?.title, !!(ov as { is_sample?: boolean } | null)?.is_sample)) {
+        // SAMPLE test once the website is Live (src/lib/sample.ts)
+        setError("Sorry, this test could not be found.");
+        return setPhase("error");
+      }
+      setOverview(ov);
       setPhase("overview");
     });
     return () => {

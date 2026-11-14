@@ -5,9 +5,11 @@
 //  If Supabase has a problem, we show an empty list and RETRY after
 //  about 30 seconds — the website never crashes because of it.
 // =====================================================================
+import { applyPriceLabels } from "./price-labels";
 import { cacheLife, cacheTag } from "next/cache";
 import { todayInIndia } from "./format";
 import { getPublicSupabase } from "./supabase/public";
+import { hiddenSample, productsWithoutSamples } from "./sample";
 import type { Product, ProductCategory, Review, SiteStat, Slot } from "./types";
 
 // content_links is private, so we always list the public columns by name
@@ -28,7 +30,7 @@ const retrySoon = (label: string, message: string) => {
 
 export async function getProducts(category: ProductCategory): Promise<Product[]> {
   "use cache";
-  cacheTag("products");
+  cacheTag("products", "settings"); // "settings": the original-price switch
   const supabase = getPublicSupabase();
   if (!supabase) return (ok(), []);
   const { data, error } = await supabase
@@ -40,12 +42,12 @@ export async function getProducts(category: ProductCategory): Promise<Product[]>
     .order("created_at");
   if (error) return (retrySoon("getProducts", error.message), []);
   ok();
-  return (data ?? []) as unknown as Product[];
+  return applyPriceLabels(productsWithoutSamples((data ?? []) as unknown as Product[])); // SAMPLE items hidden once Live
 }
 
 export async function getProductBySlug(slug: string): Promise<Product | null> {
   "use cache";
-  cacheTag("products");
+  cacheTag("products", "settings");
   const supabase = getPublicSupabase();
   if (!supabase) return (ok(), null);
   const { data, error } = await supabase
@@ -56,7 +58,9 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
     .maybeSingle();
   if (error) return (retrySoon("getProductBySlug", error.message), null);
   ok();
-  return (data as unknown as Product) ?? null;
+  const p = (data as unknown as Product) ?? null;
+  if (!p || hiddenSample(p.title)) return null; // SAMPLE item once Live → "not found"
+  return (await applyPriceLabels(productsWithoutSamples([p])))[0];
 }
 
 export async function getUpcomingSlots(limit = 8): Promise<Slot[]> {

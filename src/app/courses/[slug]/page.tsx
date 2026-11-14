@@ -107,7 +107,7 @@ async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
               </div>
             )}
             {course.price > 0 && (
-              <RefundNote kind="digital" className="mt-3" />
+              <RefundNote kind="live" className="mt-3" />
             )}
           </div>
         </aside>

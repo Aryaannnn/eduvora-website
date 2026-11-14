@@ -12,6 +12,12 @@ import { SITE_URL } from "@/lib/site-url";
 //    Unlike the phone number, this one is public.
 const SUPPORT_EMAIL = "eduvora.support@gmail.com";
 
+// ✏️ Counselling: free reschedule / full refund up to this many HOURS before the slot.
+//    One number for the whole website (FAQ, booking page, emails, Refund policy…).
+const RESCHEDULE_HOURS = 24;
+// ✏️ Live crash courses / batches: refund up to this many DAYS before the batch starts.
+const LIVE_BATCH_REFUND_DAYS = 3;
+
 export const siteConfig = {
   // ---------- Business ----------
   businessName: "EDUVORA",
@@ -101,18 +107,25 @@ export const siteConfig = {
   // A number left empty is hidden on the website.
 
   // ---------- Refund & Cancellation rules ----------
-  // ✏️ Change the numbers / sentences here — the Refund Policy page and the
-  //    short notes next to every "Buy Now" and "Pay & Book Slot" button update.
+  // ✏️ Change the numbers / sentences here — the Refund Policy page, the FAQ, the
+  //    "Book a call" section, the booking page, booking emails and the short notes
+  //    next to every "Buy Now" and "Pay & Book Slot" button all update.
   refunds: {
-    // Counselling sessions
-    counsellingHours: 24, // free reschedule / full refund up to this many hours before the slot
-    // Digital products (crash courses, study material, previous year papers, mock tests)
+    // Counselling sessions — ONE rule used everywhere
+    counsellingHours: RESCHEDULE_HOURS, // free reschedule / full refund up to this many hours before the slot (set at the top of this file)
+    // Live crash courses / batches
+    liveBatchDays: LIVE_BATCH_REFUND_DAYS, // refund up to this many days before the batch starts (set at the top of this file)
+    // Digital products (study material PDFs, previous year papers, mock test packs)
     techIssueDays: 7, // we fix the problem or refund within this many days
     processingTime: "5–7 working days", // how long a refund takes to reach the student
     // Short notes shown next to the payment buttons
-    counsellingNote: "Free reschedule or full refund up to 24 hours before your slot. No refund within 24 hours or if the session is missed.",
+    counsellingNote: `Free reschedule or full refund up to ${RESCHEDULE_HOURS} hours before your slot. No refund within ${RESCHEDULE_HOURS} hours or if the session is missed.`,
+    liveBatchNote: `Refund available up to ${LIVE_BATCH_REFUND_DAYS} days before the batch starts; full refund if we cancel the batch. Once classes begin, no refund.`,
     digitalNote: "Digital product — non-refundable once access is given. If you can't access it, we'll fix it or refund within 7 days.",
   },
+
+  // Shown on the home page and the booking page when no counselling slot is open
+  noSlotsMessage: "New slots are added every week. Message us on WhatsApp and we'll find a time for you.",
 
   // Date shown on the policy pages
   policiesUpdated: "7 November 2026",

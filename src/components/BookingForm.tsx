@@ -22,7 +22,7 @@ import { getBrowserSupabase } from "@/lib/supabase/client";
 import type { Slot } from "@/lib/types";
 import { Spinner } from "./Spinner";
 import { Field } from "./ContactForm";
-import EmptyState from "./EmptyState";
+import NoSlotsMessage from "./NoSlotsMessage";
 import RefundNote from "./RefundNote";
 import { CheckIcon, LockIcon, ShieldIcon, UserIcon } from "./Icons";
 import { CouponBox, PriceBreakdown, useQuote } from "./checkout/Checkout";
@@ -197,8 +197,10 @@ export default function BookingForm() {
   if (slots.length === 0) {
     return (
       <div className="mx-auto max-w-xl space-y-4">
-        <EmptyState what="open slots" />
-        <Link href="/contact#enquiry" className="btn-primary w-full">Request a slot (free enquiry)</Link>
+        <NoSlotsMessage className="!p-6" />
+        <p className="text-center text-sm text-slate-500">
+          Prefer email? <Link href="/contact#enquiry" className="font-semibold text-brand-700 underline">Send a free enquiry</Link>
+        </p>
       </div>
     );
   }

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { siteConfig } from "@/config/site";
 import { cancelMyBooking } from "@/lib/booking-actions";
 import { LogoutIcon, ReceiptIcon } from "../Icons";
 import { useLogout } from "@/lib/useLogout";
@@ -17,7 +18,8 @@ export function LogoutButton({ className = "" }: { className?: string }) {
   );
 }
 
-export function CancelBookingButton({ bookingId }: { bookingId: string }) {
+/** The confirmation tells the student, from the ONE rule in src/config/site.ts, whether they get a refund. */
+export function CancelBookingButton({ bookingId, slotDate, slotTime, paid }: { bookingId: string; slotDate: string; slotTime: string; paid: boolean }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   return (
@@ -25,7 +27,14 @@ export function CancelBookingButton({ bookingId }: { bookingId: string }) {
       type="button"
       disabled={busy}
       onClick={async () => {
-        if (!confirm("Cancel this booking? See our Refund & Cancellation Policy for refund rules.")) return;
+        const h = siteConfig.refunds.counsellingHours;
+        const hoursLeft = (new Date(`${slotDate}T${slotTime.slice(0, 8)}+05:30`).getTime() - Date.now()) / 3_600_000;
+        const refund = !paid
+          ? ""
+          : hoursLeft >= h
+            ? `\n\nYour slot is more than ${h} hours away, so you get a FULL REFUND (within ${siteConfig.refunds.processingTime}).`
+            : `\n\nYour slot is less than ${h} hours away, so there is NO REFUND. (Free reschedule or full refund is only up to ${h} hours before.)`;
+        if (!confirm(`Cancel this booking?${refund}\n\nTip: to change the time instead, message us on WhatsApp.`)) return;
         setBusy(true);
         const res = await cancelMyBooking(bookingId); // server: cancels + removes the Google Calendar event
         setBusy(false);

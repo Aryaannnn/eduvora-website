@@ -14,4 +14,8 @@ export const faqs = [
     q: "Can I reschedule or cancel my slot?",
     a: `Yes. You can reschedule for free up to ${siteConfig.refunds.counsellingHours} hours before your slot, and cancelling more than ${siteConfig.refunds.counsellingHours} hours before gives a full refund. See our Refund & Cancellation Policy for details.`,
   },
+  {
+    q: "Can I get a refund for a crash course?",
+    a: `For live crash courses and batches: ${siteConfig.refunds.liveBatchNote} Study material PDFs, previous year papers and mock test packs are non-refundable once you get access.`,
+  },
 ];

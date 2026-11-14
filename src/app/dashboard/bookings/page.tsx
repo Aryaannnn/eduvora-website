@@ -7,6 +7,7 @@ import { DashSkeleton, EmptyBox, PageHeader, StatusBadge } from "@/components/da
 import SessionCreditsCard from "@/components/packages/SessionCreditsCard";
 import { CalendarIcon, ClockIcon, VideoIcon } from "@/components/Icons";
 import { getMyBookings, requireUser } from "@/lib/dashboard";
+import { siteConfig } from "@/config/site";
 import { formatDate, formatDateTime, formatPrice, formatTime, todayInIndia } from "@/lib/format";
 import { getCredits } from "@/lib/packages";
 
@@ -81,7 +82,7 @@ async function BookingsContent() {
                       <a href={`/api/invoices/${b.id}`} download className="font-semibold text-brand-700 underline">PDF</a>
                     </span>
                   )}
-                  {upcoming && <CancelBookingButton bookingId={b.id} />}
+                  {upcoming && b.slots && <CancelBookingButton bookingId={b.id} slotDate={b.slots.date} slotTime={b.slots.start_time} paid={b.payment_status === "paid" && (b.amount ?? 0) > 0} />}
                 </div>
               </div>
               {b.status === "completed" && !fbRes.error && (
@@ -107,7 +108,8 @@ async function BookingsContent() {
         </ul>
       )}
       <p className="mt-6 text-sm text-slate-500">
-        Need to reschedule? Message us on WhatsApp from the <Link href="/dashboard/help" className="font-semibold text-brand-700 underline">Help</Link> page. See our{" "}
+        Need to reschedule? Message us on WhatsApp from the <Link href="/dashboard/help" className="font-semibold text-brand-700 underline">Help</Link> page.{" "}
+        {siteConfig.refunds.counsellingNote} See our{" "}
         <Link href="/refund-policy" className="font-semibold text-brand-700 underline">Refund &amp; Cancellation Policy</Link>.
       </p>
     </>

@@ -51,7 +51,7 @@ export default function CourseCard({ course }: { course: Product }) {
           <Link href={`/courses/${course.slug}`} className="btn-light !px-3">Details</Link>
           <BuyButton productId={course.id} label={course.price > 0 && !course.is_free ? "Enroll Now" : "Enroll Free"} className="btn-primary w-full !px-3" trust={false} free={course.is_free} />
         </div>
-        {course.price > 0 && <SecurePaymentNote className="mt-3" />}
+        {course.price > 0 && <SecurePaymentNote className="mt-3" refundKind="live" />}
       </div>
     </article>
   );

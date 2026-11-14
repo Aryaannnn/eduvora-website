@@ -215,8 +215,9 @@ export default function HeroSlider() {
                     <Link href={s.cta.href} className="btn-accent !px-6 !py-3.5 text-base" tabIndex={active ? 0 : -1}>
                       {s.cta.label} <ArrowRightIcon className="h-4 w-4" />
                     </Link>
-                    <Link href="/book-a-slot" className="btn-outline !py-3.5" tabIndex={active ? 0 : -1}>
-                      Free Guidance Call
+                    {/* The enquiry form really is free (a counselling slot is paid) */}
+                    <Link href="/contact#enquiry" className="btn-outline !py-3.5" tabIndex={active ? 0 : -1}>
+                      Send a Free Enquiry
                     </Link>
                   </div>
                 </div>
@@ -306,8 +307,12 @@ function PredictorFlow({ active }: { active: boolean }) {
     <div className="relative mx-auto max-w-sm">
       <div className="absolute -inset-4 rounded-[2rem] bg-gradient-to-br from-accent-400 to-brand-500 opacity-30 blur-2xl" />
       <div className="relative rounded-[1.75rem] bg-white/10 p-6 ring-1 ring-white/20 backdrop-blur-xl">
-        <p className="text-xs font-bold uppercase tracking-[0.15em] text-accent-300">How it works</p>
-        <ol className="mt-4">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs font-bold uppercase tracking-[0.15em] text-accent-300">How it works</p>
+          {/* These numbers are only an illustration, not a real prediction */}
+          <span className="rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-wider text-white ring-1 ring-white/30">Example</span>
+        </div>
+        <ol className="mt-4" aria-label="Example: marks, predicted rank, then college and branch">
           {flowSteps.map((step, i) => (
             <li key={step.label}>
               <div

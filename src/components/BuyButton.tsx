@@ -14,7 +14,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { failedUrl, openCheckout, postJson, preloadCheckout } from "@/lib/razorpay-checkout";
 import { ShieldIcon } from "./Icons";
-import RefundNote from "./RefundNote";
+import RefundNote, { type RefundKind } from "./RefundNote";
 import dynamic from "next/dynamic";
 import { Spinner } from "./Spinner";
 import { track } from "@/lib/analytics";
@@ -42,7 +42,10 @@ export default function BuyButton({
   ownedHref,
   ownedLabel,
   ownedNote,
+  refundKind = "digital",
 }: {
+  /** which refund rule to show under the button (live crash courses → "live") */
+  refundKind?: RefundKind;
   productId: string;
   label?: string;
   className?: string;
@@ -180,7 +183,7 @@ export default function BuyButton({
           <p className={`mt-2 flex items-center justify-center gap-1 text-[11px] font-semibold text-slate-500 ${trustClassName}`}>
             <ShieldIcon className="h-3.5 w-3.5 text-emerald-600" /> 100% Secure Payments by Razorpay
           </p>
-          <RefundNote kind="digital" className="mt-1" />
+          <RefundNote kind={refundKind} className="mt-1" />
         </>
       )}
       {error && (
@@ -194,13 +197,13 @@ export default function BuyButton({
 }
 
 /** "100% Secure Payments by Razorpay" line for layouts where the button is small */
-export function SecurePaymentNote({ className = "" }: { className?: string }) {
+export function SecurePaymentNote({ className = "", refundKind = "digital" }: { className?: string; refundKind?: RefundKind }) {
   return (
     <div className={className}>
       <p className="flex items-center justify-center gap-1 text-[11px] font-semibold text-slate-500">
         <ShieldIcon className="h-3.5 w-3.5 text-emerald-600" /> 100% Secure Payments by Razorpay
       </p>
-      <RefundNote kind="digital" className="mt-1" />
+      <RefundNote kind={refundKind} className="mt-1" />
     </div>
   );
 }

@@ -5,6 +5,8 @@
 //    "paid" purchase, so it shows in My Courses & Material and the admin
 //    sees it in Admin → Students ("Free items").
 // =====================================================================
+import { applyPriceLabels } from "./price-labels";
+import { productsWithoutSamples, withoutSamples } from "./sample";
 import { cacheLife, cacheTag } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { PRODUCT_COLUMNS } from "./data";
@@ -17,7 +19,7 @@ export type FreeResources = { products: Product[]; tests: FreeTest[] };
 /** Public list for the home page and /free-resources (cached, no private data). */
 export async function getFreeResources(): Promise<FreeResources> {
   "use cache";
-  cacheTag("products");
+  cacheTag("products", "settings");
   const supabase = getPublicSupabase();
   if (!supabase) return (cacheLife("minutes"), { products: [], tests: [] });
   const [products, tests] = await Promise.all([
@@ -40,7 +42,8 @@ export async function getFreeResources(): Promise<FreeResources> {
   const standalone = ((tests.data ?? []) as unknown as (FreeTest & { product_id: string | null; products: { is_free: boolean } | null })[])
     .filter((t) => !t.products?.is_free)
     .map(({ id, title, type, duration_minutes, total_marks }) => ({ id, title, type, duration_minutes, total_marks }));
-  return { products: (products.data ?? []) as unknown as Product[], tests: standalone };
+  // SAMPLE items are hidden once the website is Live (src/lib/sample.ts)
+  return { products: await applyPriceLabels(productsWithoutSamples((products.data ?? []) as unknown as Product[])), tests: withoutSamples(standalone) };
 }
 
 /**

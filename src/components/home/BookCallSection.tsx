@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { siteConfig } from "@/config/site";
 import { formatDate, formatPrice, formatTime } from "@/lib/format";
 import type { Slot } from "@/lib/types";
 import { ArrowRightIcon, CalendarIcon, CheckIcon, HeadsetIcon } from "../Icons";
+import NoSlotsMessage from "../NoSlotsMessage";
 import Reveal from "../Reveal";
 import SectionHeading from "../SectionHeading";
 
@@ -45,7 +47,7 @@ export default function BookCallSection({ slots }: { slots: Slot[] }) {
                 <p className="font-bold text-slate-900">Next available slots</p>
                 <p className="flex items-center gap-1 text-sm text-slate-500">
                   <CalendarIcon className="h-4 w-4" />
-                  {minPrice !== null ? `From ${formatPrice(minPrice)} per session` : "New slots added every week"}
+                  {minPrice !== null ? `From ${formatPrice(minPrice)} per session` : "One-to-one video call"}
                 </p>
               </div>
             </div>
@@ -64,16 +66,16 @@ export default function BookCallSection({ slots }: { slots: Slot[] }) {
                 ))}
               </div>
             ) : (
-              <p className="mt-6 rounded-xl bg-slate-50 p-4 text-center text-sm text-slate-600 ring-1 ring-slate-200">
-                All slots are booked right now. Message us on WhatsApp and we&apos;ll find a time for you.
-              </p>
+              <NoSlotsMessage className="mt-6" />
             )}
 
-            <Link href="/book-a-slot" className="btn-primary mt-6 w-full !py-3.5 text-base">
-              Book Your Slot <ArrowRightIcon className="h-4 w-4" />
-            </Link>
+            {slots.length > 0 && (
+              <Link href="/book-a-slot" className="btn-primary mt-6 w-full !py-3.5 text-base">
+                Book Your Slot <ArrowRightIcon className="h-4 w-4" />
+              </Link>
+            )}
             <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-slate-500">
-              <CheckIcon className="h-4 w-4 text-green-600" /> Free reschedule up to 12 hours before
+              <CheckIcon className="h-4 w-4 text-green-600" /> Free reschedule up to {siteConfig.refunds.counsellingHours} hours before your slot
             </p>
           </div>
         </Reveal>

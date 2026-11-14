@@ -139,7 +139,7 @@ ${
     : ""
 }
 ${paid ? note(`🎯 <strong>Your full college list is now unlocked!</strong><br>The Rank &amp; College Predictor now shows every VIT campus &amp; branch you can get, with your chances, before the session.<br><br>${button("See My Colleges", url("/dashboard/predictor"))}`, "navy") : ""}
-<p style="font-size:13px;color:#64748b">${attachments.length ? "Your invoice (PDF) is attached. " : ""}Need to change the time? Just reply to this email or message us on WhatsApp.</p>`,
+<p style="font-size:13px;color:#64748b">${attachments.length ? "Your invoice (PDF) is attached. " : ""}Need to change the time? Just reply to this email or message us on WhatsApp. ${esc(siteConfig.refunds.counsellingNote)} <a href="${url("/refund-policy")}">Refund &amp; Cancellation Policy</a></p>`,
       }),
     };
   },
@@ -341,7 +341,8 @@ ${details([["Date & time", slotLine(b)], ["Booking ID", bookingRef(b.id)]])}
 ${meetBlock(b)}
 ${note("Keep your VITEEE marks / rank, preferred campuses and questions ready. Parents are welcome to join.")}
 ${phone ? `<p>${button("Call " + founderFirst + " Sir", phone.tel, "navy")}${button("WhatsApp", phone.whatsapp, "green")}</p>` : ""}
-${b.meet_link ? "" : `<p>${button("Add to Google Calendar", googleCalendarUrl(b.slots, b.id, b.invoice_number))}</p>`}`,
+${b.meet_link ? "" : `<p>${button("Add to Google Calendar", googleCalendarUrl(b.slots, b.id, b.invoice_number))}</p>`}
+${which === "24h" ? `<p style="font-size:13px;color:#64748b">Can't make it? Reply to this email as soon as possible. ${esc(siteConfig.refunds.counsellingNote)}</p>` : ""}`,
     }),
   };
 }
