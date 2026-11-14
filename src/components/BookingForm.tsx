@@ -20,7 +20,7 @@ import { formatDate, formatPrice, formatTime, todayInIndia } from "@/lib/format"
 import { openCheckout, postJson, preloadCheckout } from "@/lib/razorpay-checkout";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 import type { Slot } from "@/lib/types";
-import { Spinner } from "./BuyButton";
+import { Spinner } from "./Spinner";
 import { Field } from "./ContactForm";
 import EmptyState from "./EmptyState";
 import RefundNote from "./RefundNote";

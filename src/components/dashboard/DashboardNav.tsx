@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import Logo from "../Logo";
 import { useLogout } from "@/lib/useLogout";
-import { Spinner } from "../BuyButton";
+import { Spinner } from "../Spinner";
 import { BookIcon, CalendarIcon, ClipboardIcon, CloseIcon, DotsIcon, GiftIcon, GridIcon, HeadsetIcon, LogoutIcon, ReceiptIcon, StarIcon, TargetIcon, UserIcon, ChartIcon, UsersIcon } from "../Icons";
 import PredictorLockBadge from "../predictor/PredictorLockBadge";
 

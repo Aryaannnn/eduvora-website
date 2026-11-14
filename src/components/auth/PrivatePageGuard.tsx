@@ -6,7 +6,7 @@
 // replace with /login (so Back can't go there again either).
 import { usePathname } from "next/navigation";
 import { Suspense, useEffect } from "react";
-import { getBrowserSupabase } from "@/lib/supabase/client";
+import { loadBrowserSupabase } from "@/lib/supabase/lazy";
 
 const PRIVATE = ["/dashboard", "/admin", "/invoice", "/payment-success", "/booking-confirmed"];
 const isPrivate = (p: string) => PRIVATE.some((x) => p === x || p.startsWith(`${x}/`));
@@ -24,7 +24,9 @@ function Guard() {
 
   useEffect(() => {
     if (!isPrivate(pathname)) return;
-    const supabase = getBrowserSupabase();
+    let alive = true;
+    let supabase: Awaited<ReturnType<typeof loadBrowserSupabase>> = null;
+    let unsubscribe: (() => void) | undefined;
     const check = () => {
       supabase?.auth.getSession().then(({ data }) => {
         if (!data.session) {
@@ -32,20 +34,26 @@ function Guard() {
         }
       });
     };
-    check();
     // Page restored from the browser's back/forward cache → reload it so the server checks again
     const onShow = (e: PageTransitionEvent) => {
       if (e.persisted) window.location.reload();
       else check();
     };
     window.addEventListener("pageshow", onShow);
-    // Logged out in another tab → leave this private page too
-    const { data: sub } = supabase?.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_OUT") check();
-    }) ?? { data: null };
+    void loadBrowserSupabase().then((client) => {
+      if (!client || !alive) return;
+      supabase = client;
+      check();
+      // Logged out in another tab → leave this private page too
+      const { data: sub } = client.auth.onAuthStateChange((event) => {
+        if (event === "SIGNED_OUT") check();
+      });
+      unsubscribe = () => sub.subscription.unsubscribe();
+    });
     return () => {
+      alive = false;
       window.removeEventListener("pageshow", onShow);
-      sub?.subscription.unsubscribe();
+      unsubscribe?.();
     };
   }, [pathname]);
 

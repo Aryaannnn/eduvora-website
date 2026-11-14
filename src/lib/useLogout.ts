@@ -8,7 +8,7 @@
 //     removed from history, so Back can't return to it, and the navbar is
 //     rebuilt fresh (shows "Login").
 import { useState } from "react";
-import { getBrowserSupabase } from "./supabase/client";
+import { loadBrowserSupabase } from "./supabase/lazy";
 
 export function useLogout() {
   const [loggingOut, setLoggingOut] = useState(false);
@@ -25,7 +25,7 @@ export function useLogout() {
       /* still continue — the browser sign-out below and the login page handle it */
     }
     try {
-      await getBrowserSupabase()?.auth.signOut({ scope: "local" });
+      await (await loadBrowserSupabase())?.auth.signOut({ scope: "local" });
     } catch {
       /* already signed out */
     }

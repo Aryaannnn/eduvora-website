@@ -11,7 +11,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { siteConfig } from "@/config/site";
-import { getBrowserSupabase } from "@/lib/supabase/client";
+import { loadBrowserSupabase, useHasLoginCookie } from "@/lib/supabase/lazy";
 import { PhoneIcon, WhatsAppIcon } from "../Icons";
 
 const SKIP_DAYS = 7;
@@ -45,11 +45,14 @@ function Prompt({ communityHref }: { communityHref: string | null }) {
   const [error, setError] = useState("");
   const hiddenHere = HIDDEN_ON.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 
+  // Only for logged-in browsers (visitors never download the login library)
+  const loggedIn = useHasLoginCookie();
   useEffect(() => {
-    const supabase = getBrowserSupabase();
-    if (!supabase || hiddenHere) return;
+    if (!loggedIn || hiddenHere) return;
     let alive = true;
     let timer: ReturnType<typeof setTimeout> | undefined;
+    let unsubscribe: (() => void) | undefined;
+    let supabase: Awaited<ReturnType<typeof loadBrowserSupabase>> = null;
 
     async function check() {
       const { data } = await supabase!.auth.getUser();
@@ -61,17 +64,22 @@ function Prompt({ communityHref }: { communityHref: string | null }) {
       // small pause so the page appears first
       timer = setTimeout(() => alive && setUser({ id: u.id, firstName }), 1200);
     }
-    void check();
-    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_IN") void check();
-      if (event === "SIGNED_OUT") setUser(null);
+    void loadBrowserSupabase().then((client) => {
+      if (!client || !alive) return;
+      supabase = client;
+      void check();
+      const { data: sub } = client.auth.onAuthStateChange((event) => {
+        if (event === "SIGNED_IN") void check();
+        if (event === "SIGNED_OUT") setUser(null);
+      });
+      unsubscribe = () => sub.subscription.unsubscribe();
     });
     return () => {
       alive = false;
       clearTimeout(timer);
-      sub.subscription.unsubscribe();
+      unsubscribe?.();
     };
-  }, [hiddenHere]);
+  }, [hiddenHere, loggedIn]);
 
   if (!user || hiddenHere) return null;
 
@@ -88,7 +96,7 @@ function Prompt({ communityHref }: { communityHref: string | null }) {
     e.preventDefault();
     setError("");
     if (!/^[6-9]\d{9}$/.test(mobile)) return setError("Please enter a valid 10-digit mobile number.");
-    const supabase = getBrowserSupabase();
+    const supabase = await loadBrowserSupabase();
     if (!supabase) return;
     setSaving(true);
     const { error } = await supabase.from("profiles").update({ phone: `91${mobile}` }).eq("id", user!.id);

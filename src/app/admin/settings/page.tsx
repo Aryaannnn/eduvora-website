@@ -7,11 +7,13 @@ import GoogleCalendarCard from "@/components/admin/GoogleCalendarCard";
 import MaintenanceCard, { type MaintenanceState } from "@/components/admin/MaintenanceCard";
 import ReferralSettingsForm from "@/components/admin/ReferralSettingsForm";
 import StatsManager from "@/components/admin/StatsManager";
+import WhySettingsForm from "@/components/admin/WhySettingsForm";
 import { DashSkeleton } from "@/components/dashboard/ui";
 import { siteConfig } from "@/config/site";
 import { requireAdmin } from "@/lib/admin";
 import { getCalendarConnection } from "@/lib/google-calendar";
 import type { SiteStat } from "@/lib/types";
+import { DEFAULT_WHY, WHY_LIMITS, cleanWhyCards, type WhySettings } from "@/lib/why-shared";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -25,13 +27,19 @@ export default function SettingsPage() {
 
 async function Content() {
   const s = await requireAdmin("/admin/settings");
-  const [{ data, error }, ref, wc, cal, mt] = await Promise.all([
+  const [{ data, error }, ref, wc, cal, mt, wy] = await Promise.all([
     s.supabase.from("site_stats").select("id,label,value,suffix,sort_order").order("sort_order"),
     s.supabase.from("referral_settings").select("enabled,referred_discount,referrer_reward").eq("id", 1).maybeSingle(),
     s.supabase.from("community_settings").select("whatsapp_link").eq("id", 1).maybeSingle(),
     getCalendarConnection(),
     s.supabase.from("maintenance_settings").select("enabled,message,updated_at").eq("id", 1).maybeSingle(),
+    s.supabase.from("why_settings").select("enabled,title,cards").eq("id", 1).maybeSingle(),
   ]);
+  const whyCards = wy.data ? cleanWhyCards(wy.data.cards) : null;
+  const whyInitial: WhySettings = wy.data
+    ? { enabled: wy.data.enabled !== false, title: String(wy.data.title || DEFAULT_WHY.title).slice(0, WHY_LIMITS.heading), cards: whyCards?.ok ? whyCards.cards : DEFAULT_WHY.cards }
+    : DEFAULT_WHY;
+  const why = <WhySettingsForm initial={whyInitial} setupMissing={!!wy.error || !wy.data} />;
   const maintenance = <MaintenanceCard state={mt.error || !mt.data ? null : (mt.data as MaintenanceState)} />;
   const calendar = (
     <>
@@ -55,6 +63,7 @@ async function Content() {
         <ExportDataCard />
         {calendar}
         {community}
+        {why}
         {referral}
         <p className="card p-6 text-red-600">{missing ? "Run supabase/stats-reviews.sql in Supabase → SQL Editor to turn on editable stats." : `Could not load settings: ${error.message}`}</p>
       </>
@@ -66,6 +75,7 @@ async function Content() {
       <ExportDataCard />
       {calendar}
       {community}
+      {why}
       {referral}
       <StatsManager stats={(data ?? []) as SiteStat[]} />
     </>

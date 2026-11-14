@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Spinner } from "../BuyButton";
+import { Spinner } from "../Spinner";
 import { DownloadIcon } from "../Icons";
 import { Notice } from "./ui";
 

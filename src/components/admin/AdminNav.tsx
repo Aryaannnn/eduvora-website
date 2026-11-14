@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLogout } from "@/lib/useLogout";
-import { Spinner } from "../BuyButton";
+import { Spinner } from "../Spinner";
 import Logo from "../Logo";
 import { BookIcon, ChatIcon, CalendarIcon, ChartIcon, ClipboardIcon, ClockIcon, GiftIcon, GridIcon, LogoutIcon, MailIcon, ReceiptIcon, ShieldIcon, StarIcon, TagIcon, TargetIcon, UsersIcon } from "../Icons";
 

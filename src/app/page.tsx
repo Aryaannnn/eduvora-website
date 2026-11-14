@@ -17,11 +17,12 @@ import HeroSlider from "@/components/home/HeroSlider";
 import ResultsSection from "@/components/home/ResultsSection";
 import ReviewsSection from "@/components/home/ReviewsSection";
 import TrustSection from "@/components/home/TrustSection";
+import WhySection from "@/components/home/WhySection";
 import { ArrowRightIcon } from "@/components/Icons";
 import Reveal from "@/components/Reveal";
 import SectionHeading from "@/components/SectionHeading";
 import { faqs } from "@/data/misc";
-import PredictorGate from "@/components/predictor/PredictorGate";
+import HomePredictor from "@/components/predictor/HomePredictor";
 import { getApprovedReviews, getProducts, getUpcomingSlots, getVideoTestimonials } from "@/lib/data";
 import VideoTestimonials from "@/components/reviews/VideoTestimonials";
 import { getFreeResources } from "@/lib/free-resources";
@@ -62,6 +63,9 @@ export default async function Home() {
       <JsonLd data={faqLd(faqs)} />
       {/* 1. Hero slideshow */}
       <HeroSlider />
+
+      {/* Why EDUVORA? — 4 cards (edit or hide in Admin → Settings) */}
+      <WhySection />
 
       {/* 2. Founder */}
       <FounderSection />
@@ -104,7 +108,7 @@ export default async function Home() {
         <div className="container-page">
           <SectionHeader eyebrow="Rank & college predictor" title="What rank will your marks get you?" subtitle="See your likely VITEEE rank range for free. The VIT campus and branch you can get, with your chances, comes with counselling." href="/predictor" linkText="Open full predictor" />
           {/* Locked unless the visitor has paid for counselling (checked on the server) */}
-          <Reveal className="mt-10"><PredictorGate mode="public" returnTo="/#predictor" /></Reveal>
+          <Reveal className="mt-10"><HomePredictor returnTo="/#predictor" /></Reveal>
           {/* Fee Calculator & Campus Comparison */}
           <Reveal className="mt-6">
             <Link href="/fee-calculator" className="card card-hover flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">

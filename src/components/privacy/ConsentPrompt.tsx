@@ -7,7 +7,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { acceptPrivacyTerms } from "@/lib/privacy-actions";
-import { getBrowserSupabase } from "@/lib/supabase/client";
+import { loadBrowserSupabase, useHasLoginCookie } from "@/lib/supabase/lazy";
 import { useLogout } from "@/lib/useLogout";
 import { ShieldIcon } from "../Icons";
 
@@ -29,27 +29,33 @@ function Prompt() {
   const { logout, loggingOut } = useLogout();
   const skipHere = SKIP.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 
+  // Only for logged-in browsers (visitors never download the login library)
+  const loggedIn = useHasLoginCookie();
   useEffect(() => {
-    const supabase = getBrowserSupabase();
-    if (!supabase) return;
+    if (!loggedIn) return;
     let alive = true;
-    const check = async () => {
-      const { data } = await supabase.auth.getUser();
-      if (!data.user) return alive && setShow(false);
-      const { data: p, error } = await supabase.from("profiles").select("consent_at").eq("id", data.user.id).maybeSingle();
-      if (!alive || error || !p) return; // not set up yet → don't block anyone
-      setShow(!p.consent_at);
-    };
-    void check();
-    const { data: sub } = supabase.auth.onAuthStateChange((e) => {
-      if (e === "SIGNED_IN") void check();
-      if (e === "SIGNED_OUT") setShow(false);
+    let unsubscribe: (() => void) | undefined;
+    void loadBrowserSupabase().then((supabase) => {
+      if (!supabase || !alive) return;
+      const check = async () => {
+        const { data } = await supabase.auth.getUser();
+        if (!data.user) return alive && setShow(false);
+        const { data: p, error } = await supabase.from("profiles").select("consent_at").eq("id", data.user.id).maybeSingle();
+        if (!alive || error || !p) return; // not set up yet → don't block anyone
+        setShow(!p.consent_at);
+      };
+      void check();
+      const { data: sub } = supabase.auth.onAuthStateChange((e) => {
+        if (e === "SIGNED_IN") void check();
+        if (e === "SIGNED_OUT") setShow(false);
+      });
+      unsubscribe = () => sub.subscription.unsubscribe();
     });
     return () => {
       alive = false;
-      sub.subscription.unsubscribe();
+      unsubscribe?.();
     };
-  }, []);
+  }, [loggedIn]);
 
   if (!show || skipHere) return null;
 

@@ -12,9 +12,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { isGroup, mainNav, type NavGroup, type NavLink } from "@/lib/navigation";
-import { getBrowserSupabase } from "@/lib/supabase/client";
+import { loadBrowserSupabase, useHasLoginCookie } from "@/lib/supabase/lazy";
 import { useLogout } from "@/lib/useLogout";
-import { Spinner } from "./BuyButton";
+import { Spinner } from "./Spinner";
 import { CalendarIcon, ChevronDownIcon, CloseIcon, LogoutIcon, MenuIcon, UserIcon } from "./Icons";
 import Logo from "./Logo";
 import PredictorLockBadge from "./predictor/PredictorLockBadge";
@@ -59,22 +59,32 @@ function HeaderBar({ pathname }: { pathname: string }) {
   // After logging in, come back to this page (home / login pages → dashboard)
   const loginHref = !pathname || pathname === "/" || pathname.startsWith("/login") || pathname.startsWith("/auth") ? "/login" : `/login?next=${encodeURIComponent(pathname)}`;
 
-  // When signed in, show the user menu (Dashboard / Admin Panel / Logout) instead of "Login"
+  // When signed in, show the user menu (Dashboard / Admin Panel / Logout) instead of "Login".
+  // Visitors who aren't logged in never download the login library (faster pages).
+  const loggedIn = useHasLoginCookie();
   useEffect(() => {
-    const supabase = getBrowserSupabase();
-    if (!supabase) return;
-    const load = async (u: { id: string; email?: string | null } | null | undefined) => {
-      if (!u) return setUser(null);
-      const { data: p } = await supabase.from("profiles").select("full_name,role").eq("id", u.id).maybeSingle();
-      setUser({ name: p?.full_name || u.email?.split("@")[0] || "Student", email: u.email ?? "", role: p?.role ?? "student" });
-    };
-    supabase.auth.getSession().then(({ data }) => load(data.session?.user));
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-      // Run outside the auth callback (Supabase recommends not awaiting inside it)
-      setTimeout(() => load(session?.user), 0);
+    if (!loggedIn) return;
+    let alive = true;
+    let unsubscribe: (() => void) | undefined;
+    void loadBrowserSupabase().then((supabase) => {
+      if (!supabase || !alive) return;
+      const load = async (u: { id: string; email?: string | null } | null | undefined) => {
+        if (!u) return setUser(null);
+        const { data: p } = await supabase.from("profiles").select("full_name,role").eq("id", u.id).maybeSingle();
+        if (alive) setUser({ name: p?.full_name || u.email?.split("@")[0] || "Student", email: u.email ?? "", role: p?.role ?? "student" });
+      };
+      supabase.auth.getSession().then(({ data }) => load(data.session?.user));
+      const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+        // Run outside the auth callback (Supabase recommends not awaiting inside it)
+        setTimeout(() => load(session?.user), 0);
+      });
+      unsubscribe = () => data.subscription.unsubscribe();
     });
-    return () => data.subscription.unsubscribe();
-  }, []);
+    return () => {
+      alive = false;
+      unsubscribe?.();
+    };
+  }, [loggedIn]);
 
   return (
     <>

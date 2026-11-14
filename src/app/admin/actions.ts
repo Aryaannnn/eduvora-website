@@ -12,6 +12,7 @@ import { adminOrError, friendlyDbError, isError, staffOrError, type ActionResult
 import { yearInIndia } from "@/lib/format";
 import { SUBJECTS } from "@/lib/subjects";
 import { getAdminSupabase } from "@/lib/supabase/admin";
+import { WHY_LIMITS, cleanWhyCards } from "@/lib/why-shared";
 import { notifyBookingChanged, notifyBookingConfirmed, notifyMeetLinkReady, notifyPurchasePaid, sendKind } from "@/lib/email/notify";
 import { disconnectCalendar, syncBookingCalendar } from "@/lib/google-calendar";
 
@@ -1117,6 +1118,31 @@ export async function saveCommunityLink(link: string): Promise<ActionResult> {
   updateTag("community");
   if (error && /community_settings/.test(error.message)) return fail("Run supabase/whatsapp-community.sql in Supabase first.");
   return dbResult(error, v ? "Saved — the WhatsApp community banner is now shown." : "Link removed — the banner is hidden everywhere.");
+}
+
+// ---------------------------------------------------------------- "WHY EDUVORA?" (supabase/why-eduvora.sql)
+/** Home page "Why EDUVORA?" cards: show/hide, heading and up to 4 cards. */
+export async function saveWhySettings(input: { enabled: boolean; title: string; cards: unknown }): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const title = String(input.title ?? "").replace(/\s+/g, " ").trim();
+  if (!title) return fail("Please write a heading, e.g. Why EDUVORA?");
+  if (title.length > WHY_LIMITS.heading) return fail(`Please keep the heading under ${WHY_LIMITS.heading} characters.`);
+  const clean = cleanWhyCards(input.cards);
+  if (!clean.ok) return fail(clean.error);
+  if (input.enabled && clean.cards.length === 0) return fail("Add at least one card, or switch the section off.");
+  const { data, error } = await s.supabase
+    .from("why_settings")
+    .update({ enabled: !!input.enabled, title, cards: clean.cards })
+    .eq("id", 1)
+    .select("id");
+  updateTag("settings"); // the home page updates immediately
+  if (error) return fail(/why_settings/.test(error.message) ? "Run supabase/why-eduvora.sql in Supabase first." : friendlyDbError(error.message));
+  if (!data?.length) return fail("Run supabase/why-eduvora.sql in Supabase first.");
+  await s.supabase
+    .rpc("log_admin_event", { p_action: "settings.why", p_summary: input.enabled ? `Updated the "Why EDUVORA?" cards (${clean.cards.length})` : 'Hid the "Why EDUVORA?" section', p_details: {} })
+    .then(() => undefined, () => undefined);
+  return { ok: true, message: input.enabled ? "Saved — the home page shows the new cards now." : "Saved — the section is hidden on the home page." };
 }
 
 // ---------------------------------------------------------------- BLOG (supabase/blog.sql)

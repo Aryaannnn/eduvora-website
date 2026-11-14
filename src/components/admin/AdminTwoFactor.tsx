@@ -12,7 +12,7 @@ import { useEffect, useRef, useState } from "react";
 import { logAdminSignIn } from "@/app/admin/actions";
 import { useLogout } from "@/lib/useLogout";
 import { getBrowserSupabase } from "@/lib/supabase/client";
-import { Spinner } from "../BuyButton";
+import { Spinner } from "../Spinner";
 import { ShieldIcon } from "../Icons";
 
 type Stage = { kind: "loading" } | { kind: "setup"; factorId: string; qr: string; secret: string } | { kind: "verify"; factorId: string } | { kind: "error"; message: string };

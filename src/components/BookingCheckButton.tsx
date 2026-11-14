@@ -4,7 +4,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { postJson } from "@/lib/razorpay-checkout";
-import { Spinner } from "./BuyButton";
+import { Spinner } from "./Spinner";
 
 export default function BookingCheckButton({ bookingId, auto = false }: { bookingId: string; auto?: boolean }) {
   const router = useRouter();

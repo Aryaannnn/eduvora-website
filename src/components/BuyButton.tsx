@@ -15,8 +15,12 @@ import { useEffect, useState } from "react";
 import { failedUrl, openCheckout, postJson, preloadCheckout } from "@/lib/razorpay-checkout";
 import { ShieldIcon } from "./Icons";
 import RefundNote from "./RefundNote";
-import { CheckoutDialog } from "./checkout/Checkout";
+import dynamic from "next/dynamic";
+import { Spinner } from "./Spinner";
 import { track } from "@/lib/analytics";
+
+// The checkout window is only downloaded when someone clicks Buy (keeps pages light)
+const CheckoutDialog = dynamic(() => import("./checkout/Checkout").then((m) => m.CheckoutDialog), { ssr: false });
 
 // ---- shared (one request per page) list of products this student owns ----
 type Owned = { loggedIn: boolean; owned: string[] };
@@ -201,6 +205,4 @@ export function SecurePaymentNote({ className = "" }: { className?: string }) {
   );
 }
 
-export function Spinner() {
-  return <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent align-[-2px]" aria-hidden />;
-}
+

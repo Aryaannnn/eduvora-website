@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { initials } from "@/lib/format";
 import { useLogout } from "@/lib/useLogout";
-import { Spinner } from "./BuyButton";
+import { Spinner } from "./Spinner";
 import { ChevronDownIcon, GridIcon, LogoutIcon, ShieldIcon, UserIcon } from "./Icons";
 
 type MenuUser = { name: string; email: string; role: string };

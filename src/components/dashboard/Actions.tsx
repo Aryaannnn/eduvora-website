@@ -6,7 +6,7 @@ import { useState } from "react";
 import { cancelMyBooking } from "@/lib/booking-actions";
 import { LogoutIcon, ReceiptIcon } from "../Icons";
 import { useLogout } from "@/lib/useLogout";
-import { Spinner } from "../BuyButton";
+import { Spinner } from "../Spinner";
 
 export function LogoutButton({ className = "" }: { className?: string }) {
   const { logout, loggingOut } = useLogout();

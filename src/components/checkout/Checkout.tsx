@@ -11,7 +11,7 @@ import { createPortal } from "react-dom";
 import { formatPrice } from "@/lib/format";
 import { postJson } from "@/lib/razorpay-checkout";
 import { CloseIcon, ShieldIcon, TagIcon } from "../Icons";
-import { Spinner } from "../BuyButton";
+import { Spinner } from "../Spinner";
 
 export type QuoteView = {
   title?: string;
