@@ -90,11 +90,24 @@ export default function HeroSlider() {
   const [hovering, setHovering] = useState(false); // mouse over (desktop)
   const [touching, setTouching] = useState(false); // finger on screen (mobile)
   const [keyboardFocus, setKeyboardFocus] = useState(false); // tabbing with the keyboard
+  // Paused by the visitor (Pause button, or a tap on the slideshow) — stays paused until "Play"
+  const [userPaused, setUserPaused] = useState(false);
+  // The first slide appears instantly (no slide-in) — animations only once slides change
+  const [moved, setMoved] = useState(false);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const n = slides.length;
-  const paused = hovering || touching || keyboardFocus;
+  const paused = hovering || touching || keyboardFocus || userPaused;
+
+  // "Reduce motion" turned on in the phone/computer settings → start paused
+  useEffect(() => {
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      const t = setTimeout(() => setUserPaused(true), 0);
+      return () => clearTimeout(t);
+    }
+  }, []);
 
   const go = (i: number, direction: 1 | -1) => {
+    setMoved(true);
     setDir(direction);
     setIndex((i + n) % n);
   };
@@ -106,6 +119,7 @@ export default function HeroSlider() {
   useEffect(() => {
     if (paused) return;
     const id = setTimeout(() => {
+      setMoved(true);
       setDir(1);
       setIndex((i) => (i + 1) % n);
     }, AUTO_SLIDE_MS);
@@ -129,6 +143,7 @@ export default function HeroSlider() {
       onTouchStart={(e) => {
         touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
         setTouching(true);
+        setUserPaused(true); // a tap pauses the slideshow (press Play to continue)
       }}
       onTouchEnd={(e) => {
         setTouching(false);
@@ -160,7 +175,7 @@ export default function HeroSlider() {
                 inert={!active}
                 className={`grid items-center gap-8 [grid-area:1/1] lg:grid-cols-[1.15fr_1fr] lg:gap-10 ${
                   active
-                    ? `visible ${dir === 1 ? "animate-slide-in-right" : "animate-slide-in-left"}`
+                    ? `visible ${moved ? (dir === 1 ? "animate-slide-in-right" : "animate-slide-in-left") : ""}`
                     : "invisible opacity-0 transition-[opacity,visibility] duration-200"
                 }`}
               >
@@ -201,7 +216,7 @@ export default function HeroSlider() {
                 {/* Right-hand picture (desktop) */}
                 <div className="hidden lg:block">
                   {s.visual === "predictor" ? (
-                    <PredictorFlow active={active} />
+                    <PredictorFlow active={active && moved} />
                   ) : (
                     <div className={`relative mx-auto max-w-sm ${active ? "animate-float" : ""}`}>
                       <div className={`absolute -inset-4 rounded-[2rem] bg-gradient-to-br ${s.color} opacity-40 blur-2xl`} />
@@ -226,9 +241,23 @@ export default function HeroSlider() {
           })}
         </div>
 
-        {/* Dots — click to jump to any slide. The active one fills with gold over 3 seconds. */}
+        {/* Dots — click to jump to any slide. The active one fills with gold over 3 seconds.
+            + Pause / Play button (always visible) */}
         <div className="mt-8 flex justify-center px-16 lg:mt-10 lg:px-0">
           <div className="flex flex-wrap items-center justify-center gap-1">
+            <button
+              type="button"
+              onClick={() => setUserPaused((p) => !p)}
+              aria-pressed={userPaused}
+              aria-label={userPaused ? "Play slideshow" : "Pause slideshow"}
+              className="mr-1 grid h-11 w-11 place-items-center rounded-full bg-white/10 text-white ring-1 ring-white/25 transition hover:bg-white/20"
+            >
+              {userPaused ? (
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden><path d="M8 5v14l11-7z" /></svg>
+              ) : (
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden><path d="M7 5h4v14H7zM13 5h4v14h-4z" /></svg>
+              )}
+            </button>
             {slides.map((s, i) => (
               <button
                 key={s.title}
@@ -236,7 +265,7 @@ export default function HeroSlider() {
                 onClick={() => go(i, i >= index ? 1 : -1)}
                 aria-label={`Go to slide ${i + 1}: ${s.title}`}
                 aria-current={i === index}
-                className="group grid h-8 min-w-6 place-items-center px-1"
+                className="group grid h-11 min-w-8 place-items-center px-1"
               >
                 <span
                   className={`relative block h-2.5 overflow-hidden rounded-full transition-all duration-300 ${

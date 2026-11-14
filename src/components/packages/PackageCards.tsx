@@ -68,7 +68,7 @@ function PackageCard({ p }: { p: Package }) {
 
       <div className="mt-5 flex items-baseline gap-2">
         <span className="text-4xl font-extrabold tracking-tight">{formatPrice(p.price)}</span>
-        {p.original_price && <span className={`text-sm line-through ${popular ? "text-slate-400" : "text-slate-400"}`}>{formatPrice(p.original_price)}</span>}
+        {p.original_price && <span className={`text-sm line-through ${popular ? "text-slate-300" : "text-slate-500"}`}>{formatPrice(p.original_price)}</span>}
         {off > 0 && <span className="rounded-md bg-emerald-100 px-1.5 py-0.5 text-xs font-bold text-emerald-700">{off}% off</span>}
       </div>
       <p className={`mt-1 inline-flex items-center gap-1.5 text-sm font-semibold ${popular ? "text-white" : "text-slate-700"}`}>

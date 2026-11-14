@@ -44,7 +44,7 @@ export default function CourseCard({ course }: { course: Product }) {
       <div className="mt-auto pt-6">
         <div className="flex items-baseline gap-2 border-t border-slate-100 pt-5">
           <span className="text-3xl font-extrabold text-slate-900">{formatPrice(course.price)}</span>
-          {course.original_price && <span className="text-sm text-slate-400 line-through">{formatPrice(course.original_price)}</span>}
+          {course.original_price && <span className="text-sm text-slate-500 line-through">{formatPrice(course.original_price)}</span>}
           {off > 0 && <span className="rounded-md bg-green-100 px-1.5 py-0.5 text-xs font-bold text-green-700">{off}% off</span>}
         </div>
         <div className="mt-4 grid grid-cols-2 gap-2">

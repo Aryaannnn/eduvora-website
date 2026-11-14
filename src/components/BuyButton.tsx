@@ -67,10 +67,11 @@ export default function BuyButton({
   const [error, setError] = useState("");
   const busy = phase !== "idle";
 
-  // Load the Razorpay script early so the popup opens right away on click
-  useEffect(() => {
-    void preloadCheckout();
-  }, []);
+  // Load the Razorpay script as soon as someone shows interest (hover / touch / keyboard focus),
+  // so the popup still opens right away — but pages don't download it for every visitor.
+  const warmUp = () => {
+    if (!free) void preloadCheckout();
+  };
 
   useEffect(() => {
     let alive = true;
@@ -149,7 +150,7 @@ export default function BuyButton({
   if (owned && ownedHref) {
     return (
       <div className="w-full">
-        <a href={ownedHref} className={`${className} !bg-emerald-600 !text-white hover:!bg-emerald-700`}>{ownedLabel ?? "Open"}</a>
+        <a href={ownedHref} className={`${className} !bg-emerald-700 !text-white hover:!bg-emerald-800`}>{ownedLabel ?? "Open"}</a>
         {ownedNote && <p className={`mt-2 text-center text-xs font-semibold text-emerald-600 ${trustClassName}`}>{ownedNote}</p>}
       </div>
     );
@@ -166,7 +167,7 @@ export default function BuyButton({
   return (
     <div className="w-full">
       {checkout && <CheckoutDialog productId={productId} paying={phase === "creating"} onClose={() => setCheckout(false)} onPay={(c) => void buy(c)} />}
-      <button type="button" onClick={start} disabled={busy} className={`${className} disabled:cursor-wait disabled:opacity-70`}>
+      <button type="button" onClick={start} onPointerEnter={warmUp} onTouchStart={warmUp} onFocus={warmUp} disabled={busy} className={`${className} disabled:cursor-wait disabled:opacity-70`}>
         {phase === "creating" ? (
           <><Spinner /> {free ? "Unlocking…" : "Starting payment…"}</>
         ) : phase === "paying" ? (

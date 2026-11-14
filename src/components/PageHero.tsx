@@ -23,7 +23,7 @@ export default function PageHero({
           <BackButton tone="dark" />
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 font-semibold text-white ring-1 ring-white/20 transition hover:bg-white/20"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-white/10 px-3.5 py-1.5 font-semibold text-white ring-1 ring-white/20 transition hover:bg-white/20"
           >
             <HomeIcon className="h-4 w-4" /> Home
           </Link>

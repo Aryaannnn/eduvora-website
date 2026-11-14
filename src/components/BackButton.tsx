@@ -26,7 +26,7 @@ export default function BackButton({ tone = "light", className = "" }: { tone?: 
       type="button"
       onClick={goBack}
       aria-label="Go back to the previous page"
-      className={`inline-flex min-h-9 items-center gap-1 rounded-full py-1.5 pl-2 pr-3.5 text-sm font-semibold ring-1 transition active:scale-95 ${styles} ${className}`}
+      className={`inline-flex min-h-11 items-center gap-1 rounded-full py-1.5 pl-2.5 pr-4 text-sm font-semibold ring-1 transition active:scale-95 ${styles} ${className}`}
     >
       <ChevronLeftIcon className="h-4 w-4" /> Back
     </button>

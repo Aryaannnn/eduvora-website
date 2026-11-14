@@ -26,11 +26,19 @@ export async function generateMetadata(props: PageProps<"/courses/[slug]">): Pro
   return pageMeta({ title: course.title, description, path: `/courses/${course.slug}`, ...(course.thumbnail_url ? { image: { url: course.thumbnail_url, alt: course.title } } : {}) });
 }
 
-// The course comes from Supabase. The page loads per visit (inside Suspense).
+// Every current course page is built ahead of time (fast, no layout jump while it loads).
+// New courses work straight away too: the first visitor gets them built on demand.
+export async function generateStaticParams() {
+  const courses = await getProducts("crash_course");
+  return courses.length ? courses.map((c) => ({ slug: c.slug })) : [{ slug: "viteee-crash-course" }];
+}
+
+// The course comes from Supabase (inside Suspense).
 // ✏️ Every section below is edited in Admin → Products → (course) → "Course page".
 export default function CourseDetailPage(props: PageProps<"/courses/[slug]">) {
   return (
-    <Suspense fallback={<div className="hero-bg h-72" aria-busy="true" />}>
+    // (the placeholder fills the screen, so nothing visible jumps if the page ever streams in)
+    <Suspense fallback={<div className="hero-bg min-h-[100svh]" aria-busy="true" />}>
       <CourseDetail params={props.params} />
     </Suspense>
   );
@@ -104,7 +112,7 @@ async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
         <div className="container-page relative animate-fade-up py-10 sm:py-14">
           <nav className="flex flex-wrap items-center gap-2 text-sm" aria-label="Breadcrumb">
             <BackButton tone="dark" />
-            <Link href="/" className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 font-semibold text-white ring-1 ring-white/20 transition hover:bg-white/20">
+            <Link href="/" className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-white/10 px-3.5 py-1.5 font-semibold text-white ring-1 ring-white/20 transition hover:bg-white/20">
               <HomeIcon className="h-4 w-4" /> Home
             </Link>
             <span className="text-slate-400" aria-hidden>›</span>
@@ -144,7 +152,7 @@ async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
           <div className="card p-6 shadow-xl shadow-slate-200/70 lg:sticky lg:top-24">
             <div className="flex flex-wrap items-baseline gap-2">
               <span className="text-4xl font-extrabold text-slate-900">{priceText}</span>
-              {course.original_price && <span className="text-slate-400 line-through">{formatPrice(course.original_price)}</span>}
+              {course.original_price && <span className="text-slate-500 line-through">{formatPrice(course.original_price)}</span>}
               {off > 0 && <span className="rounded-md bg-green-100 px-2 py-0.5 text-xs font-bold text-green-700">{off}% off</span>}
             </div>
             <ul className="mt-5 space-y-3 border-y border-slate-100 py-5">

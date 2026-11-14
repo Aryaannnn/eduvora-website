@@ -1,8 +1,10 @@
-"use client";
-
-import { useEffect, useRef } from "react";
-
-// Wrap anything in <Reveal> to make it fade-and-slide in when scrolled into view.
+// Wrap anything in <Reveal> to make it fade-and-slide in as it scrolls into view.
+// Pure CSS (scroll-driven animation, see .reveal in globals.css) — no JavaScript:
+//  • content that is already on screen when the page opens is visible immediately
+//    (nothing waits for scripts — better for slow phones and Google's speed score)
+//  • browsers without scroll-driven animations simply show the content
+//  • "Reduce motion" setting → no animation
+// `delay` is kept so existing code still works (staggered cards), but is optional.
 export default function Reveal({
   children,
   className = "",
@@ -12,28 +14,10 @@ export default function Reveal({
   children: React.ReactNode;
   id?: string;
   className?: string;
-  delay?: number; // milliseconds
+  delay?: number; // milliseconds (small stagger for cards in a row)
 }) {
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const io = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          el.classList.add("is-visible");
-          io.disconnect();
-        }
-      },
-      { threshold: 0.1, rootMargin: "0px 0px -40px 0px" },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
-
   return (
-    <div ref={ref} id={id} className={`reveal ${className}`} style={delay ? { transitionDelay: `${delay}ms` } : undefined}>
+    <div id={id} className={`reveal ${className}`} style={delay ? ({ "--reveal-offset": `${Math.round(Math.min(delay, 300) / 10)}%` } as React.CSSProperties) : undefined}>
       {children}
     </div>
   );

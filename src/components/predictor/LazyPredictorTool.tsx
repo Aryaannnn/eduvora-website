@@ -10,7 +10,7 @@ import type PredictorToolType from "./PredictorTool";
 const PredictorTool = dynamic(() => import("./PredictorTool"), { ssr: false, loading: () => <Placeholder /> });
 
 function Placeholder() {
-  return <div className="card min-h-[24rem] animate-pulse bg-slate-100" aria-busy="true" aria-label="Loading the Rank Predictor" />;
+  return <div className="card min-h-[24rem] animate-pulse bg-slate-100" role="status" aria-busy="true" aria-label="Loading the Rank Predictor" />;
 }
 
 export default function LazyPredictorTool(props: ComponentProps<typeof PredictorToolType>) {

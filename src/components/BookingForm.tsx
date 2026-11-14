@@ -14,11 +14,13 @@
 // =====================================================================
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { formatDate, formatPrice, formatTime, todayInIndia } from "@/lib/format";
 import { openCheckout, postJson, preloadCheckout } from "@/lib/razorpay-checkout";
-import { getBrowserSupabase } from "@/lib/supabase/client";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { loadBrowserSupabase } from "@/lib/supabase/lazy";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
 import type { Slot } from "@/lib/types";
 import { Spinner } from "./Spinner";
 import { Field } from "./ContactForm";
@@ -40,8 +42,10 @@ type Notice = { kind: "retry" | "taken" | "error"; text: string } | null;
 
 export default function BookingForm() {
   const router = useRouter();
-  const supabase = getBrowserSupabase();
-  const [slots, setSlots] = useState<Slot[] | null>(supabase ? null : []);
+  // The Supabase library is loaded in the background (not part of this page's first download)
+  const sbRef = useRef<SupabaseClient | null>(null);
+  const getSb = async () => (sbRef.current ??= await loadBrowserSupabase());
+  const [slots, setSlots] = useState<Slot[] | null>(isSupabaseConfigured ? null : []);
   const [user, setUser] = useState<User | null>(null);
   const [date, setDate] = useState("");
   const [slotId, setSlotId] = useState("");
@@ -58,6 +62,7 @@ export default function BookingForm() {
   const [useCredit, setUseCredit] = useState(true);
 
   async function loadSlots() {
+    const supabase = await getSb();
     if (!supabase) return;
     // Free any 10-minute holds that ran out, so their slots show again
     await supabase.rpc("release_expired_holds").then(() => undefined, () => undefined);
@@ -74,9 +79,9 @@ export default function BookingForm() {
 
   // Load slots + the logged-in user (pre-fill their details) + any saved draft
   useEffect(() => {
-    void preloadCheckout(); // so Razorpay opens instantly on "Pay"
-    if (!supabase) return;
-    void Promise.resolve().then(loadSlots);
+    void getSb().then((supabase) => {
+    if (!supabase) return setSlots([]);
+    void loadSlots();
     supabase.auth.getUser().then(async ({ data }) => {
       setUser(data.user);
       let draft: (Form & { date?: string; slotId?: string }) | null = null;
@@ -105,8 +110,15 @@ export default function BookingForm() {
         email: f.email || p?.email || data.user?.email || "",
       }));
     });
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Razorpay's script is loaded once a slot is picked (so "Pay" opens instantly, but
+  // visitors who only look at the page don't download it)
+  useEffect(() => {
+    if (slotId) void preloadCheckout();
+  }, [slotId]);
 
   const dates = useMemo(() => [...new Set((slots ?? []).map((s) => s.date))], [slots]);
   const activeDate = date && dates.includes(date) ? date : dates[0] || "";
@@ -125,7 +137,7 @@ export default function BookingForm() {
   async function pay() {
     setNotice(null);
     setFormError("");
-    if (!supabase) return setFormError("Booking will work once Supabase is connected.");
+    if (!(await getSb())) return setFormError("Booking will work once Supabase is connected.");
     if (!selected) return setFormError("Please choose a date and time first.");
     if (!user) {
       try {
@@ -356,7 +368,7 @@ export default function BookingForm() {
               <p className="mt-3 flex items-center justify-center gap-1.5 text-center text-xs font-semibold text-slate-500">
                 <ShieldIcon className="h-3.5 w-3.5 text-emerald-600" /> 100% Secure Payments by Razorpay
               </p>
-              <p className="mt-1 flex items-center justify-center gap-1.5 text-center text-[11px] text-slate-400">
+              <p className="mt-1 flex items-center justify-center gap-1.5 text-center text-[11px] text-slate-500">
                 <LockIcon className="h-3 w-3" /> Your slot is booked only after the payment succeeds.
               </p>
               {user && !hasCredit && (

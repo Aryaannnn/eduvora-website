@@ -67,7 +67,7 @@ export default function Footer() {
       </div>
 
       <div className="border-t border-white/10">
-        <div className="container-page space-y-2 py-6 text-xs text-slate-500">
+        <div className="container-page space-y-2 py-6 text-xs text-slate-300">
           <p>© {siteConfig.businessName}. All rights reserved.</p>
           {/* ✏️ Text: src/config/site.ts → disclaimer */}
           <p className="max-w-4xl leading-relaxed">{siteConfig.disclaimer}</p>

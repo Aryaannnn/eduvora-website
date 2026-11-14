@@ -11,7 +11,7 @@ export default function NoSlotsMessage({ className = "" }: { className?: string 
         href={whatsappLink("Hi, I'd like to book a counselling session. When can we talk?")}
         target="_blank"
         rel="noopener noreferrer"
-        className="btn-primary mt-3 w-full !bg-[#25D366] !py-3 text-base !text-white hover:!bg-[#1ebe5b]"
+        className="btn-primary mt-3 w-full !bg-emerald-700 !py-3 text-base !text-white hover:!bg-emerald-800"
       >
         <WhatsAppIcon className="h-5 w-5" /> Message us on WhatsApp
       </a>

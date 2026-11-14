@@ -24,7 +24,9 @@ export function seatLimitOf(details: { seat_limit?: unknown } | null | undefined
 export async function getSeatsLeft(productId: string, limit: number | null): Promise<number | null> {
   "use cache";
   cacheTag("products", "seats");
-  cacheLife({ stale: 30, revalidate: 30, expire: 300 });
+  // refreshed in the background about every 30 s; the page itself never "expires"
+  // quickly (an expired page would be rebuilt while the visitor waits)
+  cacheLife({ stale: 30, revalidate: 30, expire: 3600 });
   if (!limit) return null;
   const db = getAdminSupabase();
   if (!db) return null;

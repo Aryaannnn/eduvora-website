@@ -33,7 +33,7 @@ export async function generateMetadata(props: PageProps<"/blog/[slug]">): Promis
 
 export default function BlogPostPage(props: PageProps<"/blog/[slug]">) {
   return (
-    <Suspense fallback={<div className="hero-bg h-72" aria-busy="true" />}>
+    <Suspense fallback={<div className="hero-bg min-h-[100svh]" aria-busy="true" />}>
       <Post params={props.params} />
     </Suspense>
   );

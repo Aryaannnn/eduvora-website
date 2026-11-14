@@ -35,7 +35,7 @@ export default function TestCard({ product }: { product: Product }) {
       <div className="mt-auto flex items-center justify-between gap-3 pt-5">
         <div>
           <span className={`text-xl font-extrabold ${product.is_free ? "text-green-600" : "text-slate-900"}`}>{formatPrice(product.price)}</span>
-          {product.original_price && <span className="ml-1.5 text-xs text-slate-400 line-through">{formatPrice(product.original_price)}</span>}
+          {product.original_price && <span className="ml-1.5 text-xs text-slate-500 line-through">{formatPrice(product.original_price)}</span>}
         </div>
         {product.is_free ? (
           // Free: log in → unlocked → opens in My Courses (tests & downloads are there)

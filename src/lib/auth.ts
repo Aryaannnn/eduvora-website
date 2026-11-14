@@ -5,7 +5,7 @@
 // =====================================================================
 import { siteConfig } from "@/config/site";
 import { appOrigin } from "./site-url";
-import { getBrowserSupabase } from "./supabase/client";
+import { loadBrowserSupabase } from "./supabase/lazy";
 import { isSupabaseConfigured } from "./supabase/env";
 import { reportFailure } from "./monitor";
 
@@ -56,7 +56,7 @@ export async function signUpWithEmail(
 ): Promise<AuthResult & { needsConfirmation?: boolean }> {
   if (!EMAIL_RE.test(email)) return { ok: false, message: "Please enter a valid email address." };
   if (password.length < 6) return { ok: false, message: "Password must be at least 6 characters." };
-  const supabase = getBrowserSupabase();
+  const supabase = (await loadBrowserSupabase());
   if (!supabase) return { ok: false, message: "Login will work once Supabase is connected." };
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -79,7 +79,7 @@ export async function signUpWithEmail(
 export async function signInWithEmail(email: string, password: string): Promise<AuthResult> {
   if (!EMAIL_RE.test(email)) return { ok: false, message: "Please enter a valid email address." };
   if (!password) return { ok: false, message: "Please enter your password." };
-  const supabase = getBrowserSupabase();
+  const supabase = (await loadBrowserSupabase());
   if (!supabase) return { ok: false, message: "Login will work once Supabase is connected." };
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   watch("Email login", error);
@@ -106,7 +106,7 @@ function friendlyEmail(message: string): string {
  */
 export async function requestPasswordReset(email: string): Promise<AuthResult> {
   if (!EMAIL_RE.test(email)) return { ok: false, message: "Please enter a valid email address." };
-  const supabase = getBrowserSupabase();
+  const supabase = (await loadBrowserSupabase());
   if (!supabase) return { ok: false, message: "Password reset will work once Supabase is connected." };
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${appOrigin()}/auth/callback?next=/reset-password`,
@@ -123,7 +123,7 @@ export async function requestPasswordReset(email: string): Promise<AuthResult> {
 
 /** Saves the new password for the user who opened the reset link. */
 export async function updatePassword(password: string): Promise<AuthResult> {
-  const supabase = getBrowserSupabase();
+  const supabase = (await loadBrowserSupabase());
   if (!supabase) return { ok: false, message: "Supabase is not connected." };
   const { error } = await supabase.auth.updateUser({ password });
   if (!error) return { ok: true };
@@ -141,7 +141,7 @@ export async function sendOtp(
   profile?: { fullName: string; role: "student" | "parent" },
 ): Promise<AuthResult> {
   if (!/^[6-9]\d{9}$/.test(phone)) return { ok: false, message: "Please enter a valid 10-digit mobile number." };
-  const supabase = getBrowserSupabase();
+  const supabase = (await loadBrowserSupabase());
   if (!supabase) {
     await wait(600);
     return { ok: true };
@@ -161,7 +161,7 @@ export async function sendOtp(
 /** Checks the OTP the user typed and logs them in. */
 export async function verifyOtp(phone: string, otp: string): Promise<AuthResult> {
   if (!/^\d{6}$/.test(otp)) return { ok: false, message: "Please enter the 6-digit OTP." };
-  const supabase = getBrowserSupabase();
+  const supabase = (await loadBrowserSupabase());
   if (!supabase) {
     await wait(600);
     return { ok: true };
@@ -172,7 +172,7 @@ export async function verifyOtp(phone: string, otp: string): Promise<AuthResult>
 
 /** Sends the user to Google, then back to /auth/callback on this website. */
 export async function signInWithGoogle(next: string): Promise<AuthResult> {
-  const supabase = getBrowserSupabase();
+  const supabase = (await loadBrowserSupabase());
   if (!supabase) {
     await wait(400);
     return { ok: false, message: "Google sign-in will work once Supabase is connected (see SUPABASE_SETUP.md)." };
@@ -191,7 +191,7 @@ export async function signInWithGoogle(next: string): Promise<AuthResult> {
 }
 
 export async function signOut() {
-  await getBrowserSupabase()?.auth.signOut();
+  await (await loadBrowserSupabase())?.auth.signOut();
 }
 
 /** Where to go after login: ?next=/something (only paths on this site) */

@@ -34,7 +34,7 @@ export default function MaterialCard({ m }: { m: Product }) {
         <div className="mt-auto pt-5">
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-extrabold text-slate-900">{formatPrice(m.price)}</span>
-            {m.original_price && <span className="text-sm text-slate-400 line-through">{formatPrice(m.original_price)}</span>}
+            {m.original_price && <span className="text-sm text-slate-500 line-through">{formatPrice(m.original_price)}</span>}
             {off > 0 && <span className="text-xs font-bold text-green-600">{off}% off</span>}
           </div>
           {m.is_free ? (

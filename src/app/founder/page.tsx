@@ -24,7 +24,7 @@ export default function FounderPage() {
         <div className="container-page relative py-8 sm:py-10">
           <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-2 text-sm">
             <BackButton tone="dark" />
-            <Link href="/" className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 font-semibold text-white ring-1 ring-white/20 transition hover:bg-white/20">
+            <Link href="/" className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-white/10 px-3.5 py-1.5 font-semibold text-white ring-1 ring-white/20 transition hover:bg-white/20">
               <HomeIcon className="h-4 w-4" /> Home
             </Link>
             <span className="text-slate-400" aria-hidden>›</span>

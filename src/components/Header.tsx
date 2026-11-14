@@ -240,7 +240,7 @@ function MobileMenu({ open, onClose, isActive, user, loginHref }: { open: boolea
     `flex items-center rounded-2xl px-4 py-3.5 text-[17px] font-bold transition-colors ${isActive(href) ? "bg-brand-50 text-brand-700" : "text-slate-800 active:bg-slate-100"}`;
 
   return (
-    <div id="mobile-menu" className={`fixed inset-0 z-[60] lg:hidden print:hidden ${open ? "" : "pointer-events-none"}`} aria-hidden={!open}>
+    <div id="mobile-menu" className={`fixed inset-0 z-[60] overflow-hidden lg:hidden print:hidden ${open ? "" : "pointer-events-none"}`} aria-hidden={!open} inert={!open}>
       {/* dim background */}
       <button
         type="button"
