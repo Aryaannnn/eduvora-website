@@ -116,6 +116,36 @@ export async function getSiteStats(): Promise<SiteStat[]> {
 // Rank & College Predictor data is PRIVATE (server only; the college list is for paid counselling) —
 // it is loaded on the server in src/lib/predictor-server.ts
 
+// ---------------------------------------------------------------- REVIEW SUMMARY
+/** Average rating + counts from APPROVED reviews only (reviews page, "Rating: x/5" lines). */
+export async function getReviewSummary(): Promise<{ avg: number; count: number; verified: number }> {
+  const reviews = await getApprovedReviews();
+  const count = reviews.length;
+  const avg = count ? Math.round((reviews.reduce((s, r) => s + Number(r.rating || 0), 0) / count) * 10) / 10 : 0;
+  return { avg, count, verified: reviews.filter((r) => r.is_verified).length };
+}
+
+// ---------------------------------------------------------------- SUCCESS STORIES
+// Real students only, added in Admin → Success Stories with their consent (supabase/success-stories.sql).
+export type SuccessStory = { id: string; student_name: string; year: number | null; achievement: string; quote: string; photo_url: string | null; video_url: string | null };
+
+export async function getSuccessStories(): Promise<SuccessStory[]> {
+  "use cache";
+  cacheTag("reviews");
+  const supabase = getPublicSupabase();
+  if (!supabase) return (ok(), []);
+  const { data, error } = await supabase
+    .from("success_stories")
+    .select("id,student_name,year,achievement,quote,photo_url,video_url")
+    .eq("is_published", true)
+    .order("sort_order")
+    .order("created_at", { ascending: false })
+    .limit(60);
+  if (error) return (retrySoon("getSuccessStories", error.message), []);
+  ok();
+  return (data ?? []) as SuccessStory[];
+}
+
 // ---------------------------------------------------------------- VIDEO TESTIMONIALS
 // Only videos with the student's consent confirmed (supabase/video-testimonials.sql).
 export type VideoTestimonial = { id: string; youtube_id: string; student_name: string; achievement: string | null; year: number | null };

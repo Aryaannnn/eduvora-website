@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import RatingLine from "@/components/reviews/RatingLine";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -157,6 +158,8 @@ async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
             </div>
             {/* The refund rule for live batches, in one short line, right under the button */}
             {!free && <RefundNote kind="live" className="mt-2.5" />}
+            {/* "Rating: x/5 from N reviews" — only with 5+ approved reviews */}
+            <RatingLine className="mt-2" />
             <a href={phoneLink} className="btn-light mt-4 w-full">
               <PhoneIcon className="h-4 w-4" /> Call Us
             </a>

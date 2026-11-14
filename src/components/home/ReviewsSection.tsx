@@ -17,7 +17,7 @@ const tabs: { id: Review["type"]; label: string }[] = [
 
 // Reviews come from Supabase (only approved ones are shown)
 /** mobileShort: on phones show only 3 reviews + "View all reviews" (home page) */
-export default function ReviewsSection({ reviews, showHeading = true, mobileShort = false }: { reviews: Review[]; showHeading?: boolean; mobileShort?: boolean }) {
+export default function ReviewsSection({ reviews, showHeading = true, mobileShort = false, showSummary = true }: { reviews: Review[]; showHeading?: boolean; mobileShort?: boolean; showSummary?: boolean }) {
   const [tab, setTab] = useState<Review["type"]>("student");
   const list = reviews.filter((r) => r.type === tab);
   const avg = reviews.length ? Math.round((reviews.reduce((s, r) => s + r.rating, 0) / reviews.length) * 10) / 10 : 0;
@@ -33,11 +33,11 @@ export default function ReviewsSection({ reviews, showHeading = true, mobileShor
           <div className="mx-auto mt-10 max-w-xl"><EmptyState what="reviews" /></div>
         ) : (
           <>
-            <Reveal className="mx-auto mt-10 flex max-w-md flex-col items-center gap-2 rounded-3xl bg-gradient-to-br from-accent-100 to-white p-6 text-center ring-1 ring-accent-300/50">
+            {showSummary && <Reveal className="mx-auto mt-10 flex max-w-md flex-col items-center gap-2 rounded-3xl bg-gradient-to-br from-accent-100 to-white p-6 text-center ring-1 ring-accent-300/50">
               <p className="text-5xl font-extrabold text-slate-900">{avg.toFixed(1)}<span className="text-2xl text-slate-400">/5</span></p>
               <Stars rating={avg} className="h-6 w-6" />
               <p className="text-sm text-slate-600">Average rating from {reviews.length} review{reviews.length === 1 ? "" : "s"}</p>
-            </Reveal>
+            </Reveal>}
 
             <div className="mt-10 flex justify-center">
               <div role="tablist" aria-label="Review type" className="inline-flex rounded-2xl bg-slate-100 p-1.5">

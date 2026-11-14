@@ -1147,6 +1147,63 @@ export async function deleteVideoTestimonial(id: string): Promise<ActionResult> 
   return dbResult(error, "Video deleted.");
 }
 
+// ---------------------------------------------------------------- SUCCESS STORIES (supabase/success-stories.sql)
+export type StoryInput = {
+  id?: string; student_name: string; year: string; achievement: string; quote: string;
+  photo_url: string; video_url: string; consent_confirmed: boolean; is_published: boolean; sort_order: string;
+};
+
+/** Add / edit a success story. Real students only — consent must be confirmed. */
+export async function saveSuccessStory(input: StoryInput): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  if (!input.consent_confirmed) return fail("Tick the consent box: the student agreed to be shown on the website. Without it the story can't be saved.");
+  const name = input.student_name.trim();
+  if (name.length < 2 || name.length > 80) return fail("Please enter the student's name.");
+  const achievement = input.achievement.trim();
+  if (achievement.length < 2 || achievement.length > 120) return fail("Please write what they achieved, e.g. “CSE, VIT Vellore”.");
+  const quote = input.quote.trim();
+  if (quote.length < 10 || quote.length > 400) return fail("Please add a short quote (10–400 characters) in the student's own words.");
+  const year = int(input.year);
+  if (year !== null && (Number.isNaN(year) || year < 2000 || year > 2100)) return fail("Please enter a valid year, e.g. 2026.");
+  const photo = input.photo_url.trim() || null;
+  if (photo && !/^https:\/\/\S+$/.test(photo)) return fail("The photo must be uploaded here (or be an https:// link).");
+  const video = input.video_url.trim() || null;
+  if (video && !/^https:\/\/\S+$/.test(video)) return fail("The video link must start with https://");
+  const row = {
+    student_name: name, year, achievement, quote, photo_url: photo, video_url: video,
+    consent_confirmed: true, is_published: !!input.is_published, sort_order: int(input.sort_order) ?? 0,
+  };
+  const { error } = input.id
+    ? await s.supabase.from("success_stories").update(row).eq("id", input.id)
+    : await s.supabase.from("success_stories").insert(row);
+  updateTag("reviews");
+  if (error && /success_stories/.test(error.message)) return fail("Run supabase/success-stories.sql in Supabase first.");
+  return dbResult(error, input.id ? "Story saved." : row.is_published ? "Story added — it's on the website now." : "Story added (hidden).");
+}
+
+export async function setStoryPublished(id: string, published: boolean): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const { error } = await s.supabase.from("success_stories").update({ is_published: published }).eq("id", id);
+  updateTag("reviews");
+  return dbResult(error, published ? "Story shown on the website." : "Story hidden.");
+}
+
+/** Delete a story (e.g. the student withdrew consent). Its uploaded photo is deleted too. */
+export async function deleteSuccessStory(id: string): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const { data: old } = await s.supabase.from("success_stories").select("photo_url").eq("id", id).maybeSingle();
+  const { error } = await s.supabase.from("success_stories").delete().eq("id", id);
+  if (!error && old?.photo_url) {
+    const path = /\/storage\/v1\/object\/public\/blog-images\/(stories\/[^?#]+)/.exec(String(old.photo_url))?.[1];
+    if (path) await getAdminSupabase()?.storage.from("blog-images").remove([decodeURIComponent(path)]).then(() => null, () => null);
+  }
+  updateTag("reviews");
+  return dbResult(error, "Story and photo deleted.");
+}
+
 // ---------------------------------------------------------------- WHATSAPP COMMUNITY (supabase/whatsapp-community.sql)
 /** Empty link = every "Join our WhatsApp community" banner is hidden. */
 export async function saveCommunityLink(link: string): Promise<ActionResult> {

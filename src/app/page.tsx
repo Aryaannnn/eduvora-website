@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import SuccessStoriesSection from "@/components/reviews/SuccessStories";
 import Link from "next/link";
 import JsonLd from "@/components/seo/JsonLd";
 import { faqLd, pageMeta } from "@/lib/seo";
@@ -103,6 +104,9 @@ export default async function Home() {
       {/* 6. Founder (+ "Why EDUVORA?" cards — edit or hide in Admin → Settings) */}
       <FounderSection />
       <WhySection />
+
+      {/* Success stories (real students, with consent — hidden when there are none) */}
+      <SuccessStoriesSection className="bg-slate-50" />
 
       {/* 7. Reviews + video testimonials (both hidden when there are none) */}
       {reviews.length > 0 && <ReviewsSection reviews={reviews} mobileShort />}

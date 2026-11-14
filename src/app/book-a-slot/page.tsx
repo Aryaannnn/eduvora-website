@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import RatingLine from "@/components/reviews/RatingLine";
 import JsonLd from "@/components/seo/JsonLd";
 import { pageMeta, breadcrumbLd } from "@/lib/seo";
 import BookingForm from "@/components/BookingForm";
@@ -33,7 +34,8 @@ export default function BookASlotPage() {
       </section>
       <section id="book" className="container-page scroll-mt-24 py-10 sm:py-14">
         <h2 className="mb-2 text-2xl font-extrabold text-brand-700">Book a session</h2>
-        <p className="mb-8 text-slate-600">Have a package? Your session credit is used automatically. Otherwise pay for a single slot.</p>
+        <p className="mb-3 text-slate-600">Have a package? Your session credit is used automatically. Otherwise pay for a single slot.</p>
+        <RatingLine className="mb-8 !justify-start" />
         <BookingForm />
       </section>
     </>
