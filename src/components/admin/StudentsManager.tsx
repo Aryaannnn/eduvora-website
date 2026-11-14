@@ -1,13 +1,32 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { adjustSessionCredits, adminDeleteAccount, setPredictorAccess, setUserRole } from "@/app/admin/actions";
 import { csvDateTimeIST, formatDateTime } from "@/lib/format";
 import { LockIcon, SearchIcon, ShieldIcon, TargetIcon } from "../Icons";
 import { AdminHeader, Notice, downloadCsv } from "./ui";
 
 type UserRole = "student" | "parent" | "counsellor" | "admin";
+
+const ROLES: Record<UserRole, { label: string; badge: string; select: string }> = {
+  student: { label: "Student", badge: "bg-sky-50 text-sky-700 ring-sky-200", select: "bg-white text-slate-700 ring-slate-200" },
+  parent: { label: "Parent", badge: "bg-amber-50 text-amber-800 ring-amber-200", select: "bg-amber-50 text-amber-800 ring-amber-200" },
+  counsellor: { label: "Counsellor", badge: "bg-indigo-50 text-indigo-700 ring-indigo-200", select: "bg-indigo-50 text-indigo-700 ring-indigo-200" },
+  admin: { label: "Admin", badge: "bg-red-50 text-red-700 ring-red-200", select: "bg-red-50 text-red-700 ring-red-200" },
+};
+const roleInfo = (r: string) => ROLES[r as UserRole] ?? ROLES.student;
+const WHAT_CHANGES: Record<UserRole, string> = {
+  student: "They lose any staff access and see the normal student dashboard.",
+  parent: "They lose any staff access and see the normal dashboard.",
+  counsellor: "They can open Bookings (no amounts), Leads, Students (no payments) and Enquiries. They can NOT see revenue, payments, prices, coupons, settings or exports. They must set up 2-step login the first time.",
+  admin: "They get FULL control: products, prices, payments, settings and other users' roles. They must set up 2-step login the first time.",
+};
+
+function RoleBadge({ role }: { role: string }) {
+  const r = roleInfo(role);
+  return <span className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-bold ring-1 ${r.badge}`}>{r.label}</span>;
+}
 
 export type AdminStudent = {
   id: string; full_name: string | null; email: string | null; phone: string | null; role: string; created_at: string; bought: string[];
@@ -51,13 +70,21 @@ export default function StudentsManager({ students, currentUserId, setupMissing 
   const router = useRouter();
   const [q, setQ] = useState("");
   const [onlyFree, setOnlyFree] = useState(false);
+  const [roleFilter, setRoleFilter] = useState<"all" | UserRole>("all");
+  // Roles changed on this screen (shown at once, without reloading the page)
+  const [changedRoles, setChangedRoles] = useState<Record<string, UserRole>>({});
+  const roleOf = (s: AdminStudent) => changedRoles[s.id] ?? s.role;
+  // The "Change role?" popup
+  const [ask, setAsk] = useState<{ s: AdminStudent; from: string; to: UserRole } | null>(null);
+  const [typedEmail, setTypedEmail] = useState("");
   const [msg, setMsg] = useState<{ kind: "error" | "success"; text: string } | null>(null);
   const [pending, start] = useTransition();
 
   const shown = students.filter(
-    (s) => (!onlyFree || s.freeItems.length > 0) && (!q || `${s.full_name ?? ""} ${s.email ?? ""} ${s.phone ?? ""}`.toLowerCase().includes(q.toLowerCase())),
+    (s) => (roleFilter === "all" || roleOf(s) === roleFilter) && (!onlyFree || s.freeItems.length > 0) && (!q || `${s.full_name ?? ""} ${s.email ?? ""} ${s.phone ?? ""}`.toLowerCase().includes(q.toLowerCase())),
   );
   const freeUsers = students.filter((s) => s.freeItems.length > 0).length;
+  const roleCount = (r: UserRole) => students.filter((s) => roleOf(s) === r).length;
 
   // Deletion request (student asked by email/WhatsApp): type DELETE to confirm
   const deleteAccount = (s: AdminStudent) => {
@@ -75,17 +102,24 @@ export default function StudentsManager({ students, currentUserId, setupMissing 
   };
 
   const changeRole = (s: AdminStudent, role: UserRole) => {
-    if (role === s.role) return;
-    const who = s.full_name || s.email || "this user";
-    const text =
-      role === "admin" ? `Make ${who} an ADMIN? They will be able to change products, prices, payments, settings and other users.`
-      : role === "counsellor" ? `Make ${who} a COUNSELLOR?\n\nThey can open: Bookings (no amounts), Leads, Students (no payments) and Enquiries.\nThey can NOT see revenue, payments, prices, coupons, settings or exports.\nThey must set up 2-step login (authenticator app) the first time.`
-      : `Change ${who} to ${role}? They lose any staff access.`;
-    if (!confirm(text)) return;
+    if (role === roleOf(s)) return;
+    setTypedEmail("");
+    setAsk({ s, from: roleOf(s), to: role });
+  };
+
+  const confirmRole = () => {
+    if (!ask) return;
+    const { s, to } = ask;
     start(async () => {
-      const res = await setUserRole(s.id, role);
-      setMsg(res.ok ? { kind: "success", text: res.message ?? "Saved." } : { kind: "error", text: res.error });
-      if (res.ok) router.refresh();
+      const res = await setUserRole(s.id, to, to === "admin" ? typedEmail : undefined);
+      if (res.ok) {
+        setChangedRoles((m) => ({ ...m, [s.id]: res.data?.newRole ?? to }));
+        setMsg({ kind: "success", text: `${s.full_name || s.email || "User"}: ${res.message ?? "Role changed."}` });
+        router.refresh(); // quietly re-syncs the list (no page reload)
+      } else {
+        setMsg({ kind: "error", text: res.error });
+      }
+      setAsk(null);
     });
   };
 
@@ -138,9 +172,35 @@ export default function StudentsManager({ students, currentUserId, setupMissing 
           <input type="checkbox" checked={onlyFree} onChange={(e) => setOnlyFree(e.target.checked)} className="h-4 w-4 accent-emerald-600" />
           Only students who used free resources ({freeUsers}) — good for follow-up calls
         </label>
+        <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Filter by role">
+          {(["all", "student", "parent", "counsellor", "admin"] as const).filter((r) => r !== "parent" || roleCount("parent") > 0).map((r) => (
+            <button
+              key={r}
+              type="button"
+              onClick={() => setRoleFilter(r)}
+              aria-pressed={roleFilter === r}
+              className={`rounded-full px-3 py-1 text-xs font-bold ring-1 transition ${roleFilter === r ? "bg-slate-900 text-white ring-slate-900" : r === "all" ? "bg-white text-slate-700 ring-slate-200 hover:bg-slate-50" : `${ROLES[r].badge} hover:brightness-95`}`}
+            >
+              {r === "all" ? `All (${students.length})` : `${ROLES[r].label}s (${roleCount(r)})`}
+            </button>
+          ))}
+        </div>
       </div>
       {setupMissing && <div className="mb-4"><Notice kind="error">Predictor access switches need supabase/predictor-access.sql — run it in Supabase → SQL Editor.</Notice></div>}
-      {msg && <div className="mb-4"><Notice kind={msg.kind}>{msg.text}</Notice></div>}
+      {msg && <div className="mb-4" role="status"><Notice kind={msg.kind}>{msg.text}</Notice></div>}
+      {ask && (
+        <RoleDialog
+          name={ask.s.full_name || ask.s.email || "this user"}
+          email={ask.s.email}
+          from={ask.from}
+          to={ask.to}
+          typedEmail={typedEmail}
+          setTypedEmail={setTypedEmail}
+          busy={pending}
+          onCancel={() => !pending && setAsk(null)}
+          onConfirm={confirmRole}
+        />
+      )}
 
       <div className={`card overflow-x-auto ${pending ? "opacity-60" : ""}`}>
         <table className="w-full min-w-[1260px] text-left text-sm">
@@ -162,7 +222,7 @@ export default function StudentsManager({ students, currentUserId, setupMissing 
               <tr key={s.id}>
                 <td className="px-4 py-3">
                   <p className="font-semibold text-slate-900">{s.full_name || "—"}</p>
-                  <p className="text-xs capitalize text-slate-500">{s.role}</p>
+                  <p className="mt-0.5"><RoleBadge role={roleOf(s)} /></p>
                   <SignedUpWith providers={s.signedUpWith} />
                 </td>
                 <td className="px-4 py-3 text-slate-600">
@@ -193,7 +253,7 @@ export default function StudentsManager({ students, currentUserId, setupMissing 
                         {s.credits.unlimited ? "Unlimited" : s.credits.total > 0 || s.credits.used > 0 ? `${Math.max(s.credits.total - s.credits.used, 0)} of ${s.credits.total} left` : "—"}
                       </p>
                       {s.credits.used > 0 && <p className="text-slate-500">{s.credits.used} booked</p>}
-                      {s.role !== "admin" && <button type="button" onClick={() => adjustCredits(s)} className="mt-1 font-semibold text-brand-700 underline">Adjust</button>}
+                      {roleOf(s) !== "admin" && <button type="button" onClick={() => adjustCredits(s)} className="mt-1 font-semibold text-brand-700 underline">Adjust</button>}
                     </>
                   ) : <span className="text-slate-400">Run packages.sql</span>}
                 </td>
@@ -203,7 +263,7 @@ export default function StudentsManager({ students, currentUserId, setupMissing 
                     {s.predictor.access ? "Yes" : "No"}
                   </span>
                   <p className="mt-1 text-[11px] text-slate-500">{REASON[s.predictor.reason]}</p>
-                  {s.role !== "admin" && !setupMissing && (
+                  {roleOf(s) !== "admin" && !setupMissing && (
                     <select
                       value={s.predictor.override === true ? "give" : s.predictor.override === false ? "remove" : "auto"}
                       onChange={(e) => changePredictor(s, e.target.value as "auto" | "give" | "remove")}
@@ -224,17 +284,17 @@ export default function StudentsManager({ students, currentUserId, setupMissing 
                       <label className="sr-only" htmlFor={`role-${s.id}`}>Role of {s.full_name || s.email || "user"}</label>
                       <select
                         id={`role-${s.id}`}
-                        value={s.role}
+                        value={roleOf(s)}
                         onChange={(e) => changeRole(s, e.target.value as UserRole)}
                         disabled={pending}
-                        className={`rounded-lg border-0 px-2 py-1.5 text-xs font-bold ring-1 ${s.role === "admin" ? "bg-red-50 text-red-700 ring-red-200" : s.role === "counsellor" ? "bg-indigo-50 text-indigo-700 ring-indigo-200" : "bg-white text-slate-700 ring-slate-200"}`}
+                        className={`rounded-lg border-0 px-2 py-1.5 text-xs font-bold ring-1 ${roleInfo(roleOf(s)).select}`}
                       >
                         <option value="student">Student</option>
-                        <option value="parent">Parent</option>
-                        <option value="counsellor">Counsellor (staff)</option>
+                        {roleOf(s) === "parent" && <option value="parent">Parent</option>}
+                        <option value="counsellor">Counsellor</option>
                         <option value="admin">Admin</option>
                       </select>
-                      {s.role !== "admin" && s.role !== "counsellor" && (
+                      {roleOf(s) !== "admin" && roleOf(s) !== "counsellor" && (
                         <button type="button" onClick={() => deleteAccount(s)} className="text-xs font-semibold text-red-600 underline">Delete account</button>
                       )}
                     </div>
@@ -246,5 +306,67 @@ export default function StudentsManager({ students, currentUserId, setupMissing 
         </table>
       </div>
     </>
+  );
+}
+
+/** "Change Riya's role from Student to Counsellor?" — Confirm / Cancel. Making an admin needs their email typed. */
+function RoleDialog({
+  name, email, from, to, typedEmail, setTypedEmail, busy, onCancel, onConfirm,
+}: {
+  name: string; email: string | null; from: string; to: UserRole; typedEmail: string;
+  setTypedEmail: (v: string) => void; busy: boolean; onCancel: () => void; onConfirm: () => void;
+}) {
+  const box = useRef<HTMLDivElement>(null);
+  const cancelRef = useRef(onCancel);
+  useEffect(() => { cancelRef.current = onCancel; });
+  const needsEmail = to === "admin";
+  const emailOk = !needsEmail || (!!email && typedEmail.trim().toLowerCase() === email.trim().toLowerCase());
+  useEffect(() => {
+    const prev = document.activeElement as HTMLElement | null;
+    box.current?.querySelector<HTMLElement>("input, button")?.focus();
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") cancelRef.current(); };
+    window.addEventListener("keydown", onKey);
+    return () => { window.removeEventListener("keydown", onKey); prev?.focus?.(); };
+  }, []);
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }}>
+      <div ref={box} role="dialog" aria-modal="true" aria-labelledby="role-dialog-title" className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+        <h2 id="role-dialog-title" className="text-lg font-extrabold text-slate-900">
+          Change {name}&apos;s role from {roleInfo(from).label} to {ROLES[to].label}?
+        </h2>
+        <p className="mt-2 flex items-center gap-2 text-sm"><RoleBadge role={from} /> <span aria-hidden>→</span> <RoleBadge role={to} /></p>
+        <p className="mt-3 text-sm text-slate-600">{WHAT_CHANGES[to]}</p>
+        <p className="mt-2 text-xs text-slate-500">It applies the next time they open a page. The change is saved in the Activity Log.</p>
+        {needsEmail && (
+          <div className="mt-4 rounded-xl bg-red-50 p-3 ring-1 ring-red-200">
+            <label htmlFor="role-confirm-email" className="text-sm font-bold text-red-800">
+              To confirm, type their email{email ? <>: <span className="break-all font-mono">{email}</span></> : ""}
+            </label>
+            <input
+              id="role-confirm-email"
+              type="email"
+              autoComplete="off"
+              value={typedEmail}
+              onChange={(e) => setTypedEmail(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && emailOk && !busy) onConfirm(); }}
+              className="input mt-2"
+              placeholder="their@email.com"
+            />
+            {!email && <p className="mt-1 text-xs text-red-700">This account has no email, so it can&apos;t be made an admin.</p>}
+          </div>
+        )}
+        <div className="mt-6 flex justify-end gap-2">
+          <button type="button" onClick={onCancel} disabled={busy} className="btn-light">Cancel</button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={busy || !emailOk}
+            className={`btn-primary disabled:cursor-not-allowed disabled:opacity-50 ${to === "admin" ? "!bg-red-600 hover:!bg-red-700" : ""}`}
+          >
+            {busy ? "Saving…" : `Yes, make ${ROLES[to].label}`}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

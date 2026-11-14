@@ -1,4 +1,5 @@
 -- =====================================================================
+--  ⚠️ NEW: just run supabase/roles.sql instead — it includes this whole file.
 --  COUNSELLOR STAFF ROLE
 --  Run in Supabase → SQL Editor → New query → paste → Run. Safe to run again.
 --  Run AFTER admin-security.sql and leads.sql. Then run leads.sql ONCE MORE

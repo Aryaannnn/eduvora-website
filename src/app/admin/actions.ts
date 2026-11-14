@@ -544,7 +544,7 @@ export async function assignLead(id: string, staffId: string | null): Promise<Ac
   const s = await adminOrError();
   if (isError(s)) return s;
   const { error } = await s.supabase.from("leads").update({ assigned_to: staffId || null }).eq("id", id);
-  if (error && /assigned_to/.test(error.message) && /column/.test(error.message)) return fail("Run supabase/counsellor.sql in Supabase first.");
+  if (error && /assigned_to/.test(error.message) && /column/.test(error.message)) return fail("Run supabase/roles.sql in Supabase first.");
   return dbResult(error, staffId ? "Lead assigned." : "Lead unassigned.");
 }
 
@@ -554,7 +554,7 @@ export async function assignBooking(id: string, staffId: string | null): Promise
   const s = await adminOrError();
   if (isError(s)) return s;
   const { error } = await s.supabase.from("bookings").update({ assigned_to: staffId || null }).eq("id", id);
-  if (error && /assigned_to/.test(error.message) && /column/.test(error.message)) return fail("Run supabase/counsellor.sql in Supabase first.");
+  if (error && /assigned_to/.test(error.message) && /column/.test(error.message)) return fail("Run supabase/roles.sql in Supabase first.");
   return dbResult(error, staffId ? "Booking assigned." : "Booking unassigned.");
 }
 
@@ -564,7 +564,7 @@ export async function staffCompleteBooking(id: string): Promise<ActionResult> {
   if (isError(s)) return s;
   const { error } = await s.supabase.rpc("staff_complete_booking", { p_booking: id });
   updateTag("slots");
-  if (error) return fail(/function/i.test(error.message) && /find/i.test(error.message) ? "Run supabase/counsellor.sql in Supabase first." : error.message);
+  if (error) return fail(/function/i.test(error.message) && /find/i.test(error.message) ? "Run supabase/roles.sql in Supabase first." : error.message);
   return { ok: true, message: "Marked as completed — the student gets the feedback email 1 hour after the session ends." };
 }
 
@@ -575,7 +575,7 @@ export async function addBookingNote(bookingId: string, body: string): Promise<A
   if (!text) return fail("Please write a note.");
   if (text.length > 2000) return fail("Please keep the note under 2000 characters.");
   const { error } = await s.supabase.from("booking_notes").insert({ booking_id: bookingId, body: text });
-  if (error && /booking_notes/.test(error.message)) return fail("Run supabase/counsellor.sql in Supabase first.");
+  if (error && /booking_notes/.test(error.message)) return fail("Run supabase/roles.sql in Supabase first.");
   return dbResult(error, "Note added.");
 }
 
@@ -641,26 +641,55 @@ export async function saveSiteStats(rows: { id?: string; label: string; value: s
 }
 
 // ---------------------------------------------------------------- STUDENTS
-export async function setUserRole(userId: string, role: "admin" | "counsellor" | "student" | "parent"): Promise<ActionResult> {
+export type UserRole = "admin" | "counsellor" | "student" | "parent";
+const ROLE_NAME: Record<UserRole, string> = { admin: "Admin", counsellor: "Counsellor", student: "Student", parent: "Parent" };
+
+/**
+ * Change someone's role (Admin → Students). Only admins (checked here on the server).
+ * The change itself runs in the database function change_user_role() with the
+ * server-only service key — nobody can change a role from the browser. That function
+ * also enforces: no changing your own role, the last admin stays, making an admin
+ * needs their email typed, and it writes the Activity Log entry.
+ */
+export async function setUserRole(
+  userId: string,
+  role: UserRole,
+  confirmEmail?: string,
+): Promise<ActionResult<{ oldRole: UserRole; newRole: UserRole }>> {
   const s = await adminOrError();
   if (isError(s)) return s;
-  if (!["admin", "counsellor", "student", "parent"].includes(role)) return fail("Unknown role.");
+  if (!(role in ROLE_NAME)) return fail("Unknown role.");
+  if (typeof userId !== "string" || !/^[0-9a-f-]{36}$/i.test(userId)) return fail("User not found.");
   if (userId === s.user.id) return fail("You can't change your own role (so you don't lock yourself out).");
-  const { error } = await s.supabase.from("profiles").update({ role }).eq("id", userId);
-  if (error && /profiles_role_check/.test(error.message)) return fail("Run supabase/counsellor.sql in Supabase first.");
-  if (!error) {
-    // Staff accounts aren't leads; un-assign work from someone who is no longer staff
-    const db = getAdminSupabase();
-    if (db && (role === "admin" || role === "counsellor")) await db.from("leads").delete().eq("user_id", userId);
-    if (db && role !== "admin" && role !== "counsellor") {
-      await db.from("leads").update({ assigned_to: null }).eq("assigned_to", userId);
-      await db.from("bookings").update({ assigned_to: null }).eq("assigned_to", userId);
-    }
+  if (role === "admin" && !confirmEmail?.trim()) return fail("To make someone an admin, type their email address exactly.");
+
+  const db = getAdminSupabase();
+  if (!db) return fail("Role changes aren't available right now. Please try again later.");
+  const { data, error } = await db.rpc("change_user_role", {
+    p_user: userId,
+    p_new_role: role,
+    p_actor: s.user.id,
+    p_confirm_email: role === "admin" ? confirmEmail!.trim().slice(0, 320) : null,
+  });
+  if (error) {
+    // The one-time database update (supabase/roles.sql) hasn't been run yet
+    if (/change_user_role|function|schema cache/i.test(error.message) && /find|exist|schema cache/i.test(error.message))
+      return fail("Role changes aren't switched on yet — the one-time database update hasn't been installed.");
+    // Messages written in change_user_role() are already plain English
+    if (/^(Only admins|You can't|To make someone|This is the last admin|User not found|Unknown role)/.test(error.message)) return fail(error.message);
+    return fail(friendlyDbError(error.message));
   }
-  return dbResult(
-    error,
-    role === "admin" ? "User is now an admin." : role === "counsellor" ? "User is now a counsellor. They must set up 2-step login when they open the staff panel." : `Role changed to ${role}.`,
-  );
+  const r = (data ?? {}) as { changed?: boolean; old_role?: UserRole; new_role?: UserRole };
+  const oldRole = (r.old_role ?? role) as UserRole;
+  if (!r.changed) return { ok: true, message: `Already ${ROLE_NAME[role]} — nothing changed.`, data: { oldRole, newRole: role } };
+  return {
+    ok: true,
+    message:
+      `Role changed from ${ROLE_NAME[oldRole]} to ${ROLE_NAME[role]}.` +
+      (role === "counsellor" || role === "admin" ? " They'll need to set up 2-step login when they open the staff panel." : "") +
+      " It applies the next time they open a page.",
+    data: { oldRole, newRole: role },
+  };
 }
 
 /** Predictor access by hand: "give" / "remove" override, or "auto" (paid counselling decides). */

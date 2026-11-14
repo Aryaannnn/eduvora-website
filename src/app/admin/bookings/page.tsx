@@ -45,7 +45,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/admin/booki
         .limit(1000),
       staffExtras(s),
     ]);
-    if (error) return <p className="card p-6 text-red-600">Bookings are not set up for counsellors yet (admin: run supabase/counsellor.sql).</p>;
+    if (error) return <p className="card p-6 text-red-600">Bookings are not set up for counsellors yet (admin: run supabase/roles.sql once).</p>;
     return <StaffBookings bookings={(data ?? []) as StaffBooking[]} notes={extras.notes} today={todayInIndia()} me={s.user.id} staffNames={extras.staffNames} notAllowed={sp.notAllowed === "1"} />;
   }
 

@@ -44,7 +44,7 @@ async function Content() {
   // Counsellors: view only, no payment information (staff_students view in supabase/counsellor.sql)
   if (role === "counsellor") {
     const { data, error } = await s.supabase.from("staff_students").select("id,full_name,email,phone,role,created_at,sessions_booked").order("created_at", { ascending: false }).limit(5000);
-    if (error) return <p className="card p-6 text-red-600">Students are not set up for counsellors yet (admin: run supabase/counsellor.sql).</p>;
+    if (error) return <p className="card p-6 text-red-600">Students are not set up for counsellors yet (admin: run supabase/roles.sql once).</p>;
     return <StaffStudents students={(data ?? []) as StaffStudent[]} />;
   }
   const [profiles, purchases, paidCounselling, overrides, signIn, freeAttempts, pkgPurchases, creditBookings, adjustments] = await Promise.all([
