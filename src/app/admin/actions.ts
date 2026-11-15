@@ -269,6 +269,34 @@ export async function addSlotsBulk(input: {
   return dbResult(error, `${count ?? rows.length} slot(s) of 30 minutes added${skipped ? ` (skipped: ${skipped})` : ""}.`);
 }
 
+/** Admin → Slots → "Add test slots": next 7 days, 10–1 and 4–6, ₹499, is_test (supabase/test-slots.sql). */
+export async function addTestSlots(): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const { data, error } = await s.supabase.rpc("add_test_slots");
+  updateTag("slots");
+  if (error) return fail(/add_test_slots/.test(error.message) ? "Run supabase/test-slots.sql in Supabase first." : friendlyDbError(error.message));
+  const r = (data ?? {}) as { created?: number; skipped?: number; booked?: number };
+  return {
+    ok: true,
+    message: `Test slots added: ${r.created ?? 0} new 30-minute slot(s) at ₹499${r.skipped ? `, ${r.skipped} skipped (a slot was already there)` : ""}${r.booked ? `. ${r.booked} marked as booked by a sample test booking, so you can see "Booked".` : "."}`,
+  };
+}
+
+/** Admin → Slots → "Delete all test slots": only test slots without a paid booking. */
+export async function deleteTestSlots(): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const { data, error } = await s.supabase.rpc("delete_test_slots");
+  updateTag("slots");
+  if (error) return fail(/delete_test_slots/.test(error.message) ? "Run supabase/test-slots.sql in Supabase first." : friendlyDbError(error.message));
+  const r = (data ?? {}) as { removed_slots?: number; removed_bookings?: number; kept_with_payment?: number };
+  return {
+    ok: true,
+    message: `Deleted ${r.removed_slots ?? 0} test slot(s)${r.removed_bookings ? ` and ${r.removed_bookings} unpaid / sample booking(s)` : ""}.${r.kept_with_payment ? ` ${r.kept_with_payment} test slot(s) with a payment were kept.` : ""}`,
+  };
+}
+
 /** Replace FUTURE slots that were never booked with 30-minute slots (supabase/voice-calls.sql). */
 export async function convertSlotsTo30(): Promise<ActionResult> {
   const s = await adminOrError();

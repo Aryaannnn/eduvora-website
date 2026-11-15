@@ -17,13 +17,10 @@ export default function SlotsPage() {
 
 async function Content() {
   const s = await requireAdmin("/admin/slots");
-  const { data, error } = await s.supabase
-    .from("slots")
-    .select("id,date,start_time,end_time,price,is_available,bookings(id,name,status)")
-    .gte("date", todayInIndia())
-    .order("date")
-    .order("start_time")
-    .limit(1000);
+  const load = (cols: string) =>
+    s.supabase.from("slots").select(cols).gte("date", todayInIndia()).order("date").order("start_time").limit(1000);
+  let { data, error } = await load("id,date,start_time,end_time,price,is_available,is_test,bookings(id,name,status)");
+  if (error?.code === "42703") ({ data, error } = await load("id,date,start_time,end_time,price,is_available,bookings(id,name,status)")); // test-slots.sql not run yet
   if (error) return <p className="card p-6 text-red-600">Could not load slots: {error.message}</p>;
-  return <SlotsManager slots={(data ?? []) as AdminSlot[]} today={todayInIndia()} />;
+  return <SlotsManager slots={(data ?? []) as unknown as AdminSlot[]} today={todayInIndia()} />;
 }

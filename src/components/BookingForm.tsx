@@ -128,18 +128,43 @@ export default function BookingForm({ initialBoard }: { initialBoard: SlotBoard 
 
   const update = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setForm({ ...form, [e.target.name]: e.target.value });
 
+  // Where to come back to after logging in: this page with the same slot chosen
+  const backHere = `/book-a-slot${slotId ? `?slot=${encodeURIComponent(slotId)}` : ""}#book`;
+  const loginHref = `/login?next=${encodeURIComponent(backHere)}`;
+
+  /** Not logged in yet → save what they typed + the slot, log in, come back to the same slot. */
+  function goToLogin() {
+    try {
+      sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ ...form, slotId }));
+    } catch {
+      /* private mode — the slot is in the address anyway */
+    }
+    router.push(loginHref);
+  }
+
+  /** Our own check of the details, with a clear message (instead of a small browser bubble). */
+  function detailsProblem(): { field: string; text: string } | null {
+    if (form.name.trim().length < 2) return { field: "name", text: "Please enter the student's name." };
+    if (!/^(\+?91[ -]?|0)?[6-9]\d{4}[ -]?\d{5}$/.test(form.phone.trim())) return { field: "phone", text: "Please enter the 10-digit mobile number we should call you on (e.g. 98765 43210)." };
+    if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) return { field: "email", text: "Please check the email address (or leave it empty)." };
+    const m = form.expectedMarks.trim();
+    if (m && (Number.isNaN(Number(m)) || Number(m) < 0 || Number(m) > 125)) return { field: "expectedMarks", text: "Expected marks must be between 0 and 125 (or leave it empty)." };
+    return null;
+  }
+
   async function pay() {
     setNotice(null);
     setFormError("");
-    if (!(await getSb())) return setFormError("Booking will work once Supabase is connected.");
-    if (!selected) return setFormError("Please choose a date and time first.");
-    if (!user) {
-      try {
-        sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ ...form, slotId }));
-      } catch {
-        /* ignore */
-      }
-      return router.push("/login?next=/book-a-slot");
+    if (!(await getSb())) return setFormError("Booking is not available right now. Please try again later.");
+    if (!selected) return setFormError(lostSlot ? "The time you chose was just booked. Please choose another time." : "Please choose a date and time first.");
+    if (!user) return goToLogin(); // details can be filled after logging in
+    const problem = detailsProblem();
+    if (problem) {
+      setFormError(problem.text);
+      const el = document.getElementById(problem.field);
+      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+      el?.focus({ preventScroll: true });
+      return;
     }
 
     setPhase("creating");
@@ -158,7 +183,7 @@ export default function BookingForm({ initialBoard }: { initialBoard: SlotBoard 
 
     if (res.status === 401) {
       setPhase("idle");
-      return router.push("/login?next=/book-a-slot");
+      return goToLogin(); // login ran out → log in again, same slot
     }
     if (res.status === 409 || d.slotTaken) {
       // Checked on the server: someone else got this slot first (or it starts too soon)
@@ -226,12 +251,12 @@ export default function BookingForm({ initialBoard }: { initialBoard: SlotBoard 
     );
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-[1fr_22rem]">
+    <form onSubmit={handleSubmit} noValidate className="grid gap-8 lg:grid-cols-[1fr_22rem]">
       <div className="min-w-0 space-y-8">
         {!user && (
           <div className="flex flex-col gap-3 rounded-2xl bg-brand-50 p-4 ring-1 ring-brand-100 sm:flex-row sm:items-center sm:justify-between">
             <p className="flex items-center gap-2 text-sm font-semibold text-brand-800"><UserIcon className="h-4 w-4" /> Please sign in to book a slot — it takes 30 seconds. Your choices are saved.</p>
-            <Link href="/login?next=/book-a-slot" className="btn-primary !py-2.5">Sign In / Sign Up</Link>
+            <Link href={loginHref} onClick={() => { try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ ...form, slotId })); } catch { /* ignore */ } }} className="btn-primary !py-2.5">Sign In / Sign Up</Link>
           </div>
         )}
 
@@ -245,6 +270,9 @@ export default function BookingForm({ initialBoard }: { initialBoard: SlotBoard 
             selectedId={selected?.id ?? ""}
             onSelect={(s) => {
               setSlotId(s.id);
+              // Keep the chosen slot in the address (refresh / log in → same slot)
+              window.history.replaceState(null, "", `/book-a-slot?slot=${encodeURIComponent(s.id)}#book`);
+              void refreshBoard(); // re-check with the server: taken meanwhile → shown as booked at once
               setFormError("");
               if (notice?.kind === "taken") setNotice(null);
               // Phones: bring the details form into view

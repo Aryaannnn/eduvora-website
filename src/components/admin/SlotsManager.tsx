@@ -2,14 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { addSlot, addSlotsBulk, convertSlotsTo30, deleteSlot, setSlotAvailable } from "@/app/admin/actions";
+import { addSlot, addSlotsBulk, addTestSlots, convertSlotsTo30, deleteSlot, deleteTestSlots, setSlotAvailable } from "@/app/admin/actions";
 import { dailyStarts, slotEnd } from "@/lib/slot-time";
 import { formatDate, formatPrice, formatTime } from "@/lib/format";
 import { PlusIcon, TrashIcon } from "../Icons";
 import { AdminHeader, Label, Modal, Notice, Toggle } from "./ui";
 
 export type AdminSlot = {
-  id: string; date: string; start_time: string; end_time: string; price: number; is_available: boolean;
+  id: string; date: string; start_time: string; end_time: string; price: number; is_available: boolean; is_test?: boolean;
   bookings: { id: string; name: string; status: string }[];
 };
 
@@ -30,6 +30,7 @@ export default function SlotsManager({ slots, today }: { slots: AdminSlot[]; tod
 
   const byDate = slots.reduce<Record<string, AdminSlot[]>>((acc, s) => ((acc[s.date] ??= []).push(s), acc), {});
   const minutes = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
+  const testCount = slots.filter((s) => s.is_test).length;
   const longSlots = slots.filter((s) => minutes(s.end_time) - minutes(s.start_time) !== 30).length;
 
   return (
@@ -38,6 +39,27 @@ export default function SlotsManager({ slots, today }: { slots: AdminSlot[]; tod
         <button type="button" onClick={() => setModal("single")} className="btn-light"><PlusIcon /> Add one slot</button>
         <button type="button" onClick={() => setModal("bulk")} className="btn-primary"><PlusIcon /> Add many slots</button>
       </AdminHeader>
+
+      {/* Test slots: for trying the booking flow (Razorpay test mode) */}
+      <div className="mb-4 flex flex-wrap items-center gap-3 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+        <p className="min-w-0 flex-1 text-sm text-slate-600">
+          <strong className="text-slate-800">Test slots</strong> — next 7 days, 10:00 AM–1:00 PM and 4:00 PM–6:00 PM, ₹499, marked <span className="rounded bg-violet-100 px-1.5 py-0.5 text-xs font-bold text-violet-800">TEST</span>. Two get a sample booking so you can see &ldquo;Booked&rdquo;.
+          {testCount > 0 && <> Now: <strong>{testCount}</strong> test slot{testCount === 1 ? "" : "s"}.</>}
+        </p>
+        <button type="button" disabled={pending} onClick={() => run(() => addTestSlots())} className="btn-light !py-2.5 text-sm disabled:opacity-60"><PlusIcon /> Add test slots</button>
+        <button
+          type="button"
+          disabled={pending || testCount === 0}
+          onClick={() => {
+            if (confirm(`Delete all test slots?
+
+Removes every test slot that has NO paid booking, together with its unpaid and sample bookings. Test slots with a payment are kept. This can't be undone.`)) run(() => deleteTestSlots());
+          }}
+          className="btn-light !py-2.5 text-sm !text-red-700 disabled:opacity-50"
+        >
+          <TrashIcon className="h-4 w-4" /> Delete all test slots
+        </button>
+      </div>
 
       {longSlots > 0 && (
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-amber-50 p-4 ring-1 ring-amber-200">
@@ -72,7 +94,7 @@ export default function SlotsManager({ slots, today }: { slots: AdminSlot[]; tod
                   return (
                     <li key={s.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
                       <div>
-                        <p className="font-semibold text-slate-900">{formatTime(s.start_time)} – {formatTime(s.end_time)} <span className="font-normal text-slate-500">· {formatPrice(s.price)}</span></p>
+                        <p className="font-semibold text-slate-900">{formatTime(s.start_time)} – {formatTime(s.end_time)} <span className="font-normal text-slate-500">· {formatPrice(s.price)}</span>{s.is_test && <span className="ml-2 rounded bg-violet-100 px-1.5 py-0.5 text-[11px] font-bold text-violet-800">TEST</span>}</p>
                         <p className="text-xs">
                           {active ? <span className="font-semibold text-brand-700">Booked by {active.name} ({active.status})</span>
                             : s.is_available ? <span className="text-green-700">Available</span>
