@@ -91,14 +91,17 @@ export const siteConfig = {
 
   // ---------- Contact ----------
   // 🔒 Your FULL phone number is NOT stored here (this file is public).
-  //    It lives in .env.local / Vercel as CONTACT_PHONE.
-  //    • WhatsApp CHAT: only when showWhatsApp (below) is true — open to everyone then
-  //    • Direct CALL + the full number on screen: only students who paid, and admins
-  //    Only the masked version below is shown to everyone else:
-  phoneMasked: "+91 88719 XXXXX",
-  whatsappMessage: "Hi, I need help with VITEEE counselling", // (only used when showWhatsApp is true)
-  // ✏️ Shown on the contact page and in the footer
-  contactNote: "Send us an enquiry or email us anytime. Direct call support is available for enrolled students.",
+  //    It lives in .env.local / Vercel as CONTACT_PHONE (one number for calls AND WhatsApp).
+  //    Who sees it is set in Admin → Settings → "Contact mode":
+  //    • Open    → everyone: the number with Call + WhatsApp buttons
+  //    • Private → only paid students and admins (Help page, booking confirmation,
+  //                payment success); everyone else gets the free enquiry form
+  whatsappMessage: "Hi, I need help with VITEEE counselling", // ready-to-send WhatsApp message
+  // Default texts for the two modes (edit them in Admin → Settings → Contact mode)
+  contactTexts: {
+    openNote: "WhatsApp us anytime – replies 10 AM to 8 PM, Mon to Sat. Counselling calls are for booked students.",
+    privateNote: "We'll call you back within a few hours.",
+  },
   email: SUPPORT_EMAIL,
   // 📍 Address is HIDDEN everywhere (footer, contact page, invoices).
   //    To show it again: write your real address below and set showAddress: true
@@ -137,11 +140,6 @@ export const siteConfig = {
   // Shown on the home page and the booking page when no counselling slot is open
   noSlotsMessage: "New slots open soon. Please check back shortly.",
 
-  // ✏️ WhatsApp buttons, icons and links everywhere on the website and in emails.
-  //    false = all hidden (visitors use the free enquiry form, email and the call rules).
-  //    Set to true to bring every WhatsApp button back.
-  showWhatsApp: false,
-
   // Date shown on the policy pages
   policiesUpdated: "7 November 2026",
 
@@ -157,11 +155,13 @@ export const siteConfig = {
 // ---------------------------------------------------------------------
 //  Helper links (you normally don't need to change anything below)
 // ---------------------------------------------------------------------
-// These links do NOT contain your number. They go to small server routes (src/app/go/...):
-//   /go/whatsapp → opens WhatsApp for EVERYONE
-//   /go/call     → paid students & admins: phone dialer · everyone else: the "Unlock Direct Call" page
-export function whatsappLink(message: string = siteConfig.whatsappMessage) {
-  return `/go/whatsapp?text=${encodeURIComponent(message)}`;
+// These links do NOT contain your number. They go to small server routes (src/app/go/...),
+// which follow the Contact mode (Admin → Settings):
+//   /go/whatsapp → Open: WhatsApp for everyone · Private: paid students & admins, others → enquiry form
+//   /go/call     → Open: phone dialer for everyone · Private: paid students & admins, others → enquiry form
+// Pages that already know the number (Open mode, server side) pass waDigits for a direct wa.me link.
+export function whatsappLink(message: string = siteConfig.whatsappMessage, waDigits?: string | null) {
+  return waDigits ? `https://wa.me/${waDigits}?text=${encodeURIComponent(message)}` : `/go/whatsapp?text=${encodeURIComponent(message)}`;
 }
 
 export const phoneLink = "/go/call";

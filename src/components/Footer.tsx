@@ -2,6 +2,8 @@ import Link from "next/link";
 import { emailLink, siteConfig, whatsappLink } from "@/config/site";
 import { legalLinks } from "@/lib/navigation";
 import DirectContact from "./contact/DirectContact";
+import { getOpenContact } from "@/lib/contact";
+import { getContactMode } from "@/lib/contact-mode";
 import { InstagramIcon, MailIcon, MapPinIcon, WhatsAppIcon, YouTubeIcon } from "./Icons";
 import Logo from "./Logo";
 
@@ -25,12 +27,14 @@ const company = [
   ...legalLinks,
 ];
 
-export default function Footer() {
+export default async function Footer() {
+  // Contact mode (Admin → Settings): Open = number + WhatsApp for everyone · Private = enquiry form
+  const [cm, open] = await Promise.all([getContactMode(), getOpenContact()]);
   const socials = [
     { href: siteConfig.instagram, label: "Instagram", icon: InstagramIcon, newTab: true },
     { href: siteConfig.youtube, label: "YouTube", icon: YouTubeIcon, newTab: true },
-    // WhatsApp chat (only when showWhatsApp is on; /go/whatsapp adds the number on the server)
-    ...(siteConfig.showWhatsApp ? [{ href: whatsappLink(), label: "WhatsApp", icon: WhatsAppIcon, newTab: true }] : []),
+    // WhatsApp (Open mode only)
+    ...(open ? [{ href: whatsappLink(siteConfig.whatsappMessage, open.waDigits), label: "WhatsApp", icon: WhatsAppIcon, newTab: true }] : []),
   ];
 
   return (
@@ -56,9 +60,9 @@ export default function Footer() {
 
         <div>
           <p className="text-sm font-bold uppercase tracking-wider text-white">Get in touch</p>
-          <p className="mt-3 text-sm leading-relaxed text-slate-400">{siteConfig.contactNote}</p>
+          <p className="mt-3 text-sm leading-relaxed text-slate-400">{cm.mode === "open" ? cm.openNote : "Send us a free enquiry or email us anytime."}</p>
           <ul className="mt-4 space-y-3 text-sm">
-            {/* Full number & call only for paid students (checked on the server) */}
+            {/* Open: number + Call + WhatsApp · Private: the enquiry link (decided on the server) */}
             <li><DirectContact variant="footer" /></li>
             <li><a href={emailLink} className="flex gap-2.5 break-all hover:text-white"><MailIcon className="mt-0.5 h-4 w-4 shrink-0" />{siteConfig.email}</a></li>
             {siteConfig.showAddress && <li className="flex gap-2.5"><MapPinIcon className="mt-0.5 h-4 w-4 shrink-0" />{siteConfig.address}</li>}

@@ -1,14 +1,19 @@
 import Link from "next/link";
+import { siteConfig, whatsappLink } from "@/config/site";
 import { founder } from "@/content/founder";
+import { getOpenContact } from "@/lib/contact";
+import { getContactMode } from "@/lib/contact-mode";
 import FounderHighlights from "../FounderHighlights";
 import FounderPhoto from "../FounderPhoto";
-import { ArrowRightIcon, CalendarIcon } from "../Icons";
+import { ArrowRightIcon, CalendarIcon, PhoneIcon, WhatsAppIcon } from "../Icons";
 import Reveal from "../Reveal";
 
 // Home page founder section (short version). Text lives in src/content/founder.ts
 // Sits right under the hero slideshow: phones show the photo on top, text below.
 // eagerPhoto: right under the slideshow the photo is visible on phones straight away → load it first
-export default function FounderSection({ className = "", eagerPhoto = false }: { className?: string; eagerPhoto?: boolean }) {
+export default async function FounderSection({ className = "", eagerPhoto = false }: { className?: string; eagerPhoto?: boolean }) {
+  // Contact mode Open (Admin → Settings) → the number with Call + WhatsApp here too
+  const [open, cm] = await Promise.all([getOpenContact(), getContactMode()]);
   return (
     <section aria-labelledby="founder-heading" className={`section ${className}`}>
       <div className="container-page grid items-center gap-10 sm:gap-12 lg:grid-cols-[0.85fr_1.15fr]">
@@ -38,6 +43,19 @@ export default function FounderSection({ className = "", eagerPhoto = false }: {
               <CalendarIcon className="h-5 w-5" /> Book a Direct Call
             </Link>
           </div>
+          {open && (
+            <div className="mt-5 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+              <p className="text-sm font-semibold text-slate-500">Call or WhatsApp</p>
+              <p className="text-xl font-extrabold tracking-wide text-brand-700">{open.display}</p>
+              <p className="mt-1 text-xs leading-relaxed text-slate-600">{cm.openNote}</p>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <a href={`tel:${open.tel}`} className="btn-light !py-2.5 text-sm"><PhoneIcon className="h-4 w-4" /> Call</a>
+                <a href={whatsappLink(siteConfig.whatsappMessage, open.waDigits)} target="_blank" rel="noopener noreferrer" className="btn-primary !bg-[#25D366] !py-2.5 text-sm hover:!bg-[#1ebe5b]">
+                  <WhatsAppIcon className="h-4 w-4" /> WhatsApp
+                </a>
+              </div>
+            </div>
+          )}
           <Link href="/about" className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-brand-700 hover:underline">
             About EDUVORA <ArrowRightIcon className="h-4 w-4" />
           </Link>

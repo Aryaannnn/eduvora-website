@@ -140,8 +140,8 @@ async function Content({ searchParams }: { searchParams: PageProps<"/payment-suc
         </div>
       </div>
 
-      {/* Paid students also unlock the founder's direct number */}
-      {access.unlocked && !free && <DirectContact />}
+      {/* The number (Call + WhatsApp): Open mode = everyone, Private mode = paid students */}
+      {access.unlocked && !free && <DirectContact paidOnly />}
     </div>
   );
 }

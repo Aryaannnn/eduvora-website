@@ -19,7 +19,6 @@ import { csvDateTimeIST, formatDateTime, todayInIndia } from "@/lib/format";
 import { predictFromMarks } from "@/lib/predictor";
 import { DownloadIcon, EditIcon, PhoneIcon, PlusIcon, SearchIcon, TrashIcon, UploadIcon, WhatsAppIcon } from "../Icons";
 import { AdminHeader, Label, Modal, Notice, downloadCsv } from "./ui";
-import { siteConfig } from "@/config/site";
 
 export type AdminBand = { id: string; year: number; min_marks: number; max_marks: number; min_rank: number; max_rank: number; is_sample: boolean };
 export type AdminCutoff = { id: string; year: number; campus: string; branch: string; fee_category: number; counselling_phase: number; closing_rank: number; is_sample: boolean };
@@ -178,7 +177,7 @@ function Leads({ predictions }: { predictions: AdminPrediction[] }) {
                       {phone ? (
                         <span className="inline-flex gap-2">
                           <a href={`tel:+${phone}`} className="btn-primary !px-3 !py-1.5 text-xs"><PhoneIcon className="h-3.5 w-3.5" /> Call</a>
-                          {siteConfig.showWhatsApp && <a href={wa} target="_blank" rel="noopener noreferrer" className="btn-primary !bg-[#25D366] !px-3 !py-1.5 text-xs"><WhatsAppIcon className="h-3.5 w-3.5" /> WhatsApp</a>}
+                          {<a href={wa} target="_blank" rel="noopener noreferrer" className="btn-primary !bg-[#25D366] !px-3 !py-1.5 text-xs"><WhatsAppIcon className="h-3.5 w-3.5" /> WhatsApp</a>}
                         </span>
                       ) : p.email ? (
                         <a href={`mailto:${p.email}`} className="btn-light !px-3 !py-1.5 text-xs">Email</a>

@@ -4,6 +4,7 @@ import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import FloatingButtons from "@/components/FloatingButtons";
+import { getOpenContact } from "@/lib/contact";
 import NavigationEffects from "@/components/NavigationEffects";
 import CompleteProfilePrompt from "@/components/auth/CompleteProfilePrompt";
 import SiteAnalytics from "@/components/analytics/SiteAnalytics";
@@ -64,7 +65,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />
-        <FloatingButtons />
+        <FloatingContact />
         <NavigationEffects />
         <PrivatePageGuard />
         <Suspense fallback={null}>
@@ -90,4 +91,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
 async function ProfilePrompt() {
   const link = await getCommunityLink();
   return <CompleteProfilePrompt communityHref={link ? communityHref("signup") : null} />;
+}
+
+/** Floating Call / WhatsApp buttons. Contact mode Open → the number for everyone; Private → none in the page. */
+async function FloatingContact() {
+  const open = await getOpenContact();
+  return <FloatingButtons open={open ? { tel: open.tel, waDigits: open.waDigits } : null} />;
 }

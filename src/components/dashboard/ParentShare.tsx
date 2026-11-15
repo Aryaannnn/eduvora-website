@@ -81,7 +81,7 @@ export default function ParentShare({ share, studentFirst }: { share: ShareState
             <input readOnly value={link} onFocus={(e) => e.currentTarget.select()} className="input font-mono text-xs" aria-label="Parent link" />
             <button type="button" onClick={copy} className="btn-primary shrink-0">{copied ? <><CheckIcon className="h-4 w-4" /> Copied</> : <><CopyIcon className="h-4 w-4" /> Copy</>}</button>
           </div>
-          {siteConfig.showWhatsApp && <a
+          {<a
             href={`https://wa.me/?text=${encodeURIComponent(`Hi! Here is my VITEEE progress on ${siteConfig.businessName} (private link, please don't share): ${link}`)}`}
             target="_blank"
             rel="noopener noreferrer"

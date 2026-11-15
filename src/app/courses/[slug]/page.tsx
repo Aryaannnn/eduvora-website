@@ -10,7 +10,8 @@ import { CalendarIcon, CheckIcon, ClockIcon, FileIcon, HomeIcon, LockIcon, MailI
 import Reveal from "@/components/Reveal";
 import BuyButton from "@/components/BuyButton";
 import RefundNote from "@/components/RefundNote";
-import { phoneLink, siteConfig, whatsappLink } from "@/config/site";
+import { phoneLink, whatsappLink } from "@/config/site";
+import { getOpenContact } from "@/lib/contact";
 import { getProductBySlug, getProducts } from "@/lib/data";
 import { discountPercent, formatDate, formatPrice } from "@/lib/format";
 import { getSeatsLeft, seatLimitOf } from "@/lib/seats";
@@ -70,6 +71,7 @@ function Ticks({ items, tone = "brand" }: { items: string[]; tone?: "brand" | "g
 }
 
 async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
+  const open = await getOpenContact(); // Contact mode Open → WhatsApp buttons
   const { slug } = await params;
   const course = await getProductBySlug(slug);
   if (!course || course.category !== "crash_course") notFound();
@@ -92,8 +94,8 @@ async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
   const fullBox = (
     <div className="rounded-xl bg-amber-50 p-3 text-center ring-1 ring-amber-200">
       <p className="text-sm font-bold text-amber-900">This batch is full</p>
-      {siteConfig.showWhatsApp ? (
-        <a href={whatsappLink(`Hi, the ${course.title} batch is full. Can I join the waiting list or the next batch?`)} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1.5 text-sm font-bold text-emerald-700 underline">
+      {open ? (
+        <a href={whatsappLink(`Hi, the ${course.title} batch is full. Can I join the waiting list or the next batch?`, open.waDigits)} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1.5 text-sm font-bold text-emerald-700 underline">
           <WhatsAppIcon className="h-4 w-4" /> Join the waiting list
         </a>
       ) : (
@@ -284,8 +286,8 @@ async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
       <div className="h-24 md:hidden" aria-hidden />
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-3 pt-2.5 shadow-[0_-8px_24px_-12px_rgba(15,23,42,0.25)] backdrop-blur pb-[max(0.625rem,env(safe-area-inset-bottom))] md:hidden print:hidden">
         <div className="mx-auto flex max-w-md items-center gap-2.5">
-          {siteConfig.showWhatsApp ? (
-            <a href={whatsappLink(`Hi, I have a question about the ${course.title}`)} target="_blank" rel="noopener noreferrer" aria-label="Ask on WhatsApp" className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-[#25D366] text-white">
+          {open ? (
+            <a href={whatsappLink(`Hi, I have a question about the ${course.title}`, open.waDigits)} target="_blank" rel="noopener noreferrer" aria-label="Ask on WhatsApp" className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-[#25D366] text-white">
               <WhatsAppIcon className="h-6 w-6" />
             </a>
           ) : (

@@ -11,6 +11,7 @@ import WhySettingsForm from "@/components/admin/WhySettingsForm";
 import PriceLabelsCard from "@/components/admin/PriceLabelsCard";
 import InvoiceSettingsCard from "@/components/admin/InvoiceSettingsCard";
 import LeadCaptureCard, { type LeadCaptureState } from "@/components/admin/LeadCaptureCard";
+import ContactModeCard from "@/components/admin/ContactModeCard";
 import BookingNoticeCard from "@/components/admin/BookingNoticeCard";
 import { DashSkeleton } from "@/components/dashboard/ui";
 import { siteConfig } from "@/config/site";
@@ -31,7 +32,7 @@ export default function SettingsPage() {
 
 async function Content() {
   const s = await requireAdmin("/admin/settings");
-  const [{ data, error }, ref, wc, cal, mt, wy, ds, gs, fp, bn] = await Promise.all([
+  const [{ data, error }, ref, wc, cal, mt, wy, ds, gs, fp, bn, cm] = await Promise.all([
     s.supabase.from("site_stats").select("id,label,value,suffix,sort_order").order("sort_order"),
     s.supabase.from("referral_settings").select("enabled,referred_discount,referrer_reward").eq("id", 1).maybeSingle(),
     s.supabase.from("community_settings").select("whatsapp_link").eq("id", 1).maybeSingle(),
@@ -42,7 +43,18 @@ async function Content() {
     s.supabase.from("growth_settings").select("guide_enabled,guide_product_id,abandoned_reminders").eq("id", 1).maybeSingle(),
     s.supabase.from("products").select("id,title,file_path,product_files(id)").eq("is_free", true).order("sort_order"),
     s.supabase.from("booking_settings").select("min_notice_minutes").eq("id", 1).maybeSingle(),
+    s.supabase.from("contact_settings").select("mode,open_note,private_note").eq("id", 1).maybeSingle(),
   ]);
+  const contactMode = (
+    <ContactModeCard
+      setupMissing={!!cm.error || !cm.data}
+      initial={{
+        mode: cm.data?.mode === "private" ? "private" : "open",
+        openNote: (cm.data?.open_note as string | undefined) ?? siteConfig.contactTexts.openNote,
+        privateNote: (cm.data?.private_note as string | undefined) ?? siteConfig.contactTexts.privateNote,
+      }}
+    />
+  );
   const bookingNotice = <BookingNoticeCard initial={bn.error || !bn.data ? null : Number(bn.data.min_notice_minutes)} />;
   const freeProducts = ((fp.data ?? []) as unknown as { id: string; title: string; file_path: string | null; product_files: { id: string }[] | null }[]).map((p) => ({
     id: p.id,
@@ -69,14 +81,14 @@ async function Content() {
       </Link>
     </>
   );
-  // WhatsApp community link — only when WhatsApp is switched on (src/config/site.ts)
-  const community = siteConfig.showWhatsApp && <CommunitySettingsForm initial={(wc.data?.whatsapp_link as string | null) ?? ""} setupMissing={!!wc.error} />;
+  const community = <CommunitySettingsForm initial={(wc.data?.whatsapp_link as string | null) ?? ""} setupMissing={!!wc.error} />;
   const referral = <ReferralSettingsForm initial={ref.error ? null : (ref.data as { enabled: boolean; referred_discount: number; referrer_reward: number } | null)} />;
   if (error) {
     const missing = error.code === "42P01" || error.code === "PGRST205";
     return (
       <>
         {maintenance}
+        {contactMode}
         {bookingNotice}
         {leadCapture}
         <ExportDataCard />
@@ -93,6 +105,7 @@ async function Content() {
   return (
     <>
       {maintenance}
+      {contactMode}
       {bookingNotice}
       {leadCapture}
       <ExportDataCard />

@@ -1,13 +1,11 @@
 // =====================================================================
 //  WHATSAPP COMMUNITY LINK (Admin → Settings)
 //  Empty = every "Join our WhatsApp community" banner is hidden.
-//  Also hidden everywhere while showWhatsApp is false (src/config/site.ts).
 //  Buttons go to /go/community?from=…, which counts the click and then
 //  opens the real link (supabase/whatsapp-community.sql).
 // =====================================================================
 import { cacheLife, cacheTag } from "next/cache";
 import { getPublicSupabase } from "./supabase/public";
-import { siteConfig } from "@/config/site";
 
 export const COMMUNITY_SOURCES = ["home", "dates", "dashboard", "signup", "email", "other"] as const;
 export type CommunitySource = (typeof COMMUNITY_SOURCES)[number];
@@ -15,7 +13,6 @@ export type CommunitySource = (typeof COMMUNITY_SOURCES)[number];
 /** The community link, or null when it isn't set (cached; refreshed instantly when the admin saves). */
 export async function getCommunityLink(): Promise<string | null> {
   "use cache";
-  if (!siteConfig.showWhatsApp) return null;
   cacheTag("community");
   const supabase = getPublicSupabase();
   if (!supabase) return (cacheLife("minutes"), null);

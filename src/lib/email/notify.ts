@@ -3,6 +3,8 @@
 //
 //  Counselling is a 30-minute VOICE CALL: Utkarsh Sir calls the student on
 //  the number they gave when booking.
+//  Our own number (calls + WhatsApp) follows Admin → Settings → Contact mode:
+//  Open → in every email · Private → only in emails to students who have paid.
 //  To students:  payment_success · booking_confirmed · reminder_24h ·
 //                reminder_1h · booking_cancelled · booking_rescheduled · welcome
 //  To admin:     admin_payment · admin_booking · admin_enquiry
@@ -17,6 +19,7 @@ import { siteConfig } from "@/config/site";
 import { googleCalendarUrl, slotStart } from "../calendar";
 import { communityHref, getCommunityLink } from "../community";
 import { fullContactForPaidStudent } from "../contact";
+import { getContactMode } from "../contact-mode";
 import { formatDate, formatDateTime, formatPhoneIN, formatPrice, formatTime } from "../format";
 import { buildInvoicePdf, getInvoiceData, invoiceFileName } from "../invoices";
 import { syncBookingCalendar } from "../google-calendar";
@@ -54,8 +57,15 @@ const callSentence = (b: Booking) =>
 const callBlock = (b: Booking) =>
   note(`📞 <strong>30-minute voice call</strong><br>${callSentence(b)}<br><span style="font-size:13px">Please keep your phone available at that time. Parents are welcome to join on speaker.</span>`, "green");
 const gcalFor = (b: Booking) => (b.slots ? googleCalendarUrl(b.slots, b.id, b.invoice_number, b.phone) : null);
-/** Only when WhatsApp is switched on in src/config/site.ts */
-const orWhatsApp = siteConfig.showWhatsApp ? " or message us on WhatsApp" : "";
+/**
+ * The number (Call + WhatsApp) for THIS email, following Admin → Settings → Contact mode:
+ * Open → everyone · Private → only students who have paid. null = don't show it.
+ */
+async function contactFor(paid: boolean) {
+  const cm = await getContactMode();
+  return { phone: paid || cm.mode === "open" ? fullContactForPaidStudent() : null, cm };
+}
+const waLink = (phone: { whatsapp: string }, text: string) => `${phone.whatsapp}?text=${encodeURIComponent(text)}`;
 
 async function invoiceAttachment(db: SupabaseClient, id: string) {
   const inv = await getInvoiceData(db, id);
@@ -116,7 +126,7 @@ ${details([["Item", inv.item], ["Amount paid", formatPrice(inv.amount)], ["Invoi
     if (!b || !b.email || !["confirmed", "pending", "completed"].includes(b.status)) return null;
     const paid = b.payment_status === "paid";
     const { attachments } = paid ? await invoiceAttachment(db, id) : { attachments: [] };
-    const phone = paid ? fullContactForPaidStudent() : null;
+    const { phone, cm } = await contactFor(paid);
     const gcal = gcalFor(b);
     const rows: [string, string][] = [
       ["Date & time", slotLine(b)],
@@ -139,15 +149,12 @@ ${details(rows)}
 <p>${gcal ? button("Add to Google Calendar", gcal) : ""}${button("My Bookings", url("/dashboard/bookings"), "navy")}</p>
 ${
   phone
-    ? note(`<strong>${esc(founderFirst)} Sir's direct number:</strong> <a href="${phone.tel}" style="color:#0b2a5b;font-weight:bold">${esc(phone.display)}</a>${
-        siteConfig.showWhatsApp
-          ? `<br><a href="${phone.whatsapp}?text=${encodeURIComponent(`Hi ${founderFirst} Sir, I have booked a counselling session (Booking ID ${bookingRef(b.id)}).`)}" style="color:#047857;font-weight:bold">Chat on WhatsApp →</a>`
-          : ""
-      }`, "navy")
+    ? note(`<strong>${esc(founderFirst)} Sir's number (calls &amp; WhatsApp):</strong> <a href="${phone.tel}" style="color:#0b2a5b;font-weight:bold">${esc(phone.display)}</a><br>
+<a href="${waLink(phone, `Hi ${founderFirst} Sir, I have booked a counselling session (Booking ID ${bookingRef(b.id)}).`)}" style="color:#047857;font-weight:bold">WhatsApp us →</a>${cm.mode === "open" ? `<br><span style="font-size:12px;color:#64748b">${esc(cm.openNote)}</span>` : ""}`, "navy")
     : ""
 }
 ${paid ? note(`🎯 <strong>Your full college list is now unlocked!</strong><br>The Rank &amp; College Predictor now shows every VIT campus &amp; branch you can get, with your chances, before the session.<br><br>${button("See My Colleges", url("/dashboard/predictor"))}`, "navy") : ""}
-<p style="font-size:13px;color:#64748b">${attachments.length ? "Your invoice (PDF) is attached. " : ""}Wrong number, or need to change the time? Just reply to this email${orWhatsApp}. ${esc(siteConfig.refunds.counsellingNote)} <a href="${url("/refund-policy")}">Refund &amp; Cancellation Policy</a></p>`,
+<p style="font-size:13px;color:#64748b">${attachments.length ? "Your invoice (PDF) is attached. " : ""}Wrong number, or need to change the time? Just reply to this email${phone ? " or WhatsApp us" : ""}. ${esc(siteConfig.refunds.counsellingNote)} <a href="${url("/refund-policy")}">Refund &amp; Cancellation Policy</a></p>`,
       }),
     };
   },
@@ -244,7 +251,8 @@ ${note(`<strong>Want help with your own rank, campus or branch?</strong><br>Send
 <li>📚 Crash courses, study material, previous year papers and mock tests</li>
 </ul>
 <p>${button("Book Counselling", url("/book-a-slot"))}${button("Open Dashboard", url("/dashboard"), "navy")}</p>
-${siteConfig.showWhatsApp && (await getCommunityLink()) ? `<p>${button("Join our WhatsApp community", url(communityHref("email")), "green")}</p><p style="font-size:13px;color:#64748b">Free VITEEE updates — important dates, results and counselling news.</p>` : ""}`,
+${await welcomeContact()}
+${(await getCommunityLink()) ? `<p>${button("Join our WhatsApp community", url(communityHref("email")), "green")}</p><p style="font-size:13px;color:#64748b">Free VITEEE updates — important dates, results and counselling news.</p>` : ""}`,
       }),
     };
   },
@@ -340,10 +348,19 @@ ${e.message ? note(`<strong>Message:</strong><br>${esc(e.message)}`) : ""}
   },
 };
 
+/** Welcome email: Open → the number with WhatsApp · Private → the free enquiry form. */
+async function welcomeContact() {
+  const { phone, cm } = await contactFor(false);
+  if (phone) {
+    return note(`<strong>Questions?</strong> Call or WhatsApp us on <a href="${phone.tel}" style="color:#0b2a5b;font-weight:bold">${esc(phone.display)}</a> — <a href="${waLink(phone, siteConfig.whatsappMessage)}" style="color:#047857;font-weight:bold">WhatsApp us →</a><br><span style="font-size:12px;color:#64748b">${esc(cm.openNote)}</span>`, "green");
+  }
+  return `<p style="font-size:13px;color:#64748b">Questions? <a href="${url("/contact#enquiry")}">Send us a free enquiry</a> — ${esc(cm.privateNote.charAt(0).toLowerCase() + cm.privateNote.slice(1))}</p>`;
+}
+
 async function reminder(db: SupabaseClient, id: string, which: "24h" | "1h"): Promise<Email | null> {
   const b = await loadBooking(db, id);
   if (!b || !b.email || !b.slots || !["confirmed"].includes(b.status)) return null;
-  const phone = b.payment_status === "paid" ? fullContactForPaidStudent() : null;
+  const { phone } = await contactFor(b.payment_status === "paid");
   return {
     to: b.email,
     subject: which === "24h" ? `Reminder: ${founderFirst} Sir will call you tomorrow at ${formatTime(b.slots.start_time)} IST` : `In 1 hour: ${founderFirst} Sir will call you at ${formatTime(b.slots.start_time)} IST`,
@@ -354,7 +371,7 @@ async function reminder(db: SupabaseClient, id: string, which: "24h" | "1h"): Pr
 ${callBlock(b)}
 ${details([["Date & time", slotLine(b)], ["Booking ID", bookingRef(b.id)]])}
 ${note("Keep your VITEEE marks / rank, preferred campuses and questions ready. Parents are welcome to join on speaker.")}
-${phone ? `<p>${button("Call " + founderFirst + " Sir", phone.tel, "navy")}${siteConfig.showWhatsApp ? button("WhatsApp", phone.whatsapp, "green") : ""}</p>` : ""}
+${phone ? `<p>${button("Call " + founderFirst + " Sir", phone.tel, "navy")}${button("WhatsApp", waLink(phone, `Hi ${founderFirst} Sir, about my counselling call on ${slotLine(b)} (Booking ID ${bookingRef(b.id)}).`), "green")}</p>` : ""}
 <p>${button("Add to Google Calendar", googleCalendarUrl(b.slots, b.id, b.invoice_number, b.phone))}</p>
 ${which === "24h" ? `<p style="font-size:13px;color:#64748b">Can't make it? Reply to this email as soon as possible. ${esc(siteConfig.refunds.counsellingNote)}</p>` : ""}`,
     }),
@@ -400,6 +417,7 @@ async function checkoutReminder(db: SupabaseClient, id: string, which: "2h" | "2
   }
   const first = name.split(" ")[0] || "there";
   const later = which === "24h";
+  const { phone: open } = await contactFor(false); // Open mode only — they haven't paid
   return {
     to: email,
     subject: later ? "You left something behind 👀" : `Still thinking about ${item}?`,
@@ -409,7 +427,7 @@ async function checkoutReminder(db: SupabaseClient, id: string, which: "2h" | "2
       body: `<p>Hi ${esc(first)},</p>
 <p>${later ? "Just a gentle reminder —" : "We noticed"} you started a payment for <strong>${esc(item)}</strong>${price > 0 ? ` (${esc(formatPrice(price))})` : ""} but it wasn't completed. No money was taken.</p>
 <p>${button(link.startsWith("/book-a-slot") && !link.includes("#") ? "Pick a time again" : "Complete my purchase", url(link))}</p>
-<p>Had a problem with the payment, or have a question first? Just reply to this email${siteConfig.showWhatsApp ? ` or ${button("Message us on WhatsApp", url("/go/whatsapp"), "green")}` : ` or ${button("Send us an enquiry", url("/contact#enquiry"), "navy")}`}</p>
+<p>Had a problem with the payment, or have a question first? Just reply to this email${open ? ` or ${button("WhatsApp us", waLink(open, `Hi, I had a question about ${item}.`), "green")}` : ` or ${button("Send us an enquiry", url("/contact#enquiry"), "navy")}`}</p>
 <p style="font-size:12px;color:#94a3b8">${later ? "This is our last reminder about it — we won't email you about this again." : "You're getting this because you started a payment on our website."}</p>`,
     }),
   };

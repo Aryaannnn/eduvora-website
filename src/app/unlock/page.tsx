@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { getContactMode } from "@/lib/contact-mode";
 import Link from "next/link";
 import { Suspense } from "react";
 import ContactForm from "@/components/ContactForm";
@@ -16,7 +18,9 @@ export const metadata: Metadata = {
 // Where every "Call" button leads visitors who haven't paid yet.
 // (WhatsApp chat — only when switched on — does NOT come here.)
 // ✏️ The message text lives in src/components/contact/DirectContact.tsx (unlockMessage)
-export default function UnlockPage({ searchParams }: PageProps<"/unlock">) {
+export default async function UnlockPage({ searchParams }: PageProps<"/unlock">) {
+  // Contact mode Open (Admin → Settings): everyone already sees the number → the contact page
+  if ((await getContactMode()).mode === "open") redirect("/contact");
   return (
     <>
       <PageHero eyebrow="Direct access" title="Unlock Direct Call" subtitle={unlockMessage} />
@@ -29,15 +33,15 @@ export default function UnlockPage({ searchParams }: PageProps<"/unlock">) {
               <ol className="mt-4 space-y-3 text-slate-700">
                 <li className="flex gap-3"><Num n={1} /> Book a counselling session, or buy any course, test series or study material.</li>
                 <li className="flex gap-3"><Num n={2} /> Log in with the same account you paid with.</li>
-                <li className="flex gap-3"><Num n={3} /> The full number with the Call button appears on your dashboard, the contact page and the footer.</li>
+                <li className="flex gap-3"><Num n={3} /> The full number with Call and WhatsApp appears on your dashboard Help page, your booking confirmation and the payment success page.</li>
               </ol>
               <div className="mt-6 grid gap-3 sm:grid-cols-2">
                 <Link href="/book-a-slot" className="btn-accent !py-3"><CalendarIcon className="h-5 w-5" /> Book a Session</Link>
                 <Link href="/courses" className="btn-light !py-3"><BookIcon className="h-5 w-5" /> Browse Courses</Link>
               </div>
             </div>
-            {/* Shows the masked number — or the real one if this visitor has already paid */}
-            <DirectContact />
+            {/* The number for students who have already paid — otherwise the enquiry note */}
+            <DirectContact paidOnly formNextToIt />
           </div>
 
           <div id="enquiry" className="card scroll-mt-24 p-6 shadow-xl shadow-slate-200/60 sm:p-8">

@@ -5,7 +5,6 @@
 // Can: call the student, mark the call called / no answer / completed, add notes,
 // filter "Assigned to me".
 import { useState } from "react";
-import { siteConfig } from "@/config/site";
 import { formatDate, formatTime } from "@/lib/format";
 import { SearchIcon, WhatsAppIcon } from "../Icons";
 import { CallButton, CallStatusPill, CallStatusRow, TodaysCalls, type CallStatus } from "./CallTools";
@@ -99,9 +98,7 @@ export default function StaffBookings({ bookings, notes, today, me, staffNames, 
                   </div>
                   <div className="flex shrink-0 flex-wrap gap-2 lg:flex-col lg:items-end">
                     <CallButton phone={b.phone} name={b.name} />
-                    {siteConfig.showWhatsApp && (
-                      <a href={wa} target="_blank" rel="noopener noreferrer" className="btn-primary !bg-[#25D366] !px-4 !py-2 text-sm"><WhatsAppIcon className="h-4 w-4" /> WhatsApp</a>
-                    )}
+                    <a href={wa} target="_blank" rel="noopener noreferrer" className="btn-primary !bg-[#25D366] !px-4 !py-2 text-sm"><WhatsAppIcon className="h-4 w-4" /> WhatsApp</a>
                   </div>
                 </div>
               </li>

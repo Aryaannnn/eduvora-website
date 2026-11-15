@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   if (!s || s.profile?.role !== "admin" || !(await hasAdmin2fa(s))) {
     return new Response("Not found.", { status: 404, headers: { "Cache-Control": "private, no-store" } });
   }
-  const pdf = await buildInvoicePdf(sampleInvoice(req.nextUrl.searchParams.get("gst") === "1"), { sample: true });
+  const pdf = await buildInvoicePdf(await sampleInvoice(req.nextUrl.searchParams.get("gst") === "1"), { sample: true });
   return new Response(Buffer.from(pdf), {
     headers: {
       "Content-Type": "application/pdf",

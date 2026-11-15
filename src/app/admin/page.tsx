@@ -8,7 +8,6 @@ import { personLabel, profilesById } from "@/lib/admin-data";
 import { formatDate, formatDateTime, formatPrice, formatTime, todayInIndia } from "@/lib/format";
 import { after } from "next/server";
 import { completePastBookings, sendDueFeedbackRequests, sendDueReminders } from "@/lib/email/notify";
-import { siteConfig } from "@/config/site";
 
 export const metadata: Metadata = { title: "Overview" };
 
@@ -114,8 +113,8 @@ async function Overview() {
         ))}
       </div>
 
-      {/* WhatsApp community clicks (only when WhatsApp is switched on) */}
-      {siteConfig.showWhatsApp && !wcClicks.error && (
+      {/* WhatsApp community clicks */}
+      {!wcClicks.error && (
         <Link href="/admin/settings#community" className="card card-hover flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
             <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#25D366] text-white"><WhatsAppIcon className="h-6 w-6" /></span>

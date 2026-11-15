@@ -3,7 +3,6 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { assignBooking, rescheduleBooking, retryBookingCalendar, updateBooking } from "@/app/admin/actions";
-import { siteConfig } from "@/config/site";
 import { CallButton, CallStatusPill, CallStatusRow, TodaysCalls, type CallStatus } from "./CallTools";
 import BookingNotes, { type BookingNote } from "./BookingNotes";
 import { formatDate, formatDateTime, formatPrice, formatTime } from "@/lib/format";
@@ -172,9 +171,7 @@ export default function BookingsManager({
                   <div className="flex shrink-0 flex-col gap-2 sm:flex-row lg:flex-col lg:items-end">
                     <div className="flex flex-wrap gap-2 lg:justify-end">
                       <CallButton phone={b.phone} name={b.name} />
-                      {siteConfig.showWhatsApp && (
-                        <a href={wa} target="_blank" rel="noopener noreferrer" className="btn-primary !bg-[#25D366] !px-4 !py-2 text-sm"><WhatsAppIcon className="h-4 w-4" /> WhatsApp</a>
-                      )}
+                      <a href={wa} target="_blank" rel="noopener noreferrer" className="btn-primary !bg-[#25D366] !px-4 !py-2 text-sm"><WhatsAppIcon className="h-4 w-4" /> WhatsApp</a>
                     </div>
                     <div className="flex gap-2">
                       <select value={b.status} onChange={(e) => change(b.id, { status: e.target.value as AdminBooking["status"] })} className={`rounded-xl border-0 px-3 py-2 text-sm font-bold capitalize ring-1 ring-slate-200 ${statusColor[b.status]}`} aria-label="Booking status">

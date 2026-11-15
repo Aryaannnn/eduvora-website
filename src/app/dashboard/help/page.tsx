@@ -10,7 +10,7 @@ import { emailLink, siteConfig } from "@/config/site";
 
 export const metadata: Metadata = { title: "Help" };
 
-// The direct number is private (CONTACT_PHONE in .env.local) — see src/lib/contact.ts
+// The number is CONTACT_PHONE on the server; who sees it follows Admin → Settings → Contact mode (src/lib/contact.ts)
 export default function HelpPage() {
   return (
     <>
@@ -18,9 +18,9 @@ export default function HelpPage() {
         <RequireLogin path="/dashboard/help" />
       </Suspense>
       <PageHeader title="Help" subtitle="Stuck somewhere? We're one tap away." />
-      {/* Paid students see the full number with a Call button.
+      {/* Contact mode Open: everyone sees the number. Private: paid students & admins see it here.
           Others see the masked number and how to unlock it. */}
-      <div className="max-w-xl"><DirectContact /></div>
+      <div className="max-w-xl"><DirectContact paidOnly /></div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <Panel title="Other ways to reach us">

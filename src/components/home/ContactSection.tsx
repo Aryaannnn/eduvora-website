@@ -18,8 +18,8 @@ export default function ContactSection({ showHeading = true }: { showHeading?: b
         {showHeading && <SectionHeading eyebrow="Contact" title="Talk to us today" subtitle="Questions about counselling, courses or material? We're one message away." />}
         <div className="mt-10 grid gap-8 lg:grid-cols-[1fr_1.15fr]">
           <Reveal className="space-y-3">
-            {/* Full number only for students who have paid (checked on the server) */}
-            <DirectContact />
+            {/* Contact mode (Admin → Settings): Open = number + Call + WhatsApp · Private = the enquiry form next to it */}
+            <DirectContact formNextToIt />
             {items.map((it) => (
               <a
                 key={it.label}
@@ -49,7 +49,7 @@ export default function ContactSection({ showHeading = true }: { showHeading?: b
 
           <Reveal delay={120} id="enquiry" className="card scroll-mt-24 p-6 shadow-xl shadow-slate-200/60 sm:p-8">
             <h3 className="text-xl font-extrabold text-slate-900">Send a free enquiry</h3>
-            <p className="mt-1 text-sm text-slate-600">No payment needed — fill in your details and our team will call you back.</p>
+            <p className="mt-1 text-sm text-slate-600">No payment needed — fill in your details and our team will call you back within a few hours.</p>
             <div className="mt-6"><ContactForm /></div>
           </Reveal>
         </div>

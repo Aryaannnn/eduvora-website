@@ -27,7 +27,7 @@ export const parentsPage = {
   buttons: {
     book: "Book a call with parents joining",
     enquiry: "Send us an enquiry",
-    whatsapp: "Ask us on WhatsApp", // only when showWhatsApp is on (src/config/site.ts)
+    whatsapp: "Ask us on WhatsApp", // Contact mode Open (Admin → Settings)
     whatsappMessage: "Hi, I'm a parent. I have a few questions about VITEEE counselling for my child.",
     // pre-filled in the booking form's message box
     bookingNote: "My parents will join the call.",

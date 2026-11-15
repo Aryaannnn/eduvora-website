@@ -3,36 +3,41 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense, type MouseEvent } from "react";
-import { phoneLink, siteConfig, whatsappLink } from "@/config/site";
+import { phoneLink, whatsappLink } from "@/config/site";
 import { whatsappMessageFor } from "@/lib/whatsapp-message";
 import { CalendarIcon, MailIcon, PhoneIcon, WhatsAppIcon } from "./Icons";
 
 // Contact buttons on every public page:
-//  • PHONES: a bar fixed to the bottom → [📞] [Book a Slot] [✉️ Enquiry]
-//    (or [WhatsApp] instead of Enquiry when showWhatsApp is on in src/config/site.ts)
+//  Follows Admin → Settings → Contact mode (passed in from the layout, decided on the server):
+//   Open    → [📞 your number] [Book a Slot] [WhatsApp] + the round WhatsApp button
+//   Private → [📞 → paid: dialer, others: enquiry form] [Book a Slot] [✉️ Enquiry], no WhatsApp
+//  • PHONES: a bar fixed to the bottom
 //    (hidden on booking, payment, test, login and admin pages, where it
 //     would cover the form — those pages keep only the small WhatsApp button)
-//  • COMPUTERS: the round WhatsApp button, bottom-right
-//  • WhatsApp → /go/whatsapp: opens WhatsApp for EVERYONE, with a message about
-//    the page they're on (src/lib/whatsapp-message.ts)
-//  • Call → /go/call: the SERVER checks if the visitor has paid:
-//    paid / admin → phone dialer; everyone else → the "Unlock Direct Call" page.
-//  The real number is never written in this file or in the page.
+//  • COMPUTERS: the round WhatsApp button, bottom-right (Open mode)
+//  • WhatsApp opens wa.me with a message about the page they're on
+//    (src/lib/whatsapp-message.ts)
+//  • Private mode: Call → /go/call, where the SERVER checks if the visitor has
+//    paid (paid / admin → dialer; everyone else → the enquiry form). The number
+//    is then never in this page for anyone else.
 //  Not shown at all on the dashboard (own bottom menu), admin or the exam screen.
 
 const NONE = ["/dashboard", "/admin", "/tests"];
 const NO_BAR = ["/book-a-slot", "/booking-confirmed", "/payment-success", "/payment-failed", "/unlock", "/invoice", "/login", "/auth", "/forgot-password", "/reset-password"];
 const on = (pathname: string, list: string[]) => list.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 
-export default function FloatingButtons() {
+/** open = Contact mode Open (the number + WhatsApp for everyone), null = Private */
+export type OpenContact = { tel: string; waDigits: string } | null;
+
+export default function FloatingButtons({ open }: { open: OpenContact }) {
   return (
     <Suspense fallback={null}>
-      <Buttons />
+      <Buttons open={open} />
     </Suspense>
   );
 }
 
-function Buttons() {
+function Buttons({ open }: { open: OpenContact }) {
   const pathname = usePathname();
   if (on(pathname, NONE)) return null;
   // Course pages have their own "Enroll Now – ₹price" bar on phones (with WhatsApp)
@@ -41,17 +46,17 @@ function Buttons() {
 
   // The link already mentions the page; on a click we add the page heading too
   // (e.g. the course name), read from the page itself.
-  const href = whatsappLink(whatsappMessageFor(pathname));
+  const href = whatsappLink(whatsappMessageFor(pathname), open?.waDigits);
   const withHeading = (e: MouseEvent<HTMLAnchorElement>) => {
     const h1 = (document.querySelector("main h1") ?? document.querySelector("h1"))?.textContent;
-    e.currentTarget.href = whatsappLink(whatsappMessageFor(pathname, h1));
+    e.currentTarget.href = whatsappLink(whatsappMessageFor(pathname, h1), open?.waDigits);
   };
   const waProps = { target: "_blank", rel: "noopener noreferrer", onClick: withHeading, onAuxClick: withHeading, onContextMenu: withHeading };
 
   return (
     <>
-      {/* Round WhatsApp button (only when switched on): computers always; phones only where the bar is hidden */}
-      {siteConfig.showWhatsApp && (
+      {/* Round WhatsApp button (Open mode): computers always; phones only where the bar is hidden */}
+      {open && (
       <a
         href={href}
         {...waProps}
@@ -72,13 +77,13 @@ function Buttons() {
             className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-3 pt-2.5 shadow-[0_-8px_24px_-12px_rgba(15,23,42,0.25)] backdrop-blur pb-[max(0.625rem,env(safe-area-inset-bottom))] md:hidden print:hidden"
           >
             <div className="mx-auto flex max-w-md items-center gap-2.5">
-              <a href={phoneLink} aria-label="Call us" className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-700 ring-1 ring-brand-100 active:scale-95">
+              <a href={open ? `tel:${open.tel}` : phoneLink} aria-label="Call us" className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-700 ring-1 ring-brand-100 active:scale-95">
                 <PhoneIcon className="h-5 w-5" />
               </a>
               <Link href="/book-a-slot" className="btn-primary h-12 flex-1 !rounded-xl !py-0 text-[15px]">
                 <CalendarIcon className="h-5 w-5" /> Book a Slot
               </Link>
-              {siteConfig.showWhatsApp ? (
+              {open ? (
                 <a href={href} {...waProps} aria-label="Chat with us on WhatsApp" className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-[#25D366] text-white shadow-md shadow-[#25D366]/30 active:scale-95">
                   <WhatsAppIcon className="h-6 w-6" />
                 </a>

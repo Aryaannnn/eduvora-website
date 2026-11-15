@@ -6,7 +6,7 @@ import { SUPABASE_ANON_KEY, SUPABASE_URL, isSupabaseConfigured } from "@/lib/sup
 
 // Maintenance mode (Admin → Settings): remembered for 15 seconds per server,
 // so turning it on/off takes effect within ~15 seconds.
-let maintenanceCache: { enabled: boolean; message: string; until: number } | null = null;
+let maintenanceCache: { enabled: boolean; message: string; whatsapp: boolean; until: number } | null = null;
 const MAINTENANCE_TTL_MS = 15_000;
 
 // Pages only for logged-in users
@@ -38,8 +38,13 @@ export async function proxy(request: NextRequest) {
   // ---------- Maintenance mode ----------
   if (!maintenanceCache || maintenanceCache.until < Date.now()) {
     const { data: m, error } = await supabase.from("maintenance_settings").select("enabled,message").eq("id", 1).maybeSingle();
+    // Contact mode (Admin → Settings): WhatsApp button on the maintenance page only in Open mode
+    const whatsapp =
+      m?.enabled || process.env.MAINTENANCE_MODE === "on"
+        ? await supabase.from("contact_settings").select("mode").eq("id", 1).maybeSingle().then((r) => !!r.error || r.data?.mode !== "private", () => true)
+        : false;
     // table missing / Supabase hiccup → treat as OFF (never lock everyone out by accident)
-    maintenanceCache = { enabled: !error && !!m?.enabled, message: m?.message ?? "", until: Date.now() + MAINTENANCE_TTL_MS };
+    maintenanceCache = { enabled: !error && !!m?.enabled, message: m?.message ?? "", whatsapp, until: Date.now() + MAINTENANCE_TTL_MS };
   }
   // Emergency switch without the database: MAINTENANCE_MODE=on in Vercel (then redeploy)
   if (process.env.MAINTENANCE_MODE === "on") maintenanceCache.enabled = true;
@@ -59,7 +64,7 @@ export async function proxy(request: NextRequest) {
       const out =
         action === "api"
           ? NextResponse.json({ error: "We're updating the website. Please try again shortly." }, { status: 503, headers })
-          : new NextResponse(maintenanceHtml(maintenanceCache.message), { status: 503, headers: { ...headers, "Content-Type": "text/html; charset=utf-8" } });
+          : new NextResponse(maintenanceHtml(maintenanceCache.message, maintenanceCache.whatsapp), { status: 503, headers: { ...headers, "Content-Type": "text/html; charset=utf-8" } });
       response.cookies.getAll().forEach((c) => out.cookies.set(c)); // keep a refreshed login
       return out;
     }

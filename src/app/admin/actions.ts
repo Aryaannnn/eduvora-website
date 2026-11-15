@@ -7,7 +7,7 @@
 //               (2) runs with the admin's own login, so Supabase RLS checks it again,
 //               (3) refreshes the public website cache (updateTag) so changes show at once.
 // =====================================================================
-import { updateTag } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { adminOrError, friendlyDbError, isError, staffOrError, type ActionResult } from "@/lib/admin";
 import { yearInIndia } from "@/lib/format";
 import { SUBJECTS } from "@/lib/subjects";
@@ -281,6 +281,29 @@ export async function convertSlotsTo30(): Promise<ActionResult> {
   return {
     ok: true,
     message: `Done: ${r.removed} empty slot(s) replaced by ${r.created} slot(s) of 30 minutes.${r.kept_with_bookings ? ` ${r.kept_with_bookings} slot(s) with a booking were not touched.` : ""}`,
+  };
+}
+
+/**
+ * Admin → Settings → Contact mode (supabase/contact-mode.sql).
+ * "open" = number + Call/WhatsApp for everyone · "private" = paid students & admins only.
+ */
+export async function saveContactMode(input: { mode: string; openNote: string; privateNote: string }): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  if (input.mode !== "open" && input.mode !== "private") return fail("Choose Open or Private.");
+  const openNote = input.openNote.trim(), privateNote = input.privateNote.trim();
+  if (!openNote || openNote.length > 300 || !privateNote || privateNote.length > 300) return fail("Both texts are needed (up to 300 characters each).");
+  const { data, error } = await s.supabase.from("contact_settings").update({ mode: input.mode, open_note: openNote, private_note: privateNote }).eq("id", 1).select("id");
+  if (error) return fail(/contact_settings/.test(error.message) ? "Run supabase/contact-mode.sql in Supabase first." : friendlyDbError(error.message));
+  if (!data?.length) return fail("Run supabase/contact-mode.sql in Supabase first.");
+  // Every page, button, email and invoice reads the mode from here
+  updateTag("contact-mode");
+  revalidatePath("/", "layout");
+  await s.supabase.rpc("log_admin_event", { p_action: "contact_mode.update", p_summary: `Contact mode set to ${input.mode === "open" ? "Open" : "Private"}`, p_details: { mode: input.mode } }).then(() => null, () => null);
+  return {
+    ok: true,
+    message: input.mode === "open" ? "Saved — your number is now shown to everyone with Call and WhatsApp." : "Saved — only paid students and admins see your number now. Everyone else gets the enquiry form.",
   };
 }
 

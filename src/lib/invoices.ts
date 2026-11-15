@@ -18,6 +18,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { degrees, PDFDocument, rgb, StandardFonts, type PDFFont, type PDFImage, type PDFPage, type RGB } from "pdf-lib";
 import { siteConfig } from "@/config/site";
 import { fullContactForPaidStudent } from "./contact";
+import { getContactMode } from "./contact-mode";
 import { formatDate, formatDateTime, formatTime } from "./format";
 import { amountInWords, gstFromInclusive, stateFromGstin, type GstLine } from "./invoice-math";
 import { getPaymentMethod } from "./razorpay";
@@ -106,7 +107,7 @@ async function buildFromPayment(db: SupabaseClient, id: string): Promise<Invoice
     const amount = Number(p.amount);
     const product = p.products as unknown as { title: string; category?: string } | null;
     const title = product?.title ?? "Purchase";
-    return finish({
+    return await finish({
       kind: "purchase",
       id: p.id,
       userId: p.user_id,
@@ -132,7 +133,7 @@ async function buildFromPayment(db: SupabaseClient, id: string): Promise<Invoice
   const { data: prof } = await db.from("profiles").select("email").eq("id", b.user_id).maybeSingle();
   const amount = Number(b.amount ?? slot?.price ?? 0);
   const phone = String(b.phone ?? "").replace(/\D/g, "");
-  return finish({
+  return await finish({
     kind: "booking",
     id: b.id,
     userId: b.user_id,
@@ -152,13 +153,13 @@ async function buildFromPayment(db: SupabaseClient, id: string): Promise<Invoice
 }
 
 /** Adds the one-line item, the seller details and GST — as they are TODAY (then locked). */
-function finish(d: Omit<InvoiceData, "version" | "item" | "quantity" | "seller" | "gst">): InvoiceData {
+async function finish(d: Omit<InvoiceData, "version" | "item" | "quantity" | "seller" | "gst">): Promise<InvoiceData> {
   return {
     version: 2,
     ...d,
     item: d.itemDetail && d.kind === "booking" ? `${d.itemTitle} - ${d.itemDetail.replace(/^Session: /, "")}` : d.itemTitle,
     quantity: 1,
-    seller: currentSeller(d.amount > 0),
+    seller: await currentSeller(d.amount > 0),
     gst: currentGst(d.amount),
   };
 }
@@ -177,15 +178,19 @@ function pricing(r: Record<string, unknown>, paid: number): Pick<InvoiceData, "r
   return { rate: original, discounts: lines };
 }
 
-/** The seller box. The full phone number only goes on invoices for real (paid) payments. */
-export function currentSeller(paid = true): InvoiceSeller {
+/**
+ * The seller box. Phone number follows Admin → Settings → Contact mode:
+ * Open → always shown · Private → only on invoices for real (paid) payments, otherwise left out.
+ */
+export async function currentSeller(paid = true): Promise<InvoiceSeller> {
+  const { mode } = await getContactMode();
   const c = siteConfig.invoice;
   return {
     name: siteConfig.billingName,
     tagline: siteConfig.tagline,
     address: c.address.trim(),
     email: siteConfig.email,
-    phone: (paid ? fullContactForPaidStudent()?.display : null) ?? siteConfig.phoneMasked,
+    phone: (paid || mode === "open" ? fullContactForPaidStudent()?.display : null) ?? "",
     gstin: c.gstin.trim().toUpperCase(),
     udyam: c.udyam.trim().toUpperCase(),
   };
@@ -225,7 +230,7 @@ async function methodFor(db: SupabaseClient, table: "purchases" | "bookings", id
 }
 
 /** Dummy invoice for Admin → Settings → "Preview sample invoice" (no real student data). */
-export function sampleInvoice(withGst = false): InvoiceData {
+export async function sampleInvoice(withGst = false): Promise<InvoiceData> {
   const now = new Date().toISOString();
   const inv: InvoiceData = {
     version: 2,
@@ -247,7 +252,7 @@ export function sampleInvoice(withGst = false): InvoiceData {
     method: "UPI (Google Pay)",
     paymentId: "pay_SAMPLE0000000001",
     orderId: "order_SAMPLE00000001",
-    seller: currentSeller(false),
+    seller: await currentSeller(false),
     gst: withGst ? currentGst(1499, siteConfig.invoice.gstin.trim() || "33ABCDE1234F1Z5") : currentGst(1499),
   };
   inv.item = `${inv.itemTitle} - ${inv.itemDetail.replace(/^Session: /, "")}`;

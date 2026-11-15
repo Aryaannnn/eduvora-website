@@ -10,7 +10,8 @@ import Reveal from "@/components/Reveal";
 import SectionHeading from "@/components/SectionHeading";
 import Stars from "@/components/Stars";
 import JsonLd from "@/components/seo/JsonLd";
-import { siteConfig, whatsappLink } from "@/config/site";
+import { whatsappLink } from "@/config/site";
+import { getOpenContact } from "@/lib/contact";
 import { founder } from "@/content/founder";
 import { parentsPage as c } from "@/content/parents";
 import { getApprovedReviews } from "@/lib/data";
@@ -23,14 +24,15 @@ const coverIcons = [GraduationIcon, BookIcon, ReceiptIcon, CalendarIcon, FileIco
 const safetyIcons = [LockIcon, MailIcon, ShieldIcon, UsersIcon, CheckIcon];
 const bookHref = "/book-a-slot?with=parents#book";
 
-function Buttons({ center = false, dark = false }: { center?: boolean; dark?: boolean }) {
+async function Buttons({ center = false, dark = false }: { center?: boolean; dark?: boolean }) {
+  const open = await getOpenContact(); // Contact mode Open → WhatsApp button
   return (
     <div className={`flex flex-col gap-3 sm:flex-row ${center ? "sm:justify-center" : ""}`}>
       <Link href={bookHref} className="btn-accent !px-6 !py-3.5 text-base">
         <CalendarIcon className="h-5 w-5" /> {c.buttons.book}
       </Link>
-      {siteConfig.showWhatsApp ? (
-        <a href={whatsappLink(c.buttons.whatsappMessage)} target="_blank" rel="noopener noreferrer" className={`${dark ? "btn-outline" : "btn-light"} !px-6 !py-3.5 text-base`}>
+      {open ? (
+        <a href={whatsappLink(c.buttons.whatsappMessage, open.waDigits)} target="_blank" rel="noopener noreferrer" className={`${dark ? "btn-outline" : "btn-light"} !px-6 !py-3.5 text-base`}>
           <WhatsAppIcon className="h-5 w-5 text-[#25D366]" /> {c.buttons.whatsapp}
         </a>
       ) : (

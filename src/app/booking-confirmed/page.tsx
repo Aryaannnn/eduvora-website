@@ -177,7 +177,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/booking-con
       )}
 
       {/* Utkarsh Sir's full number (only for paid students — checked on the server) */}
-      <DirectContact />
+      <DirectContact paidOnly />
     </div>
   );
 }
