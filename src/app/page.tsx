@@ -69,18 +69,22 @@ export default async function Home() {
       {/* 1. Hero slideshow (4 slides, one main button each) */}
       <HeroSlider />
 
-      {/* 2. Trust strip — the student number comes from Admin → Settings */}
+      {/* 2. Founder — Utkarsh Shrivastava (photo, bio, stats, "Read Full Story", "Book a Direct Call").
+             Less space on top, so it sits neatly under the slideshow. */}
+      <FounderSection className="!pt-10 !pb-12 sm:!pt-14 sm:!pb-16" />
+
+      {/* 3. Trust strip — the student number comes from Admin → Settings */}
       <TrustStrip />
 
-      {/* 3. How it works (3 steps) + next open counselling slots */}
+      {/* 4. How it works (3 steps) + next open counselling slots */}
       <HowItWorks slots={slots} />
 
-      {/* 4. Counselling packages (hidden when there are none) */}
+      {/* 5. Counselling packages (hidden when there are none) */}
       <section className="section">
         <div className="container-page"><PackageCards /></div>
       </section>
 
-      {/* 5. Free Rank & College Predictor (+ Fee Calculator) */}
+      {/* 6. Free Rank & College Predictor (+ Fee Calculator) */}
       <section className="section bg-slate-50" id="predictor">
         <div className="container-page">
           <SectionHeader eyebrow="Free rank predictor" title="What rank will your marks get you?" subtitle="See your likely VITEEE rank range for free. The VIT campus and branch you can get, with your chances, comes with counselling." href="/predictor" linkText="Open full predictor" />
@@ -101,18 +105,17 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* 6. Founder (+ "Why EDUVORA?" cards — edit or hide in Admin → Settings) */}
-      <FounderSection />
+      {/* 7. "Why EDUVORA?" cards — edit or hide in Admin → Settings */}
       <WhySection />
 
       {/* Success stories (real students, with consent — hidden when there are none) */}
       <SuccessStoriesSection className="bg-slate-50" />
 
-      {/* 7. Reviews + video testimonials (both hidden when there are none) */}
+      {/* 8. Reviews + video testimonials (both hidden when there are none) */}
       {reviews.length > 0 && <ReviewsSection reviews={reviews} mobileShort />}
       <VideoTestimonials videos={videos.slice(0, 6)} className={reviews.length > 0 ? "!pt-0" : ""} mobileShort />
 
-      {/* 8. Study material */}
+      {/* 9. Study material */}
       <section className="section bg-slate-50">
         <div className="container-page">
           <SectionHeader eyebrow="Study material" title="Campus-wise admission kits" subtitle="Everything you need to choose the right VIT campus — rank trends, fees, branches and checklists." href="/study-material" linkText="All study material" />
@@ -127,7 +130,7 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* 9. Crash courses */}
+      {/* 10. Crash courses */}
       <section className="section">
         <div className="container-page">
           <SectionHeader eyebrow="Crash courses" title="Revise smart. Score higher." subtitle="Short, focused programmes built only for VITEEE." href="/courses" linkText="All courses" />
@@ -142,7 +145,7 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* 10. Mock tests, MCQs & previous year papers */}
+      {/* 11. Mock tests, MCQs & previous year papers */}
       <section className="section bg-slate-50">
         <div className="container-page">
           <SectionHeader eyebrow="Practice" title="Mock Tests, MCQs & Previous Year Papers" subtitle="Practise in the real exam pattern. Start with a free test — just sign up free." href="/mock-tests" linkText="All tests" />
@@ -175,7 +178,7 @@ export default async function Home() {
         </section>
       )}
 
-      {/* 11. Next 3 important dates (hidden when there are none) */}
+      {/* 12. Next 3 important dates (hidden when there are none) */}
       {nextDates.length > 0 && (
         <section className="section" id="important-dates">
           <div className="container-page">
@@ -190,7 +193,7 @@ export default async function Home() {
       {/* Secure payments (Razorpay) */}
       <TrustSection />
 
-      {/* 12. FAQ */}
+      {/* 13. FAQ */}
       <section className="section">
         <div className="container-page max-w-3xl">
           <SectionHeading center eyebrow="FAQ" title="VITEEE counselling questions" subtitle="Quick answers to what students and parents ask us most." />
@@ -198,7 +201,7 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* 13. Contact */}
+      {/* 14. Contact */}
       <div className="bg-slate-50"><ContactSection /></div>
     </>
   );

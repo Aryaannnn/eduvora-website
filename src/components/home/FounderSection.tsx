@@ -6,11 +6,12 @@ import { ArrowRightIcon, CalendarIcon } from "../Icons";
 import Reveal from "../Reveal";
 
 // Home page founder section (short version). Text lives in src/content/founder.ts
-export default function FounderSection() {
+// Sits right under the hero slideshow: phones show the photo on top, text below.
+export default function FounderSection({ className = "" }: { className?: string }) {
   return (
-    <section className="section">
-      <div className="container-page grid items-center gap-12 lg:grid-cols-[0.85fr_1.15fr]">
-        <Reveal className="relative pb-6">
+    <section aria-labelledby="founder-heading" className={`section ${className}`}>
+      <div className="container-page grid items-center gap-10 sm:gap-12 lg:grid-cols-[0.85fr_1.15fr]">
+        <Reveal className="relative mx-auto w-full max-w-[18rem] pb-6 sm:max-w-sm">
           <FounderPhoto />
           <div className="absolute bottom-0 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded-2xl bg-white px-5 py-3 text-center shadow-xl ring-1 ring-slate-200">
             <p className="font-extrabold text-brand-700">{founder.name}</p>
@@ -22,7 +23,7 @@ export default function FounderSection() {
           <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.15em] text-accent-700">
             <span className="h-1.5 w-6 rounded-full bg-accent-400" /> About the founder
           </p>
-          <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-brand-700 sm:text-4xl">{founder.name}</h2>
+          <h2 id="founder-heading" className="mt-3 text-3xl font-extrabold tracking-tight text-brand-700 sm:text-4xl">{founder.name}</h2>
           <p className="mt-2 text-sm font-semibold leading-relaxed text-accent-700 sm:text-base">{founder.title}</p>
           <p className="mt-5 text-lg leading-relaxed text-slate-600">{founder.summary}</p>
 
