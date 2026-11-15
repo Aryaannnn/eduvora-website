@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { StatusBadge, DashSkeleton } from "@/components/dashboard/ui";
-import { CalendarIcon, PhoneIcon, ReceiptIcon, UsersIcon, VideoIcon, WhatsAppIcon, ZapIcon } from "@/components/Icons";
+import { CalendarIcon, PhoneIcon, ReceiptIcon, UsersIcon, WhatsAppIcon, ZapIcon } from "@/components/Icons";
 import { requireAdmin } from "@/lib/admin";
 import { personLabel, profilesById } from "@/lib/admin-data";
 import { formatDate, formatDateTime, formatPrice, formatTime, todayInIndia } from "@/lib/format";
 import { after } from "next/server";
 import { completePastBookings, sendDueFeedbackRequests, sendDueReminders } from "@/lib/email/notify";
+import { siteConfig } from "@/config/site";
 
 export const metadata: Metadata = { title: "Overview" };
 
@@ -38,7 +39,7 @@ async function Overview() {
   const today = todayInIndia();
 
   const weekAgo = daysAgoISO(7);
-  const [paidRes, paidBookingsRes, studentsRes, recentP, recentB, upcomingRes, wcClicks, wcWeek, wcSetting, noMeet, followUps] = await Promise.all([
+  const [paidRes, paidBookingsRes, studentsRes, recentP, recentB, upcomingRes, wcClicks, wcWeek, wcSetting, callsToday, followUps] = await Promise.all([
     s.supabase.from("purchases").select("amount,created_at").eq("status", "paid").limit(10000),
     // Online counselling payments (Razorpay) also count as revenue
     s.supabase.from("bookings").select("amount,paid_at,created_at").eq("payment_status", "paid").not("amount", "is", null).limit(10000),
@@ -50,8 +51,8 @@ async function Overview() {
     s.supabase.from("community_clicks").select("source").limit(50000),
     s.supabase.from("community_clicks").select("id", { count: "exact", head: true }).gte("created_at", weekAgo),
     s.supabase.from("community_settings").select("whatsapp_link").eq("id", 1).maybeSingle(),
-    // Upcoming confirmed sessions with no Google Meet link (supabase/google-calendar.sql)
-    s.supabase.from("bookings").select("id,slots!inner(date)", { count: "exact", head: true }).eq("status", "confirmed").is("meet_link", null).gte("slots.date", today),
+    // Today's voice calls not made yet (supabase/voice-calls.sql)
+    s.supabase.from("bookings").select("id,slots!inner(date)", { count: "exact", head: true }).eq("status", "confirmed").in("call_status", ["scheduled", "no_answer"]).eq("slots.date", today),
     // Lead follow-ups due today or overdue (supabase/leads.sql)
     s.supabase.from("leads").select("id", { count: "exact", head: true }).lte("follow_up_on", today).not("status", "in", "(paid,not_interested)"),
   ]);
@@ -89,16 +90,16 @@ async function Overview() {
         <Link href="/admin/leads?f=due" className="flex items-center gap-3 rounded-2xl bg-brand-50 p-4 text-sm text-brand-900 ring-1 ring-brand-200 hover:bg-brand-100" role="alert">
           <PhoneIcon className="h-5 w-5 shrink-0" />
           <span>
-            <strong>{followUps.count} follow-up{followUps.count === 1 ? "" : "s"} due today</strong> (including overdue). Open Leads to call or WhatsApp them →
+            <strong>{followUps.count} follow-up{followUps.count === 1 ? "" : "s"} due today</strong> (including overdue). Open Leads to call them →
           </span>
         </Link>
       )}
 
-      {!noMeet.error && (noMeet.count ?? 0) > 0 && (
-        <Link href="/admin/bookings" className="flex items-start gap-3 rounded-2xl bg-amber-50 p-4 text-sm text-amber-900 ring-1 ring-amber-200 hover:bg-amber-100" role="alert">
-          <VideoIcon className="mt-0.5 h-5 w-5 shrink-0" />
+      {!callsToday.error && (callsToday.count ?? 0) > 0 && (
+        <Link href="/admin/bookings" className="flex items-start gap-3 rounded-2xl bg-emerald-50 p-4 text-sm text-emerald-900 ring-1 ring-emerald-200 hover:bg-emerald-100">
+          <PhoneIcon className="mt-0.5 h-5 w-5 shrink-0" />
           <span>
-            <strong>{noMeet.count} upcoming session{noMeet.count === 1 ? " has" : "s have"} no Google Meet link.</strong> Students see &ldquo;Meet link will be shared soon&rdquo;. Open Bookings to add the link by hand →
+            <strong>{callsToday.count} counselling call{callsToday.count === 1 ? "" : "s"} to make today.</strong> Open Bookings to see the times and call the students →
           </span>
         </Link>
       )}
@@ -113,8 +114,8 @@ async function Overview() {
         ))}
       </div>
 
-      {/* WhatsApp community clicks */}
-      {!wcClicks.error && (
+      {/* WhatsApp community clicks (only when WhatsApp is switched on) */}
+      {siteConfig.showWhatsApp && !wcClicks.error && (
         <Link href="/admin/settings#community" className="card card-hover flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
             <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#25D366] text-white"><WhatsAppIcon className="h-6 w-6" /></span>

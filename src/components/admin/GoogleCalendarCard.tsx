@@ -1,17 +1,18 @@
 "use client";
 
-// Admin → Settings → Google Calendar & Meet: connect once, see status, disconnect.
+// Admin → Settings → Google Calendar: connect once, see status, disconnect.
+// Each confirmed booking becomes a calendar event (a voice call — nothing to join).
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 import { disconnectGoogleCalendar } from "@/app/admin/actions";
 import { formatDateTime } from "@/lib/format";
-import { CalendarIcon, VideoIcon } from "../Icons";
+import { CalendarIcon } from "../Icons";
 import { Notice } from "./ui";
 
 export type CalendarStatus = { connected: boolean; email: string | null; connectedAt: string | null; lastError: string | null; setupMissing: boolean; configured: boolean };
 
 const RESULT: Record<string, { kind: "success" | "error"; text: string }> = {
-  connected: { kind: "success", text: "Google Calendar connected ✅ New bookings now get a Google Meet link automatically. Upcoming bookings without a link are being updated." },
+  connected: { kind: "success", text: "Google Calendar connected ✅ New bookings are added to your calendar automatically. Upcoming bookings are being added now." },
   cancelled: { kind: "error", text: "Connection cancelled on Google's page. Nothing was changed." },
   expired: { kind: "error", text: "That connection attempt expired. Please click Connect Google Calendar again." },
   failed: { kind: "error", text: "Google did not finish the connection. Please try again." },
@@ -28,7 +29,7 @@ export default function GoogleCalendarCard({ status, expectedEmail }: { status: 
   const shown = msg ?? fromGoogle;
 
   const disconnect = () => {
-    if (!confirm("Disconnect Google Calendar? New bookings will show \"Meet link will be shared soon\" until you reconnect. Existing events stay in your calendar.")) return;
+    if (!confirm("Disconnect Google Calendar? New bookings won't be added to your calendar until you reconnect. Existing events stay in your calendar.")) return;
     start(async () => {
       const res = await disconnectGoogleCalendar();
       setMsg(res.ok ? { kind: "success", text: res.message ?? "Disconnected." } : { kind: "error", text: res.error });
@@ -39,11 +40,11 @@ export default function GoogleCalendarCard({ status, expectedEmail }: { status: 
   return (
     <section id="google-calendar" className="card mb-8 scroll-mt-24 p-5 sm:p-6">
       <div className="flex items-start gap-3">
-        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-600 text-white"><VideoIcon className="h-6 w-6" /></span>
+        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-600 text-white"><CalendarIcon className="h-6 w-6" /></span>
         <div>
-          <h2 className="text-lg font-extrabold text-slate-900">Google Calendar &amp; Meet</h2>
+          <h2 className="text-lg font-extrabold text-slate-900">Google Calendar</h2>
           <p className="text-sm text-slate-500">
-            When a counselling booking is confirmed, an event with a <strong>Google Meet link</strong> is added to your calendar and the student gets a calendar invite.
+            When a counselling booking is confirmed, a <strong>30-minute voice call</strong> event (with the student&apos;s phone number) is added to your calendar and the student gets a calendar invite.
             Rescheduling moves the event; cancelling cancels it.
           </p>
         </div>
@@ -79,7 +80,7 @@ export default function GoogleCalendarCard({ status, expectedEmail }: { status: 
         ) : (
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <a href="/api/admin/google/connect" className="btn-primary"><CalendarIcon className="h-4 w-4" /> Connect Google Calendar</a>
-            <p className="text-xs text-slate-500">Sign in with <strong>{expectedEmail}</strong> and tick the calendar permission. Until connected, students see &ldquo;Meet link will be shared soon&rdquo;.</p>
+            <p className="text-xs text-slate-500">Sign in with <strong>{expectedEmail}</strong> and tick the calendar permission. Bookings work without it — the calendar is just a helper.</p>
           </div>
         )}
       </div>

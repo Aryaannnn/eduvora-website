@@ -13,7 +13,7 @@ create table if not exists public.why_settings (
   cards       jsonb not null default '[
     {"icon":"graduation","title":"Guided by a current VIT student","text":"Utkarsh studies at VIT Vellore right now, so you get first-hand, up-to-date advice on campuses, branches, fees and hostel life.","href":"/founder"},
     {"icon":"users","title":"1,000+ students guided","text":"Over 2 years of helping VITEEE aspirants pick the right campus and branch with confidence.","href":"/reviews"},
-    {"icon":"headset","title":"Personal 1-to-1 counselling","text":"A private video session about YOUR rank, budget and goals — not a crowded webinar.","href":"/book-a-slot"},
+    {"icon":"headset","title":"Personal 1-to-1 counselling","text":"A private 30-minute voice call about YOUR rank, budget and goals — not a crowded webinar.","href":"/book-a-slot"},
     {"icon":"target","title":"Rank & College Predictor","text":"See your likely VITEEE rank from your marks, and the campuses and branches within reach.","href":"/predictor"}
   ]'::jsonb
               check (jsonb_typeof(cards) = 'array' and jsonb_array_length(cards) <= 4),

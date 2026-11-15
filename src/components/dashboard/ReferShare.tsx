@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { CheckIcon, CopyIcon, WhatsAppIcon } from "../Icons";
+import { siteConfig } from "@/config/site";
 
-/** Referral code + link with Copy and "Share on WhatsApp". */
+/** Referral code + link with Copy (and "Share on WhatsApp" when switched on). */
 export default function ReferShare({ code, link, message }: { code: string; link: string; message: string }) {
   const [copied, setCopied] = useState<"" | "code" | "link">("");
 
@@ -33,14 +34,14 @@ export default function ReferShare({ code, link, message }: { code: string; link
           {copied === "link" ? "Copied" : "Copy"}
         </button>
       </div>
-      <a
+      {siteConfig.showWhatsApp && <a
         href={`https://wa.me/?text=${encodeURIComponent(message)}`}
         target="_blank"
         rel="noopener noreferrer"
         className="btn-primary mt-4 w-full !bg-[#25D366] !py-3 hover:!bg-[#1ebe5b]"
       >
         <WhatsAppIcon className="h-5 w-5" /> Share on WhatsApp
-      </a>
+      </a>}
     </div>
   );
 }

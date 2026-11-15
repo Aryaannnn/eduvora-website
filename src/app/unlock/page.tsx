@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 };
 
 // Where every "Call" button leads visitors who haven't paid yet.
-// (WhatsApp chat is open to everyone and does NOT come here.)
+// (WhatsApp chat — only when switched on — does NOT come here.)
 // ✏️ The message text lives in src/components/contact/DirectContact.tsx (unlockMessage)
 export default function UnlockPage({ searchParams }: PageProps<"/unlock">) {
   return (
@@ -29,7 +29,7 @@ export default function UnlockPage({ searchParams }: PageProps<"/unlock">) {
               <ol className="mt-4 space-y-3 text-slate-700">
                 <li className="flex gap-3"><Num n={1} /> Book a counselling session, or buy any course, test series or study material.</li>
                 <li className="flex gap-3"><Num n={2} /> Log in with the same account you paid with.</li>
-                <li className="flex gap-3"><Num n={3} /> The full number with the Call button appears on your dashboard, the contact page and the footer. (WhatsApp chat is open to everyone already.)</li>
+                <li className="flex gap-3"><Num n={3} /> The full number with the Call button appears on your dashboard, the contact page and the footer.</li>
               </ol>
               <div className="mt-6 grid gap-3 sm:grid-cols-2">
                 <Link href="/book-a-slot" className="btn-accent !py-3"><CalendarIcon className="h-5 w-5" /> Book a Session</Link>
@@ -63,7 +63,7 @@ function EnquiryBox({ message = "", buying = false }: { message?: string; buying
     <>
       <h2 className="text-xl font-extrabold text-slate-900">{buying ? "Request this item — we'll send you a payment link" : "Just have a question? Send a free enquiry"}</h2>
       <p className="mt-1 text-sm text-slate-600">
-        {buying ? "Send your details below. Our team will call / WhatsApp you with a secure payment link." : "No payment needed. Our team will call you back."}
+        {buying ? "Send your details below. Our team will call or email you with a secure payment link." : "No payment needed. Our team will call you back."}
       </p>
       <div className="mt-6"><ContactForm source="unlock" defaultMessage={message} /></div>
     </>

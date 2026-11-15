@@ -6,9 +6,11 @@ import BookingForm from "@/components/BookingForm";
 import PackageCards from "@/components/packages/PackageCards";
 import PackageComparison from "@/components/packages/PackageComparison";
 import PageHero from "@/components/PageHero";
+import NextSlotBanner from "@/components/booking/NextSlotBanner";
+import { Suspense } from "react";
 import { siteConfig } from "@/config/site";
 
-export const metadata: Metadata = pageMeta({ title: "Book One-to-One VITEEE Counselling", description: "Book a one-to-one VITEEE counselling call with Utkarsh Shrivastava: rank review, campus and branch choice, fee categories and documents.", path: "/book-a-slot" });
+export const metadata: Metadata = pageMeta({ title: "Book One-to-One VITEEE Counselling", description: "Book a 30-minute one-to-one VITEEE counselling voice call with Utkarsh Shrivastava: rank review, campus and branch choice, fee categories and documents.", path: "/book-a-slot" });
 
 export default function BookASlotPage() {
   return (
@@ -17,8 +19,9 @@ export default function BookASlotPage() {
       <PageHero
         eyebrow="Book a slot"
         title="Book Your Counselling Slot"
-        subtitle={`A private one-to-one call with ${siteConfig.founder.name} or our senior counsellors. Parents are welcome to join.`}
+        subtitle={`A private 30-minute one-to-one voice call with ${siteConfig.founder.name.split(" ")[0]} Sir. He calls you on your phone at the booked time — parents are welcome to join on speaker.`}
       >
+        <Suspense fallback={null}><NextSlotBanner /></Suspense>
         <div className="mt-6 flex flex-wrap gap-3">
           <a href="#packages" className="btn-outline !py-2.5">See Packages</a>
           <a href="#book" className="btn-outline !py-2.5">Book a Single Slot</a>
@@ -34,7 +37,7 @@ export default function BookASlotPage() {
       </section>
       <section id="book" className="container-page scroll-mt-24 py-10 sm:py-14">
         <h2 className="mb-2 text-2xl font-extrabold text-brand-700">Book a session</h2>
-        <p className="mb-3 text-slate-600">Have a package? Your session credit is used automatically. Otherwise pay for a single slot.</p>
+        <p className="mb-3 text-slate-600">Each session is a 30-minute voice call. Have a package? Your session credit is used automatically. Otherwise pay for a single slot. All times are India time (IST).</p>
         <RatingLine className="mb-8 !justify-start" />
         <BookingForm />
       </section>

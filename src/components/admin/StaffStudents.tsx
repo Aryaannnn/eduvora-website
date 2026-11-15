@@ -6,6 +6,7 @@ import { useState } from "react";
 import { formatDateTime } from "@/lib/format";
 import { MailIcon, PhoneIcon, SearchIcon, WhatsAppIcon } from "../Icons";
 import { AdminHeader } from "./ui";
+import { siteConfig } from "@/config/site";
 
 export type StaffStudent = { id: string; full_name: string | null; email: string | null; phone: string | null; role: string; created_at: string; sessions_booked: number };
 
@@ -56,7 +57,7 @@ export default function StaffStudents({ students }: { students: StaffStudent[] }
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-1.5">
                       {s.phone && <a href={`tel:+${intlPhone(s.phone)}`} className="rounded-lg p-2 text-brand-700 ring-1 ring-slate-200 hover:bg-slate-50" aria-label={`Call ${s.full_name ?? ""}`}><PhoneIcon className="h-4 w-4" /></a>}
-                      {s.phone && <a href={`https://wa.me/${intlPhone(s.phone)}`} target="_blank" rel="noopener noreferrer" className="rounded-lg p-2 text-[#128C7E] ring-1 ring-slate-200 hover:bg-slate-50" aria-label={`WhatsApp ${s.full_name ?? ""}`}><WhatsAppIcon className="h-4 w-4" /></a>}
+                      {siteConfig.showWhatsApp && s.phone && <a href={`https://wa.me/${intlPhone(s.phone)}`} target="_blank" rel="noopener noreferrer" className="rounded-lg p-2 text-[#128C7E] ring-1 ring-slate-200 hover:bg-slate-50" aria-label={`WhatsApp ${s.full_name ?? ""}`}><WhatsAppIcon className="h-4 w-4" /></a>}
                       {s.email && <a href={`mailto:${s.email}`} className="rounded-lg p-2 text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50" aria-label={`Email ${s.full_name ?? ""}`}><MailIcon className="h-4 w-4" /></a>}
                     </div>
                   </td>

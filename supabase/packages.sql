@@ -224,9 +224,9 @@ grant execute on function public.has_predictor_access(uuid) to authenticated, se
 insert into public.products (title, slug, description, category, price, original_price, is_free, is_active, sort_order, package_sessions, package_unlimited, details)
 values
   ('Basic', 'package-basic', 'One focused counselling session for your rank, campus and branch plan.', 'counselling_package', 499, null, false, true, 1, 1, false,
-   '{"tagline": "Quick expert guidance", "features": ["1 one-to-one counselling session", "Campus & branch plan for your rank", "Fee category guidance"]}'::jsonb),
-  ('Complete', 'package-complete', 'Three sessions, the full predictor and WhatsApp support through counselling.', 'counselling_package', 1499, null, false, true, 2, 3, false,
-   '{"tagline": "Best for most students", "popular": true, "features": ["3 one-to-one counselling sessions", "Full Rank & College Predictor", "WhatsApp support until counselling ends", "Choice list review"]}'::jsonb),
+   '{"tagline": "Quick expert guidance", "features": ["1 one-to-one 30-minute counselling session", "Campus & branch plan for your rank", "Fee category guidance"]}'::jsonb),
+  ('Complete', 'package-complete', 'Three sessions, the full predictor and call support through counselling.', 'counselling_package', 1499, null, false, true, 2, 3, false,
+   '{"tagline": "Best for most students", "popular": true, "features": ["3 one-to-one 30-minute counselling sessions", "Full Rank & College Predictor", "Call support until counselling ends", "Choice list review"]}'::jsonb),
   ('Premium', 'package-premium', 'Unlimited sessions until admission, with choice filling help and priority support.', 'counselling_package', 2999, null, false, true, 3, null, true,
-   '{"tagline": "Till you get admission", "features": ["Unlimited sessions until admission", "Full Rank & College Predictor", "Choice filling help", "Priority WhatsApp support"]}'::jsonb)
+   '{"tagline": "Till you get admission", "features": ["Unlimited 30-minute sessions until admission", "Full Rank & College Predictor", "Choice filling help", "Priority call support"]}'::jsonb)
 on conflict (slug) do nothing;

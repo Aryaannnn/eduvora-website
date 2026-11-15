@@ -5,16 +5,17 @@ import BookingCheckButton from "@/components/BookingCheckButton";
 import Confetti from "@/components/Confetti";
 import TrackEvent from "@/components/analytics/TrackEvent";
 import DirectContact from "@/components/contact/DirectContact";
-import { CalendarIcon, CheckIcon, ClockIcon, ReceiptIcon, TargetIcon } from "@/components/Icons";
+import { CalendarIcon, CheckIcon, ClockIcon, PhoneIcon, ReceiptIcon, TargetIcon } from "@/components/Icons";
 import { siteConfig } from "@/config/site";
 import { requireUser } from "@/lib/dashboard";
-import { formatDate, formatDateTime, formatPrice, formatTime } from "@/lib/format";
+import { googleCalendarUrl } from "@/lib/calendar";
+import { formatDate, formatDateTime, formatPhoneIN, formatPrice, formatTime } from "@/lib/format";
 import { getPredictorAccess } from "@/lib/predictor-server";
 
 export const metadata: Metadata = { title: "Booking Confirmed", robots: { index: false } };
 
 type Booking = {
-  id: string; name: string; status: string; payment_status: string; amount: number | null; invoice_number: string | null;
+  id: string; name: string; phone: string; status: string; payment_status: string; amount: number | null; invoice_number: string | null;
   razorpay_payment_id: string | null; paid_at: string | null; created_at: string;
   slots: { date: string; start_time: string; end_time: string; price: number } | null;
 };
@@ -26,8 +27,6 @@ const mins = (t: string) => {
   const [h, m] = t.split(":").map(Number);
   return h * 60 + m;
 };
-// "2026-11-10" + "10:00:00" → "20261110T100000" (Google Calendar, India time)
-const gcalTime = (d: string, t: string) => `${d.replace(/-/g, "")}T${t.slice(0, 8).replace(/:/g, "")}`;
 
 // /booking-confirmed?id=<booking id> — shown ONLY after a verified payment
 export default function BookingConfirmedPage({ searchParams }: PageProps<"/booking-confirmed">) {
@@ -50,7 +49,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/booking-con
   // RLS: students can only read their own bookings
   const { data } = await s.supabase
     .from("bookings")
-    .select("id,name,status,payment_status,amount,invoice_number,razorpay_payment_id,paid_at,created_at,slots(date,start_time,end_time,price)")
+    .select("id,name,phone,status,payment_status,amount,invoice_number,razorpay_payment_id,paid_at,created_at,slots(date,start_time,end_time,price)")
     .eq("id", id)
     .eq("user_id", s.user.id)
     .maybeSingle();
@@ -95,21 +94,14 @@ async function Content({ searchParams }: { searchParams: PageProps<"/booking-con
   const slot = b.slots;
   const duration = slot ? mins(slot.end_time) - mins(slot.start_time) : 0;
   const firstName = b.name.split(" ")[0] || "there";
-  const gcal = slot
-    ? `https://calendar.google.com/calendar/render?${new URLSearchParams({
-        action: "TEMPLATE",
-        text: `EDUVORA counselling with ${siteConfig.founder.name}`,
-        dates: `${gcalTime(slot.date, slot.start_time)}/${gcalTime(slot.date, slot.end_time)}`,
-        ctz: "Asia/Kolkata",
-        details: `One-to-one VITEEE counselling session.\nBooking ID: ${b.id.slice(0, 8).toUpperCase()}${b.invoice_number ? `\nInvoice: ${b.invoice_number}` : ""}\n${siteConfig.siteUrl}/dashboard/bookings`,
-      }).toString()}`
-    : null;
+  const gcal = slot ? googleCalendarUrl(slot, b.id, b.invoice_number, b.phone) : null;
   const paidLater = b.status === "pending"; // paid after the hold ran out and someone else took the time
 
   const rows: [string, string][] = [
     ["Date", slot ? formatDate(slot.date, true) : "—"],
     ["Time", slot ? `${formatTime(slot.start_time)} – ${formatTime(slot.end_time)} IST` : "—"],
-    ["Duration", duration > 0 ? `${duration} minutes` : "—"],
+    ["Session", duration > 0 ? `${duration}-minute voice call` : "Voice call"],
+    ["We call you on", formatPhoneIN(b.phone)],
     ["Amount paid", byCredit ? "1 session credit (package)" : isFree ? "Free" : formatPrice(b.amount ?? slot?.price ?? 0)],
     ["Booking ID", b.id.slice(0, 8).toUpperCase()],
     ["Invoice number", b.invoice_number ?? (byCredit ? "— (on your package invoice)" : isFree ? "— (free session)" : "Being generated…")],
@@ -128,7 +120,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/booking-con
           </span>
           <h1 className="mt-6 text-2xl font-extrabold leading-tight text-brand-700 sm:text-3xl">
             Congratulations, {firstName}! 🎉
-            <span className="mt-1 block text-lg font-bold text-slate-700 sm:text-xl">Your counselling session is booked.</span>
+            <span className="mt-1 block text-lg font-bold text-slate-700 sm:text-xl">Your counselling voice call is booked.</span>
           </h1>
           {paidLater && (
             <p className="mx-auto mt-4 max-w-md rounded-xl bg-amber-50 p-3 text-sm text-amber-900 ring-1 ring-amber-200">
@@ -152,10 +144,14 @@ async function Content({ searchParams }: { searchParams: PageProps<"/booking-con
             <a href={`/api/invoices/${b.id}`} download className="font-semibold text-brand-700 underline">Download invoice PDF</a> · a copy is also in your email
           </p>
         )}
-        {b.status === "confirmed" && (
-          <p className="relative -mb-3 mt-4 px-5 text-center text-xs text-slate-500">
-            🎥 The session is on <strong>Google Meet</strong> — the link comes in your confirmation email and appears in My Bookings.
-          </p>
+        {b.status === "confirmed" && slot && (
+          <div className="relative mx-5 mt-4 flex items-start gap-3 rounded-2xl bg-emerald-50 p-4 text-sm text-emerald-950 ring-1 ring-emerald-200 sm:mx-8">
+            <PhoneIcon className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700" />
+            <p>
+              <strong>{founderFirst} Sir will call you on {formatPhoneIN(b.phone)} on {formatDate(slot.date, true)} at {formatTime(slot.start_time)} IST.</strong>{" "}
+              Please keep your phone available. Parents are welcome to join on speaker. Wrong number? Reply to your confirmation email.
+            </p>
+          </div>
         )}
         {/* actions */}
         <div className="relative grid gap-3 p-5 sm:grid-cols-3 sm:p-8">

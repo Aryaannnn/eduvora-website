@@ -79,7 +79,7 @@ export default function CourseContentEditor({ json, onChange }: { json: string; 
         <Label>How classes are delivered (empty = not shown)</Label>
         <div className="grid gap-3 sm:grid-cols-3">
           {([
-            ["live", "Live classes", "Live on Google Meet — link in your dashboard"],
+            ["live", "Live classes", "Live classes — link in your dashboard"],
             ["recording", "Recordings", "Every class recorded, available within 24 h"],
             ["pdf", "PDF notes", "Chapter-wise PDF notes to download"],
           ] as const).map(([k, label, ph]) => (
@@ -91,7 +91,7 @@ export default function CourseContentEditor({ json, onChange }: { json: string; 
         </div>
       </div>
 
-      {area("cc-after", "What you get after payment", "after_payment", "Instant access in My Courses\nClass links + WhatsApp group invite\nInvoice by email")}
+      {area("cc-after", "What you get after payment", "after_payment", "Instant access in My Courses\nClass links + batch group invite\nInvoice by email")}
       {area("cc-feat", "Key features (optional)", "features", "Daily doubt solving\nWeekly mock tests")}
 
       <div>

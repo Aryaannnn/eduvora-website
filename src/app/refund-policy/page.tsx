@@ -20,7 +20,7 @@ export default function RefundPolicyPage() {
 
       <h2>In short</h2>
       <ul>
-        <li><strong>Counselling session:</strong> free reschedule or full refund up to {h} hours before your slot.</li>
+        <li><strong>Counselling session (30-minute voice call):</strong> free reschedule or full refund up to {h} hours before your slot.</li>
         <li><strong>Live crash courses / batches:</strong> refund up to {d} days before the batch starts; full refund if we cancel the batch. Once classes begin, no refund.</li>
         <li><strong>Study material (PDFs), previous year papers and mock test packs:</strong> non-refundable once you get access (they are digital products).</li>
         <li><strong>Can&apos;t access what you paid for?</strong> We fix it or refund you within {r.techIssueDays} days.</li>
@@ -28,11 +28,12 @@ export default function RefundPolicyPage() {
       </ul>
 
       <h2>1. Counselling sessions</h2>
+      <p>Each counselling session is a <strong>30-minute session</strong> — a one-to-one voice call. {siteConfig.founder.name.split(" ")[0]} Sir calls you on the number you gave when booking, at the booked time (India time).</p>
       <ul>
         <li><strong>Reschedule for free</strong> up to {h} hours before your slot.</li>
         <li><strong>Cancel more than {h} hours before</strong> your slot: you get a <strong>full refund</strong>.</li>
         <li><strong>Cancel within {h} hours</strong> of your slot: <strong>no refund</strong>.</li>
-        <li><strong>Miss the session</strong> without telling us: <strong>no refund</strong>.</li>
+        <li><strong>Miss the session</strong> without telling us (for example, the phone is switched off or not answered): <strong>no refund</strong>.</li>
         <li>If <strong>we</strong> have to cancel your session, you can choose a new time or a full refund.</li>
       </ul>
 

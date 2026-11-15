@@ -34,7 +34,7 @@ export default function MaintenanceCard({ state }: { state: MaintenanceState }) 
           <div>
             <h2 className="text-lg font-extrabold text-slate-900">Maintenance mode</h2>
             <p className="text-sm text-slate-500">
-              When ON, visitors and students see a maintenance page (with WhatsApp and email buttons). Admins and counsellors keep using the site. Payments, webhooks, scheduled jobs and the admin login keep working.
+              When ON, visitors and students see a maintenance page (with an email button). Admins and counsellors keep using the site. Payments, webhooks, scheduled jobs and the admin login keep working.
             </p>
           </div>
         </div>

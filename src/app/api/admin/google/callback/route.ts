@@ -1,12 +1,11 @@
 // GET /api/admin/google/callback — Google sends the admin back here after "Allow".
 // Checks admin + 2-step login + the random state, saves the (encrypted) refresh
-// token, then gives Meet links to upcoming bookings that are still missing one.
+// token, then adds upcoming bookings that are not in the calendar yet.
 import { timingSafeEqual } from "node:crypto";
 import { after, NextResponse, type NextRequest } from "next/server";
 import { hasAdmin2fa } from "@/lib/admin";
 import { getSession } from "@/lib/dashboard";
-import { notifyMeetLinkReady } from "@/lib/email/notify";
-import { finishConnect, retryMissingMeetLinks } from "@/lib/google-calendar";
+import { finishConnect, retryMissingCalendarEvents } from "@/lib/google-calendar";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 
 const STATE_COOKIE = "eduvora_gcal_state";
@@ -38,10 +37,10 @@ export async function GET(request: NextRequest) {
     () => null,
     () => null,
   );
-  // Upcoming bookings without a Meet link → create them now, and email those students
+  // Upcoming bookings that are not in the calendar yet → add them now
   after(async () => {
     if (!getAdminSupabase()) return;
-    for (const id of await retryMissingMeetLinks(25)) notifyMeetLinkReady(id);
+    await retryMissingCalendarEvents(25);
   });
   return back("connected");
 }

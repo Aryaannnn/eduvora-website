@@ -37,16 +37,14 @@ async function Content({ searchParams }: { searchParams: PageProps<"/admin/booki
 
   // ---------- COUNSELLOR: safe view without amounts / payment details ----------
   if (role === "counsellor") {
-    const [{ data, error }, extras] = await Promise.all([
-      s.supabase
-        .from("staff_bookings")
-        .select("id,name,phone,email,class_year,expected_marks,message,status,created_at,meet_link,assigned_to,slot_date,slot_start,slot_end")
-        .order("created_at", { ascending: false })
-        .limit(1000),
-      staffExtras(s),
-    ]);
+    const loadStaff = (c: string) => s.supabase.from("staff_bookings").select(c).order("created_at", { ascending: false }).limit(1000);
+    const base = "id,name,phone,email,class_year,expected_marks,message,status,created_at,assigned_to,slot_date,slot_start,slot_end";
+    const [first, extras] = await Promise.all([loadStaff(`${base},call_status,call_note`), staffExtras(s)]);
+    let { data, error } = first;
+    const callReady = !error;
+    if (error) ({ data, error } = await loadStaff(base)); // voice-calls.sql not run yet
     if (error) return <p className="card p-6 text-red-600">Bookings are not set up for counsellors yet (admin: run supabase/roles.sql once).</p>;
-    return <StaffBookings bookings={(data ?? []) as StaffBooking[]} notes={extras.notes} today={todayInIndia()} me={s.user.id} staffNames={extras.staffNames} notAllowed={sp.notAllowed === "1"} />;
+    return <StaffBookings bookings={(data ?? []) as unknown as StaffBooking[]} notes={extras.notes} today={todayInIndia()} me={s.user.id} staffNames={extras.staffNames} notAllowed={sp.notAllowed === "1"} callReady={callReady} />;
   }
 
   // ---------- ADMIN ----------
@@ -58,10 +56,11 @@ async function Content({ searchParams }: { searchParams: PageProps<"/admin/booki
       .not("status", "in", "(awaiting_payment,expired)") // unpaid attempts are never shown
       .order("created_at", { ascending: false })
       .limit(500);
-  let { data, error } = await load(`${cols},meet_link,calendar_status,calendar_error,assigned_to`);
-  if (error?.code === "42703") ({ data, error } = await load(`${cols},meet_link,calendar_status,calendar_error`)); // counsellor.sql not run yet
-  const meetReady = error?.code !== "42703"; // google-calendar.sql run?
-  if (!meetReady) ({ data, error } = await load(cols));
+  // Newest setup first; older databases fall back step by step (a missing column = 42703)
+  let { data, error } = await load(`${cols},call_status,call_note,calendar_status,calendar_error,assigned_to`);
+  const callReady = error?.code !== "42703"; // voice-calls.sql run?
+  if (!callReady) ({ data, error } = await load(`${cols},calendar_status,calendar_error,assigned_to`));
+  if (error?.code === "42703") ({ data, error } = await load(cols));
   if (error) return <p className="card p-6 text-red-600">Could not load bookings: {error.message}</p>;
   const [{ data: freeSlots }, extras] = await Promise.all([
     s.supabase
@@ -79,7 +78,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/admin/booki
       bookings={(data ?? []) as unknown as AdminBooking[]}
       today={todayInIndia()}
       freeSlots={(freeSlots ?? []) as FreeSlot[]}
-      meetReady={meetReady}
+      callReady={callReady}
       staff={extras.ready ? extras.members : null}
       staffNames={extras.staffNames}
       notes={extras.notes}

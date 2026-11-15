@@ -41,11 +41,11 @@ export default function PrivacyPolicyPage() {
         <li>To create and secure your account and let you log in.</li>
         <li>To provide what you asked for: counselling sessions, courses, study material, tests, the rank predictor and support.</li>
         <li>To process payments, send receipts and invoices, and handle refunds.</li>
-        <li>To send important messages about your bookings and purchases (email, SMS, call or WhatsApp) and, if you join, community updates.</li>
-        <li>To follow up with you about counselling after you sign up, send an enquiry, use the predictor, get a free resource or start a payment (by call, WhatsApp or email). We keep short internal notes of these conversations. Tell us any time if you don&apos;t want to be contacted.</li>
+        <li>To send important messages about your bookings and purchases (email, SMS or call) and, if you join, community updates.</li>
+        <li>To follow up with you about counselling after you sign up, send an enquiry, use the predictor, get a free resource or start a payment (by call or email). We keep short internal notes of these conversations. Tell us any time if you don&apos;t want to be contacted.</li>
         <li>To protect our study material (downloaded PDFs are personalised with your name, email and a download ID) and prevent misuse.</li>
         <li>To understand which pages help students and improve the website (analytics).</li>
-        <li>To meet legal duties, such as keeping tax and accounting records.</li>
+        <li>To fulfil legal duties, such as keeping tax and accounting records.</li>
       </ul>
       <p>We do <strong>not</strong> sell your personal data, and we do not use it for advertising.</p>
 
@@ -56,7 +56,7 @@ export default function PrivacyPolicyPage() {
         <li><strong>Supabase</strong> — our database, login system and secure file storage.</li>
         <li><strong>Resend</strong> — sending emails (receipts, booking confirmations, reminders).</li>
         <li><strong>Vercel</strong> — hosting the website, plus Vercel Web Analytics and Speed Insights.</li>
-        <li><strong>Google</strong> — if you choose &ldquo;Continue with Google&rdquo; (sign-in); Google Analytics if we turn it on; and <strong>Google Calendar &amp; Google Meet</strong> for counselling sessions (your name, phone, email, class, expected marks and message are added to our calendar event, and you are invited as a guest).</li>
+        <li><strong>Google</strong> — if you choose &ldquo;Continue with Google&rdquo; (sign-in); Google Analytics if we turn it on; and <strong>Google Calendar</strong> for counselling voice calls (your name, phone, email, class, expected marks and message are added to our calendar event, and you are invited as a guest).</li>
       </ul>
       <p>
         Some of these providers may store or process data on servers outside India. We may also share data if required by law or to

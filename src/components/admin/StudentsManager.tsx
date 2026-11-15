@@ -86,7 +86,7 @@ export default function StudentsManager({ students, currentUserId, setupMissing 
   const freeUsers = students.filter((s) => s.freeItems.length > 0).length;
   const roleCount = (r: UserRole) => students.filter((s) => roleOf(s) === r).length;
 
-  // Deletion request (student asked by email/WhatsApp): type DELETE to confirm
+  // Deletion request (student asked by email or phone): type DELETE to confirm
   const deleteAccount = (s: AdminStudent) => {
     const who = s.full_name || s.email || "this student";
     const typed = prompt(

@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
   const limit = seatLimitOf(product.details as { seat_limit?: unknown } | null);
   if (limit) {
     const taken = await countEnrolled(admin, product.id);
-    if (taken !== null && taken >= limit) return json({ error: "Sorry, this batch is full. Message us on WhatsApp to join the waiting list or the next batch." }, 409);
+    if (taken !== null && taken >= limit) return json({ error: "Sorry, this batch is full. Send us an enquiry or email us to join the waiting list or the next batch." }, 409);
   }
 
   // FREE items unlock immediately (amount 0, no Razorpay)

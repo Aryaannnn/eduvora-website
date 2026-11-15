@@ -8,6 +8,7 @@ import { addLeadNote, assignLead, deleteLeadNote, updateLead, type LeadStatus } 
 import { formatDate, formatDateTime, formatPrice } from "@/lib/format";
 import { CalendarIcon, ChevronDownIcon, DownloadIcon, MailIcon, PhoneIcon, SearchIcon, TrashIcon, WhatsAppIcon } from "../Icons";
 import { AdminHeader, downloadCsv, Notice } from "./ui";
+import { siteConfig } from "@/config/site";
 
 export type LeadNote = { id: string; body: string; created_at: string; created_by?: string | null };
 type Staff = { id: string; full_name: string | null; email: string | null; role: string };
@@ -280,7 +281,7 @@ function LeadRow({
         </button>
         <div className="flex shrink-0 flex-wrap items-center gap-2 pl-7 lg:pl-0">
           {l.phone && <a href={`tel:+${intlPhone(l.phone)}`} className="btn-primary !px-3 !py-2 text-sm" title="Call"><PhoneIcon className="h-4 w-4" /> Call</a>}
-          {l.phone && (
+          {siteConfig.showWhatsApp && l.phone && (
             <a href={`https://wa.me/${intlPhone(l.phone)}?text=${encodeURIComponent(wa)}`} target="_blank" rel="noopener noreferrer" className="btn-primary !bg-[#25D366] !px-3 !py-2 text-sm" title="WhatsApp with a ready message">
               <WhatsAppIcon className="h-4 w-4" /> WhatsApp
             </a>

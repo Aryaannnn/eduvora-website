@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     const { data: s } = await db.from("slots").select("id,price,is_available").eq("id", b.slotId).maybeSingle();
     if (!s) return json({ error: "This slot is not available." }, 404);
     const q = await quote(db, session.user.id, { kind: "slot", id: s.id, price: s.price }, b.coupon);
-    return json({ title: "One-to-one counselling session", ...q, coupon: q.coupon && { code: q.coupon.code, discount: q.coupon.discount } });
+    return json({ title: "30-minute counselling voice call", ...q, coupon: q.coupon && { code: q.coupon.code, discount: q.coupon.discount } });
   }
   return json({ error: "Nothing to check out." }, 400);
 }

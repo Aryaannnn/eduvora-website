@@ -5,7 +5,7 @@ import ContactSection from "@/components/home/ContactSection";
 import PageHero from "@/components/PageHero";
 import { siteConfig } from "@/config/site";
 
-export const metadata: Metadata = pageMeta({ title: "Contact Us – VITEEE Counselling Help", description: "Contact EDUVORA for VITEEE counselling, VIT counselling guidance, courses and study material — chat on WhatsApp or email us anytime.", path: "/contact" });
+export const metadata: Metadata = pageMeta({ title: "Contact Us – VITEEE Counselling Help", description: "Contact EDUVORA for VITEEE counselling, VIT counselling guidance, courses and study material — send us an enquiry or email us anytime.", path: "/contact" });
 
 export default function ContactPage() {
   return (

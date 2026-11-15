@@ -20,7 +20,7 @@ export default function FounderSection() {
 
         <Reveal delay={100}>
           <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.15em] text-accent-700">
-            <span className="h-1.5 w-6 rounded-full bg-accent-400" /> Meet the founder
+            <span className="h-1.5 w-6 rounded-full bg-accent-400" /> About the founder
           </p>
           <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-brand-700 sm:text-4xl">{founder.name}</h2>
           <p className="mt-2 text-sm font-semibold leading-relaxed text-accent-700 sm:text-base">{founder.title}</p>

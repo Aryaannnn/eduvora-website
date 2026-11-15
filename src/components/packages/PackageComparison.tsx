@@ -67,7 +67,7 @@ export default async function PackageComparison() {
               {cols.map((p) => <td key={p.id} className={`px-3 py-3 text-center text-base font-extrabold text-slate-900 ${p.details.popular ? "bg-brand-50" : ""}`}>{formatPrice(p.price)}</td>)}
             </tr>
             <tr>
-              <th scope="row" className="sticky left-0 bg-white px-4 py-3 text-left font-semibold text-slate-700">Counselling sessions</th>
+              <th scope="row" className="sticky left-0 bg-white px-4 py-3 text-left font-semibold text-slate-700">Counselling sessions (30-minute voice calls)</th>
               {cols.map((p) => <td key={p.id} className={`px-3 py-3 text-center font-bold text-slate-800 ${p.details.popular ? "bg-brand-50" : ""}`}>{sessionsLabel(p)}</td>)}
             </tr>
             {rows.map((r) => (

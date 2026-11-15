@@ -92,13 +92,13 @@ export const siteConfig = {
   // ---------- Contact ----------
   // 🔒 Your FULL phone number is NOT stored here (this file is public).
   //    It lives in .env.local / Vercel as CONTACT_PHONE.
-  //    • WhatsApp CHAT: open to everyone (the server adds the number)
+  //    • WhatsApp CHAT: only when showWhatsApp (below) is true — open to everyone then
   //    • Direct CALL + the full number on screen: only students who paid, and admins
   //    Only the masked version below is shown to everyone else:
   phoneMasked: "+91 88719 XXXXX",
-  whatsappMessage: "Hi, I need help with VITEEE counselling",
+  whatsappMessage: "Hi, I need help with VITEEE counselling", // (only used when showWhatsApp is true)
   // ✏️ Shown on the contact page and in the footer
-  contactNote: "Chat with us on WhatsApp anytime. Direct call support is available for enrolled students.",
+  contactNote: "Send us an enquiry or email us anytime. Direct call support is available for enrolled students.",
   email: SUPPORT_EMAIL,
   // 📍 Address is HIDDEN everywhere (footer, contact page, invoices).
   //    To show it again: write your real address below and set showAddress: true
@@ -135,7 +135,12 @@ export const siteConfig = {
   },
 
   // Shown on the home page and the booking page when no counselling slot is open
-  noSlotsMessage: "New slots are added every week. Message us on WhatsApp and we'll find a time for you.",
+  noSlotsMessage: "New slots are added every week. Leave your details and we'll call you when a slot opens.",
+
+  // ✏️ WhatsApp buttons, icons and links everywhere on the website and in emails.
+  //    false = all hidden (visitors use the free enquiry form, email and the call rules).
+  //    Set to true to bring every WhatsApp button back.
+  showWhatsApp: false,
 
   // Date shown on the policy pages
   policiesUpdated: "7 November 2026",

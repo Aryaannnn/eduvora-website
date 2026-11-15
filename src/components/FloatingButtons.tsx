@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense, type MouseEvent } from "react";
-import { phoneLink, whatsappLink } from "@/config/site";
+import { phoneLink, siteConfig, whatsappLink } from "@/config/site";
 import { whatsappMessageFor } from "@/lib/whatsapp-message";
-import { CalendarIcon, PhoneIcon, WhatsAppIcon } from "./Icons";
+import { CalendarIcon, MailIcon, PhoneIcon, WhatsAppIcon } from "./Icons";
 
 // Contact buttons on every public page:
-//  • PHONES: a bar fixed to the bottom → [📞] [Book a Slot] [WhatsApp]
+//  • PHONES: a bar fixed to the bottom → [📞] [Book a Slot] [✉️ Enquiry]
+//    (or [WhatsApp] instead of Enquiry when showWhatsApp is on in src/config/site.ts)
 //    (hidden on booking, payment, test, login and admin pages, where it
 //     would cover the form — those pages keep only the small WhatsApp button)
 //  • COMPUTERS: the round WhatsApp button, bottom-right
@@ -49,7 +50,8 @@ function Buttons() {
 
   return (
     <>
-      {/* Round WhatsApp button: computers always; phones only where the bar is hidden */}
+      {/* Round WhatsApp button (only when switched on): computers always; phones only where the bar is hidden */}
+      {siteConfig.showWhatsApp && (
       <a
         href={href}
         {...waProps}
@@ -59,6 +61,7 @@ function Buttons() {
         <span className="absolute inset-0 animate-ping rounded-full bg-[#25D366] opacity-30 motion-reduce:hidden" />
         <WhatsAppIcon className="relative h-7 w-7" />
       </a>
+      )}
 
       {showBar && (
         <>
@@ -75,9 +78,15 @@ function Buttons() {
               <Link href="/book-a-slot" className="btn-primary h-12 flex-1 !rounded-xl !py-0 text-[15px]">
                 <CalendarIcon className="h-5 w-5" /> Book a Slot
               </Link>
-              <a href={href} {...waProps} aria-label="Chat with us on WhatsApp" className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-[#25D366] text-white shadow-md shadow-[#25D366]/30 active:scale-95">
-                <WhatsAppIcon className="h-6 w-6" />
-              </a>
+              {siteConfig.showWhatsApp ? (
+                <a href={href} {...waProps} aria-label="Chat with us on WhatsApp" className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-[#25D366] text-white shadow-md shadow-[#25D366]/30 active:scale-95">
+                  <WhatsAppIcon className="h-6 w-6" />
+                </a>
+              ) : (
+                <Link href="/contact#enquiry" aria-label="Send us an enquiry" className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-700 ring-1 ring-brand-100 active:scale-95">
+                  <MailIcon className="h-5 w-5" />
+                </Link>
+              )}
             </div>
           </nav>
         </>

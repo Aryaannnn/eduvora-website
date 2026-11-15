@@ -8,6 +8,12 @@ import { siteConfig } from "@/config/site";
 import { whatsappDigits } from "@/lib/contact";
 
 export async function GET(request: NextRequest) {
+  // WhatsApp switched off (src/config/site.ts → showWhatsApp) → the enquiry form
+  if (!siteConfig.showWhatsApp) {
+    const off = NextResponse.redirect(new URL("/contact#enquiry", request.url), 307);
+    off.headers.set("Cache-Control", "private, no-store");
+    return off;
+  }
   const text = (request.nextUrl.searchParams.get("text") || siteConfig.whatsappMessage).slice(0, 1500);
   const digits = whatsappDigits();
 

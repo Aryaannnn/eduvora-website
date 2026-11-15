@@ -26,7 +26,8 @@ export const parentsPage = {
   // Buttons (shown at the top and the bottom of the page)
   buttons: {
     book: "Book a call with parents joining",
-    whatsapp: "Ask us on WhatsApp",
+    enquiry: "Send us an enquiry",
+    whatsapp: "Ask us on WhatsApp", // only when showWhatsApp is on (src/config/site.ts)
     whatsappMessage: "Hi, I'm a parent. I have a few questions about VITEEE counselling for my child.",
     // pre-filled in the booking form's message box
     bookingNote: "My parents will join the call.",
@@ -49,9 +50,9 @@ export const parentsPage = {
     title: "How a session works",
     items: [
       { title: "Choose a time", text: "Pick a slot on the Book a Slot page. Pay securely online, or use a session from a counselling package." },
-      { title: "Get your confirmation", text: "You receive a confirmation email with the date, time and a Google Meet link. Parents can join from the same link." },
+      { title: "Get your confirmation", text: "You receive a confirmation email with the date and time. Utkarsh Sir calls the number you gave when booking." },
       { title: "Keep a few things ready", text: "Your child's expected marks or rank, the campuses and branches you are considering, your budget and your questions." },
-      { title: "The call", text: "A private video call. We go through your child's options together and answer every question — from you and from your child." },
+      { title: "The call", text: "A private 30-minute voice call. We go through your child's options together and answer every question — from you and from your child." },
       { title: "Your plan", text: "You leave with a clear plan for campus, branch and fee category, and know what to do next in counselling." },
     ],
     note: "Can't make it at the booked time? You can ask to reschedule.",
@@ -82,7 +83,7 @@ export const parentsPage = {
       },
       {
         q: "Can both parents join the call?",
-        a: "Of course. Both parents, and your child, can join the same video call from different phones or laptops.",
+        a: "Of course. Put the call on speaker so both parents and your child can talk with Utkarsh Sir together.",
       },
       {
         q: "Do you guarantee admission or a particular branch?",
@@ -96,7 +97,7 @@ export const parentsPage = {
   },
 
   counsellor: {
-    title: "Meet the counsellor",
+    title: "About the counsellor",
     // The photo, name, title and short story come from src/content/founder.ts
     linkText: "Read the full story",
   },
@@ -108,7 +109,7 @@ export const parentsPage = {
       { title: "Invoice by email", text: "Every payment gets an invoice by email, and you can download it again any time from the dashboard." },
       { title: "Clear refund rules", text: `${r.counsellingNote}` },
       { title: "Your data stays private", text: "We use your details only to provide counselling and support. You can download or delete your data any time from My Profile." },
-      { title: "No pressure", text: "Ask your questions first — by WhatsApp or a free enquiry — and book only when your family is ready." },
+      { title: "No pressure", text: "Ask your questions first — by a free enquiry or email — and book only when your family is ready." },
     ],
   },
 
@@ -119,6 +120,6 @@ export const parentsPage = {
 
   closing: {
     title: "Have a question before booking?",
-    text: "Send us a message on WhatsApp or book a call when it suits your family. You're welcome to join every session.",
+    text: "Send us an enquiry or email us, or book a call when it suits your family. You're welcome to join every session.",
   },
 };

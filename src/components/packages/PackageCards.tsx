@@ -27,7 +27,7 @@ export default async function PackageCards({ heading = true }: { heading?: boole
             <span className="h-1.5 w-6 rounded-full bg-accent-400" /> Counselling packages
           </p>
           <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-brand-700 sm:text-4xl">Choose your counselling plan</h2>
-          <p className="mt-3 text-slate-600">Pay once, then book your sessions with {founderFirst} Sir whenever you need them. Every package unlocks the full Rank &amp; College Predictor and direct call support.</p>
+          <p className="mt-3 text-slate-600">Pay once, then book your 30-minute voice-call sessions with {founderFirst} Sir whenever you need them. Every package unlocks the full Rank &amp; College Predictor and direct call support.</p>
         </div>
       )}
       <div className={`grid items-stretch gap-6 md:grid-cols-2 ${COLS[Math.min(packages.length, 3)]} ${heading ? "mt-12" : ""}`}>

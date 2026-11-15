@@ -57,10 +57,11 @@ Courses, study material, tests, slots, bookings, reviews and student accounts li
 👉 Follow **[DEPLOY.md](DEPLOY.md)**: environment variables, Supabase URLs, the Razorpay webhook,
 the automatic jobs (cron-job.org) and pre-launch mode (`src/config/launch.ts`).
 
-## Google Calendar & Meet
+## Google Calendar
 
-👉 **[GOOGLE_CALENDAR.md](GOOGLE_CALENDAR.md)**: confirmed counselling bookings get a Google Calendar
-event with a Google Meet link automatically (one-time setup).
+👉 **[GOOGLE_CALENDAR.md](GOOGLE_CALENDAR.md)**: confirmed counselling bookings become a Google Calendar
+event "Voice call – EDUVORA counselling (30 min)" with the student's number (one-time setup).
+Counselling is a 30-minute voice call: Utkarsh Sir calls the student on the number they gave.
 
 ## Error monitoring (Sentry)
 

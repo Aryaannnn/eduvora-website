@@ -55,7 +55,8 @@ export type BookingRow = {
   payment_status: string;
   amount?: number | null;
   invoice_number?: string | null;
-  meet_link?: string | null;
+  /** the number we call the student on */
+  phone?: string | null;
   created_at: string;
   slots: { date: string; start_time: string; end_time: string; price: number } | null;
 };
@@ -72,16 +73,12 @@ export async function getMyPurchases(s: Session): Promise<PurchaseRow[]> {
 }
 
 export async function getMyBookings(s: Session): Promise<BookingRow[]> {
-  const cols = "id,status,payment_status,amount,invoice_number,created_at,slots(date,start_time,end_time,price)";
-  const load = (c: string) =>
-    s.supabase
-      .from("bookings")
-      .select(c)
-      .eq("user_id", s.user.id)
-      .not("status", "in", "(awaiting_payment,expired)") // unpaid attempts are never shown
-      .order("created_at", { ascending: false });
-  let { data, error } = await load(`${cols},meet_link`);
-  if (error?.code === "42703") ({ data, error } = await load(cols)); // google-calendar.sql not run yet
+  const { data, error } = await s.supabase
+    .from("bookings")
+    .select("id,status,payment_status,amount,invoice_number,phone,created_at,slots(date,start_time,end_time,price)")
+    .eq("user_id", s.user.id)
+    .not("status", "in", "(awaiting_payment,expired)") // unpaid attempts are never shown
+    .order("created_at", { ascending: false });
   if (error) console.warn("getMyBookings:", error.message);
   return (data ?? []) as unknown as BookingRow[];
 }

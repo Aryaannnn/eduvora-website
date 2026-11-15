@@ -1,15 +1,15 @@
-# Google Calendar & Meet — one-time setup
+# Google Calendar — one-time setup
 
 When a counselling booking is confirmed (paid, free, or with a package credit), the website:
 
-1. adds an event to **your** Google Calendar (eduvora.support@gmail.com) with the student's name, phone, class, expected marks and message;
-2. creates a **Google Meet link** for it;
-3. invites the student as a **guest**, so Google sends them a calendar invite too;
-4. shows the Meet link in the student's **My Bookings**, the confirmation email, both reminder emails, and **Admin → Bookings** ("Join Meet").
+1. adds an event **"Voice call – EDUVORA counselling (30 min)"** to **your** Google Calendar (eduvora.support@gmail.com) with the student's **phone number to call**, name, class, expected marks and message;
+2. invites the student as a **guest**, so Google sends them a calendar invite too.
+
+Counselling is a **30-minute voice call** — there is no link to join. Utkarsh Sir calls the student on the number they gave when booking. Admin → Bookings shows today's calls at the top with a big **Call** button.
 
 If you **reschedule** a booking, the event moves (the student gets Google's "updated" email). If a booking is **cancelled** (by you or the student), the event is cancelled.
 
-If Google Calendar is not connected or Google fails, the booking is **still confirmed**. The student sees "Meet link will be shared soon", and you see a yellow alert in Admin → Overview and Admin → Bookings, where you can paste a link by hand. The student is emailed when you save it. The website also tries again every 15 minutes (with the reminders job), and as soon as you connect.
+If Google Calendar is not connected or Google fails, the booking is **still confirmed** and every email goes out as normal — the calendar is only a helper. The website tries again every 15 minutes (with the reminders job), and as soon as you connect.
 
 ---
 
@@ -57,11 +57,11 @@ Supabase → **SQL Editor → New query** → paste all of `supabase/google-cale
 
 ## Step 6 — Connect your calendar (once)
 
-1. Log in to the website as admin → **Admin → Settings → Google Calendar & Meet → Connect Google Calendar**.
+1. Log in to the website as admin → **Admin → Settings → Google Calendar → Connect Google Calendar**.
 2. Choose **eduvora.support@gmail.com**.
 3. Google shows **"Google hasn't verified this app"**. This is normal for your own private app. Click **Advanced → Go to … (unsafe)**.
 4. **Tick the box** "View and edit events on all your calendars" → **Continue**.
-5. You're back in Settings with **✅ Connected**. Upcoming bookings without a link get one within a minute.
+5. You're back in Settings with **✅ Connected**. Upcoming bookings are added to your calendar within a minute.
 
 ---
 
@@ -80,5 +80,5 @@ Supabase → **SQL Editor → New query** → paste all of `supabase/google-cale
 | "Needs reconnecting" in Settings | Click **Reconnect**. This happens if you changed the Google password, removed access, or the app was in "Testing". |
 | `redirect_uri_mismatch` on Google's page | The redirect URI in Step 3 must match your site address exactly (including `https://`). Also check `NEXT_PUBLIC_SITE_URL` in Vercel. |
 | "Please tick the box…" | On Google's page, tick the calendar permission and continue. |
-| A booking shows "No Meet link yet" | Click **Try Google again**, or paste any Meet/Zoom link and click **Save & email student**. |
+| A booking shows "Not in Google Calendar yet" | Click **Try again** on that booking in Admin → Bookings. |
 | You changed the Client secret | Click **Reconnect** once. |

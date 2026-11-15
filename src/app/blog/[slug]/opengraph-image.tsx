@@ -1,4 +1,4 @@
-// The picture shown when an article link is shared on WhatsApp / Facebook / X:
+// The picture shown when an article link is shared in chat apps / on Facebook / X:
 // cover image (if any) + the article title + EDUVORA. 1200×630.
 import { ImageResponse } from "next/og";
 import { siteConfig } from "@/config/site";

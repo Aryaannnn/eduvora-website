@@ -1,5 +1,5 @@
 // =====================================================================
-//  GOOGLE CALENDAR + GOOGLE MEET — SERVER ONLY
+//  GOOGLE CALENDAR — SERVER ONLY (counselling is a voice call)
 //
 //  Admin → Settings → "Connect Google Calendar" connects ONE Google account
 //  (eduvora.support@gmail.com) once. We keep its refresh token ENCRYPTED in
@@ -7,20 +7,21 @@
 //  read that table — supabase/google-calendar.sql).
 //
 //  syncBookingCalendar(id) makes the calendar match the booking:
-//    confirmed  → event exists, at the right time, with a Google Meet link,
-//                 and the student invited as a guest (Google emails them)
+//    confirmed  → event "Voice call – EDUVORA counselling (30 min)" at the
+//                 right time, the student's number in the description, and
+//                 the student invited as a guest (Google emails them)
 //    cancelled  → event cancelled (Google tells the student)
 //  It never throws. If Google is not connected or fails, the booking is
-//  still confirmed: the booking shows "Meet link will be shared soon" and
-//  the admin sees an alert to add the link by hand.
+//  still confirmed and the emails go out as normal.
 //
 //  Needs (server-only, never NEXT_PUBLIC_): GOOGLE_CALENDAR_CLIENT_ID,
-//  GOOGLE_CALENDAR_CLIENT_SECRET — see README "Google Calendar & Meet".
+//  GOOGLE_CALENDAR_CLIENT_SECRET — see README "Google Calendar".
 // =====================================================================
 import "server-only";
 import { createCipheriv, createDecipheriv, hkdfSync, randomBytes } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { siteConfig } from "@/config/site";
+import { formatPhoneIN } from "./format";
 import { getAdminSupabase } from "./supabase/admin";
 import { reportFailure } from "./monitor";
 
@@ -192,34 +193,28 @@ async function gapi(db: SupabaseClient, path: string, init: { method: string; bo
   return { status: res.status, ok: res.ok, json: json as GEvent & { error?: { message?: string } } };
 }
 
-type GEvent = {
-  id?: string;
-  status?: string;
-  hangoutLink?: string;
-  conferenceData?: { createRequest?: { status?: { statusCode?: string } }; entryPoints?: { entryPointType?: string; uri?: string }[] };
-};
-
-const meetOf = (e: GEvent) => e.hangoutLink || e.conferenceData?.entryPoints?.find((p) => p.entryPointType === "video")?.uri || null;
+type GEvent = { id?: string; status?: string };
 
 // ---------------------------------------------------------------------
 //  Booking ↔ event
 // ---------------------------------------------------------------------
 type CalBooking = {
   id: string; user_id: string | null; name: string; phone: string; email: string | null; message: string | null; class_year: string | null;
-  expected_marks: number | null; status: string; meet_link: string | null; calendar_event_id: string | null; calendar_status: string | null;
+  expected_marks: number | null; status: string; calendar_event_id: string | null; calendar_status: string | null;
   slots: { date: string; start_time: string; end_time: string } | null;
 };
 
 /** Same id every time for a booking → a repeated call can never make a 2nd event. (Google allows a–v and 0–9.) */
 const eventIdFor = (bookingId: string) => `edv${bookingId.replace(/-/g, "").toLowerCase()}`;
 
-function eventBody(b: CalBooking, withMeet: boolean) {
+/** A voice call. The student's number is in the description. */
+function eventBody(b: CalBooking) {
   const ref = b.id.slice(0, 8).toUpperCase();
   const lines = [
-    `One-to-one VITEEE counselling with ${siteConfig.founder.name} (${siteConfig.businessName}).`,
+    `30-minute one-to-one VITEEE counselling voice call with ${siteConfig.founder.name} (${siteConfig.businessName}).`,
+    `Call the student on: ${formatPhoneIN(b.phone)}`,
     "",
     `Student: ${b.name}`,
-    `Phone: ${b.phone}`,
     b.class_year ? `Class / year: ${b.class_year}` : "",
     b.expected_marks !== null && b.expected_marks !== undefined ? `Expected VITEEE marks: ${+b.expected_marks} / 125` : "",
     b.message ? `Message: ${b.message}` : "",
@@ -229,7 +224,7 @@ function eventBody(b: CalBooking, withMeet: boolean) {
   ].filter((l, i, a) => l !== "" || (a[i - 1] ?? "") !== "");
   const t = (s: string) => s.slice(0, 8);
   return {
-    summary: `${siteConfig.businessName} counselling — ${b.name}`,
+    summary: `Voice call – ${siteConfig.businessName} counselling (30 min) — ${b.name}`,
     description: lines.join("\n"),
     start: { dateTime: `${b.slots!.date}T${t(b.slots!.start_time)}`, timeZone: "Asia/Kolkata" },
     end: { dateTime: `${b.slots!.date}T${t(b.slots!.end_time)}`, timeZone: "Asia/Kolkata" },
@@ -239,13 +234,12 @@ function eventBody(b: CalBooking, withMeet: boolean) {
     reminders: { useDefault: true },
     extendedProperties: { private: { bookingId: b.id } },
     status: "confirmed",
-    ...(withMeet ? { conferenceData: { createRequest: { requestId: `meet-${b.id}`, conferenceSolutionKey: { type: "hangoutsMeet" } } } } : {}),
   };
 }
 
-const BOOKING_COLS = "id,user_id,name,phone,email,message,class_year,expected_marks,status,meet_link,calendar_event_id,calendar_status,slots(date,start_time,end_time)";
+const BOOKING_COLS = "id,user_id,name,phone,email,message,class_year,expected_marks,status,calendar_event_id,calendar_status,slots(date,start_time,end_time)";
 
-export type SyncResult = { result: "created" | "updated" | "cancelled" | "skipped" | "not_connected" | "failed" | "setup_missing"; meetLink: string | null; newLink: boolean };
+export type SyncResult = { result: "created" | "updated" | "cancelled" | "skipped" | "not_connected" | "failed" | "setup_missing" };
 
 /**
  * Make Google Calendar match this booking. Never throws; the result is
@@ -253,13 +247,13 @@ export type SyncResult = { result: "created" | "updated" | "cancelled" | "skippe
  */
 export async function syncBookingCalendar(bookingId: string): Promise<SyncResult> {
   const db = getAdminSupabase();
-  if (!db) return { result: "skipped", meetLink: null, newLink: false };
+  if (!db) return { result: "skipped" };
   const { data, error } = await db.from("bookings").select(BOOKING_COLS).eq("id", bookingId).maybeSingle();
   if (error) {
-    if (error.code === "42703") return { result: "setup_missing", meetLink: null, newLink: false }; // SQL not run yet
-    return { result: "failed", meetLink: null, newLink: false };
+    if (error.code === "42703") return { result: "setup_missing" }; // SQL not run yet
+    return { result: "failed" };
   }
-  if (!data) return { result: "skipped", meetLink: null, newLink: false };
+  if (!data) return { result: "skipped" };
   const b = data as unknown as CalBooking;
   // Students' own email when the booking form email was left empty
   if (!b.email && b.user_id) {
@@ -271,67 +265,44 @@ export async function syncBookingCalendar(bookingId: string): Promise<SyncResult
   try {
     // ---- cancelled / expired → cancel the event
     if (["cancelled", "expired"].includes(b.status)) {
-      if (!b.calendar_event_id) return { result: "skipped", meetLink: null, newLink: false };
+      if (!b.calendar_event_id) return { result: "skipped" };
       const r = await gapi(db, `/${encodeURIComponent(b.calendar_event_id)}?sendUpdates=all`, { method: "DELETE" });
       if (!r.ok && r.status !== 404 && r.status !== 410) throw new Error(r.json.error?.message || `Google error ${r.status}`);
-      await save({ calendar_event_id: null, calendar_status: "cancelled", calendar_error: null, ...(b.calendar_status === "manual" ? {} : { meet_link: null }) });
-      return { result: "cancelled", meetLink: null, newLink: false };
+      await save({ calendar_event_id: null, calendar_status: "cancelled", calendar_error: null });
+      return { result: "cancelled" };
     }
-    if (b.status !== "confirmed" || !b.slots) return { result: "skipped", meetLink: b.meet_link, newLink: false };
+    if (b.status !== "confirmed" || !b.slots) return { result: "skipped" };
 
-    // ---- confirmed → create or update
-    const manual = b.calendar_status === "manual" && !!b.meet_link; // admin pasted a link: keep it
+    // ---- confirmed → create or update the calendar event (voice call)
     const id = b.calendar_event_id ?? eventIdFor(b.id);
-    let ev: GEvent;
     let created = false;
     if (!b.calendar_event_id) {
-      const r = await gapi(db, `?conferenceDataVersion=1&sendUpdates=all`, { method: "POST", body: { id, ...eventBody(b, !manual) } });
-      if (r.ok) {
-        ev = r.json;
-        created = true;
-      } else if (r.status === 409) {
-        ev = await updateEvent(db, b, id, manual); // made before (e.g. re-confirmed after a cancel)
-      } else {
-        throw new Error(r.json.error?.message || `Google error ${r.status}`);
-      }
+      const r = await gapi(db, `?sendUpdates=all`, { method: "POST", body: { id, ...eventBody(b) } });
+      if (r.ok) created = true;
+      else if (r.status === 409) await updateEvent(db, b, id); // made before (e.g. re-confirmed after a cancel)
+      else throw new Error(r.json.error?.message || `Google error ${r.status}`);
     } else {
-      ev = await updateEvent(db, b, id, manual);
+      await updateEvent(db, b, id);
     }
-    // Google sometimes needs a moment to make the Meet room
-    let meet = manual ? b.meet_link : meetOf(ev);
-    for (let i = 0; !meet && !manual && i < 3 && ev.conferenceData?.createRequest?.status?.statusCode === "pending"; i++) {
-      await new Promise((r) => setTimeout(r, 1500));
-      const g = await gapi(db, `/${encodeURIComponent(id)}`, { method: "GET" });
-      if (g.ok) ev = g.json;
-      meet = meetOf(ev);
-    }
-    const newLink = !!meet && meet !== b.meet_link;
-    if (meet) {
-      await save({ calendar_event_id: id, meet_link: meet, calendar_status: manual ? "manual" : "ok", calendar_error: null });
-    } else {
-      await save({ calendar_event_id: id, calendar_status: "failed", calendar_error: "The event was created, but Google did not give a Meet link. Please add one by hand." });
-    }
-    return { result: meet ? (created ? "created" : "updated") : "failed", meetLink: meet, newLink };
+    await save({ calendar_event_id: id, calendar_status: "ok", calendar_error: null });
+    return { result: created ? "created" : "updated" };
   } catch (e) {
     const notConnected = e instanceof NotConnected;
     const msg = (e as Error).message.slice(0, 300);
-    if (!notConnected) reportFailure("calendar", "Google Calendar sync failed (booking has no Meet link)", msg, { booking: b.id.slice(0, 8) });
+    if (!notConnected) reportFailure("calendar", "Google Calendar sync failed", msg, { booking: b.id.slice(0, 8) });
     if (["cancelled", "expired"].includes(b.status)) {
       await save({ calendar_error: `Could not cancel the calendar event: ${msg}` });
-    } else if (b.calendar_status !== "manual") {
+    } else {
       await save({ calendar_status: notConnected ? "not_connected" : "failed", calendar_error: msg });
     }
-    return { result: notConnected ? "not_connected" : "failed", meetLink: b.meet_link, newLink: false };
+    return { result: notConnected ? "not_connected" : "failed" };
   }
 }
 
-/** Existing event → new time/details; adds a Meet room if it has none. */
-async function updateEvent(db: SupabaseClient, b: CalBooking, id: string, manual: boolean): Promise<GEvent> {
-  const g = await gapi(db, `/${encodeURIComponent(id)}`, { method: "GET" });
-  const hasMeet = g.ok && !!meetOf(g.json);
-  const r = await gapi(db, `/${encodeURIComponent(id)}?conferenceDataVersion=1&sendUpdates=all`, { method: "PATCH", body: eventBody(b, !manual && !hasMeet) });
+/** Existing event → new time/details. */
+async function updateEvent(db: SupabaseClient, b: CalBooking, id: string): Promise<void> {
+  const r = await gapi(db, `/${encodeURIComponent(id)}?sendUpdates=all`, { method: "PATCH", body: eventBody(b) });
   if (!r.ok) throw new Error(r.json.error?.message || `Google error ${r.status}`);
-  return r.json;
 }
 
 /** Remove events of a deleted account from the calendar (no emails — the account is gone). */
@@ -348,28 +319,28 @@ export async function deleteEventsQuietly(eventIds: string[]) {
 }
 
 /**
- * Upcoming confirmed bookings that still have no Meet link (Google was not
- * connected, or failed) → try again. Run by the reminders cron and right
- * after connecting. Returns the ids that got a NEW link (to email them).
+ * Upcoming confirmed bookings that are not in Google Calendar yet (it was not
+ * connected, or failed) → try again. Run by the reminders cron and right after
+ * connecting. Returns how many were added.
  */
-export async function retryMissingMeetLinks(limit = 10): Promise<string[]> {
+export async function retryMissingCalendarEvents(limit = 10): Promise<number> {
   const db = getAdminSupabase();
-  if (!db) return [];
+  if (!db) return 0;
   const conn = await db.from("google_calendar_connection").select("id,last_error").eq("id", 1).maybeSingle();
-  if (conn.error || !conn.data || conn.data.last_error) return [];
+  if (conn.error || !conn.data || conn.data.last_error) return 0;
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date());
   const { data } = await db
     .from("bookings")
     .select("id,slots!inner(date)")
     .eq("status", "confirmed")
-    .is("meet_link", null)
+    .is("calendar_event_id", null)
     .or("calendar_status.is.null,calendar_status.in.(failed,not_connected)") // null = booked before Calendar was connected
     .gte("slots.date", today)
     .limit(limit);
-  const got: string[] = [];
+  let added = 0;
   for (const b of data ?? []) {
     const r = await syncBookingCalendar(b.id);
-    if (r.newLink) got.push(b.id);
+    if (r.result === "created" || r.result === "updated") added++;
   }
-  return got;
+  return added;
 }

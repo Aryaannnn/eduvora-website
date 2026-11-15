@@ -8,7 +8,7 @@
 //   • everyone else gets the branded maintenance page, HTTP 503 +
 //     Retry-After, so search engines know it's temporary
 //   • these always keep working: Razorpay webhook + payment checks,
-//     cron jobs, admin login / 2-step page, sign-in links, WhatsApp link
+//     cron jobs, admin login / 2-step page, sign-in links, WhatsApp link (when on)
 // =====================================================================
 import { siteConfig } from "@/config/site";
 import { DEFAULT_MAINTENANCE_MESSAGE } from "./maintenance-shared";
@@ -19,13 +19,13 @@ export { DEFAULT_MAINTENANCE_MESSAGE };
 const ALWAYS_OPEN = [
   "/api/payments/", // Razorpay webhook + verify/check (a payment in progress must still be saved)
   "/api/bookings/", // finishing a booking payment that was already started
-  "/api/cron/", // reminders, payment checks, leads, Meet links
+  "/api/cron/", // reminders, payment checks, leads, calendar
   "/api/admin/", // admin export, Google Calendar connect, activity ping
   "/admin", // admin pages check the role themselves (logged out → login; students → dashboard → maintenance page)
   "/admin-verify", // admin 2-step check
   "/login", // so admins can log in
   "/auth/", // sign-in links, Google sign-in, logout
-  "/go/whatsapp", // the maintenance page's WhatsApp button
+  "/go/whatsapp", // the maintenance page's WhatsApp button (when switched on)
   "/reset-password",
   "/robots.txt",
   "/sitemap.xml",
@@ -50,6 +50,14 @@ const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&
 export function maintenanceHtml(message: string): string {
   const name = esc(siteConfig.businessName);
   const email = esc(siteConfig.email);
+  // WhatsApp button only when switched on (src/config/site.ts → showWhatsApp)
+  const waButton = siteConfig.showWhatsApp
+    ? `    <a class="btn wa" href="/go/whatsapp" rel="nofollow">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.4 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.3.5-.4.4c-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.1 1 2.1 1.3 2.4 1.5.3.1.5.1.6-.1l.9-1c.2-.3.4-.2.6-.1l1.9.9c.3.1.5.2.5.3.1.1.1.7-.1 1.3Z"/></svg>
+      Chat on WhatsApp
+    </a>
+`
+    : "";
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -80,11 +88,7 @@ export function maintenanceHtml(message: string): string {
   <h1>We'll be back soon</h1>
   <p>${esc(message || DEFAULT_MAINTENANCE_MESSAGE)}</p>
   <div class="btns">
-    <a class="btn wa" href="/go/whatsapp" rel="nofollow">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.4 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.3.5-.4.4c-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.1 1 2.1 1.3 2.4 1.5.3.1.5.1.6-.1l.9-1c.2-.3.4-.2.6-.1l1.9.9c.3.1.5.2.5.3.1.1.1.7-.1 1.3Z"/></svg>
-      Chat on WhatsApp
-    </a>
-    <a class="btn mail" href="mailto:${email}">
+${waButton}    <a class="btn mail" href="mailto:${email}">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm9 7.2L4.5 7.5v.3l7.5 4.9 7.5-4.9v-.3L12 12.2Z"/></svg>
       Email us
     </a>

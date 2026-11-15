@@ -5,7 +5,7 @@ import { sendEnquiry, type EnquiryState } from "@/lib/enquiry-actions";
 import { CheckIcon } from "./Icons";
 
 // FREE ENQUIRY FORM — saved to Supabase (table "enquiries").
-// You see every enquiry in Admin → Enquiries, with Call / WhatsApp buttons.
+// You see every enquiry in Admin → Enquiries, with Call and Email buttons.
 export default function ContactForm({ source = "contact", defaultMessage = "" }: { source?: "contact" | "unlock"; defaultMessage?: string }) {
   const [state, action, pending] = useActionState<EnquiryState, FormData>(sendEnquiry, null);
 

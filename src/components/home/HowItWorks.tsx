@@ -10,7 +10,7 @@ import SectionHeading from "../SectionHeading";
 // ✏️ The 3 steps (text + where each button goes)
 const steps = [
   { icon: TargetIcon, title: "Predict your rank", text: "Enter your expected marks in the free Rank Predictor and see your likely VITEEE rank range.", href: "/predictor", cta: "Try the free predictor" },
-  { icon: CalendarIcon, title: "Book a session", text: "Pick a time for a private one-to-one video call. Parents are welcome to join.", href: "/book-a-slot", cta: "Book counselling" },
+  { icon: CalendarIcon, title: "Book a session", text: "Pick a time for a private 30-minute one-to-one voice call. Utkarsh Sir calls you on your phone — parents are welcome to join on speaker.", href: "/book-a-slot", cta: "Book counselling" },
   { icon: GraduationIcon, title: "Get your college plan", text: "Leave with a clear plan: which VIT campus, branch and fee category to aim for — and your choice list.", href: "/book-a-slot", cta: "" },
 ];
 
@@ -54,7 +54,7 @@ export default function HowItWorks({ slots }: { slots: Slot[] }) {
                 <p className="font-bold text-slate-900">Next available slots</p>
                 <p className="flex items-center gap-1 text-sm text-slate-500">
                   <CalendarIcon className="h-4 w-4" />
-                  {minPrice !== null ? `From ${formatPrice(minPrice)} per session` : "One-to-one video call"}
+                  {minPrice !== null ? `From ${formatPrice(minPrice)} per session` : "30-minute one-to-one voice call"}
                 </p>
               </div>
             </div>

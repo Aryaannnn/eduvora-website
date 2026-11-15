@@ -7,7 +7,7 @@ import { getContactAccess } from "@/lib/contact";
 export async function GET() {
   const access = await getContactAccess();
   const body = access.unlocked
-    ? { unlocked: true, phone: access.display, tel: `tel:${access.tel}`, whatsapp: `https://wa.me/${access.whatsappDigits}` }
+    ? { unlocked: true, phone: access.display, tel: `tel:${access.tel}`, ...(siteConfig.showWhatsApp ? { whatsapp: `https://wa.me/${access.whatsappDigits}` } : {}) }
     : { unlocked: false, phone: siteConfig.phoneMasked };
   return NextResponse.json(body, { headers: { "Cache-Control": "private, no-store" } });
 }

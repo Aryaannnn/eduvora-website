@@ -126,7 +126,7 @@ function PackageForm({ pkg, pending, onClose, onSave }: { pkg: AdminPackage | nu
         </div>
         <div>
           <Label htmlFor="pk-features">What&apos;s included (one per line)</Label>
-          <textarea id="pk-features" rows={5} value={f.features} onChange={(e) => set("features", e.target.value)} className="input" placeholder={"3 one-to-one counselling sessions\nFull Rank & College Predictor\nWhatsApp support until counselling ends"} />
+          <textarea id="pk-features" rows={5} value={f.features} onChange={(e) => set("features", e.target.value)} className="input" placeholder={"3 one-to-one 30-minute counselling sessions\nFull Rank & College Predictor\nCall support until counselling ends"} />
         </div>
         <div><Label htmlFor="pk-desc">Description (shown on the invoice / emails)</Label><input id="pk-desc" value={f.description} onChange={(e) => set("description", e.target.value)} className="input" /></div>
         <div className="flex flex-wrap gap-6">

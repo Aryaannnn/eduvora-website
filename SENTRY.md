@@ -106,7 +106,7 @@ error…"** in Sentry → **Issues**, and get the 🚨 email. Then click **Resol
 | **booking** | slot couldn't be held; booking order failed; a PAID booking couldn't be confirmed; package-credit booking failed |
 | **email** | any email (receipt, booking confirmation, reminder, feedback…) that Resend couldn't send |
 | **login** | Supabase down, sign-up/OTP/reset emails or SMS failing, rate limit reached, Google sign-in misconfigured (wrong passwords are **not** reported) |
-| **calendar** | Google Calendar / Meet link couldn't be created |
+| **calendar** | Google Calendar event couldn't be created or updated |
 
 Plus every unexpected crash on any page (browser and server). Visitors then see a friendly page:
 *"Something went wrong. Please try again, or contact eduvora.support@gmail.com."*

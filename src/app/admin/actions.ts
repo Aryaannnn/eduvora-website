@@ -13,7 +13,8 @@ import { yearInIndia } from "@/lib/format";
 import { SUBJECTS } from "@/lib/subjects";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import { WHY_LIMITS, cleanWhyCards } from "@/lib/why-shared";
-import { notifyBookingChanged, notifyBookingConfirmed, notifyMeetLinkReady, notifyPurchasePaid, sendKind } from "@/lib/email/notify";
+import { SLOT_MINUTES, dailyStarts, fromMinutes, nowInIndia, slotEnd, toMinutes } from "@/lib/slot-time";
+import { notifyBookingChanged, notifyBookingConfirmed, notifyPurchasePaid, sendKind } from "@/lib/email/notify";
 import { disconnectCalendar, syncBookingCalendar } from "@/lib/google-calendar";
 
 const fail = (error: string): ActionResult => ({ ok: false, error });
@@ -187,52 +188,113 @@ export async function loadProductLinks(id: string): Promise<ActionResult<{ title
 const TIME = /^\d{2}:\d{2}$/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-export async function addSlot(input: { date: string; start: string; end: string; price: number | string }): Promise<ActionResult> {
+/** One 30-minute slot: only the start time is chosen, the end is start + 30 minutes. */
+export async function addSlot(input: { date: string; start: string; price: number | string }): Promise<ActionResult> {
   const s = await adminOrError();
   if (isError(s)) return s;
-  if (!DATE.test(input.date) || !TIME.test(input.start) || !TIME.test(input.end)) return fail("Please fill date, start time and end time.");
-  if (input.end <= input.start) return fail("End time must be after start time.");
+  if (!DATE.test(input.date) || !TIME.test(input.start)) return fail("Please choose a date and a start time.");
+  const end = slotEnd(input.start);
+  if (!end) return fail("A 30-minute slot can't start that late (it would end after midnight).");
+  const now = nowInIndia();
+  if (input.date < now.date || (input.date === now.date && toMinutes(input.start) <= now.minutes)) return fail("That time has already passed. Please choose a future time.");
   const price = int(input.price);
   if (price === null || price < 0) return fail("Please enter a valid price.");
-  const { error } = await s.supabase.from("slots").insert({ date: input.date, start_time: input.start, end_time: input.end, price });
+  // Not on top of another slot (e.g. an older 45-minute one)
+  const { data: same } = await s.supabase.from("slots").select("start_time,end_time").eq("date", input.date);
+  if ((same ?? []).some((x) => toMinutes(x.start_time) < toMinutes(end) && toMinutes(x.end_time) > toMinutes(input.start))) {
+    return fail("There is already a slot at that time on that day.");
+  }
+  const { error } = await s.supabase.from("slots").insert({ date: input.date, start_time: input.start, end_time: end, price });
   updateTag("slots");
-  return dbResult(error, "Slot added.");
+  return dbResult(error, `Slot added: ${input.start}–${end} (30 minutes).`);
 }
 
+/**
+ * Many back-to-back 30-minute slots: every chosen day in the date range, from the
+ * daily start time to the daily end time, leaving out an optional break.
+ * Skips times in the past and anything that overlaps an existing slot.
+ */
 export async function addSlotsBulk(input: {
   from: string;
   to: string;
   weekdays: number[]; // 1 = Monday … 7 = Sunday
-  times: { start: string; end: string }[];
+  dayStart: string;
+  dayEnd: string;
+  breakStart?: string;
+  breakEnd?: string;
   price: number | string;
 }): Promise<ActionResult> {
   const s = await adminOrError();
   if (isError(s)) return s;
   if (!DATE.test(input.from) || !DATE.test(input.to) || input.to < input.from) return fail("Please choose a valid date range.");
-  const times = input.times.filter((t) => TIME.test(t.start) && TIME.test(t.end));
-  if (times.length === 0) return fail("Add at least one time.");
-  if (times.some((t) => t.end <= t.start)) return fail("Each end time must be after its start time.");
+  if (!TIME.test(input.dayStart) || !TIME.test(input.dayEnd) || input.dayEnd <= input.dayStart) return fail("The daily end time must be after the daily start time.");
+  const hasBreak = !!(input.breakStart || input.breakEnd);
+  if (hasBreak && (!TIME.test(input.breakStart ?? "") || !TIME.test(input.breakEnd ?? "") || (input.breakEnd ?? "") <= (input.breakStart ?? ""))) {
+    return fail("Please fill both break times (or leave both empty).");
+  }
   if (input.weekdays.length === 0) return fail("Choose at least one day of the week.");
   const price = int(input.price);
   if (price === null || price < 0) return fail("Please enter a valid price.");
+  const starts = dailyStarts(input.dayStart, input.dayEnd, hasBreak ? input.breakStart : undefined, hasBreak ? input.breakEnd : undefined);
+  if (starts.length === 0) return fail("No 30-minute slot fits between those times.");
 
+  // What already exists in that range (so nothing overlaps)
+  const { data: existing } = await s.supabase.from("slots").select("date,start_time,end_time").gte("date", input.from).lte("date", input.to);
+  const taken = new Map<string, { a: number; b: number }[]>();
+  for (const x of existing ?? []) {
+    const list = taken.get(x.date as string) ?? [];
+    list.push({ a: toMinutes(x.start_time as string), b: toMinutes(x.end_time as string) });
+    taken.set(x.date as string, list);
+  }
+  const now = nowInIndia();
   const rows: { date: string; start_time: string; end_time: string; price: number }[] = [];
-  const end = new Date(`${input.to}T00:00:00Z`);
-  for (let d = new Date(`${input.from}T00:00:00Z`); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
+  let skippedPast = 0, skippedTaken = 0;
+  const last = new Date(`${input.to}T00:00:00Z`);
+  for (let d = new Date(`${input.from}T00:00:00Z`); d <= last; d.setUTCDate(d.getUTCDate() + 1)) {
     const isoDow = ((d.getUTCDay() + 6) % 7) + 1;
     if (!input.weekdays.includes(isoDow)) continue;
     const date = d.toISOString().slice(0, 10);
-    for (const t of times) rows.push({ date, start_time: t.start, end_time: t.end, price });
+    for (const st of starts) {
+      const a = toMinutes(st), b = a + SLOT_MINUTES;
+      if (date < now.date || (date === now.date && a <= now.minutes)) { skippedPast++; continue; }
+      if ((taken.get(date) ?? []).some((x) => x.a < b && x.b > a)) { skippedTaken++; continue; }
+      rows.push({ date, start_time: st, end_time: fromMinutes(b), price });
+    }
   }
-  if (rows.length === 0) return fail("No dates match the chosen days.");
-  if (rows.length > 500) return fail(`That would create ${rows.length} slots. Please choose a shorter range (max 500).`);
-
-  // Skips slots that already exist at the same date + start time
-  const { error, count } = await s.supabase
-    .from("slots")
-    .upsert(rows, { onConflict: "date,start_time", ignoreDuplicates: true, count: "exact" });
+  if (rows.length === 0) return fail(`Nothing new to add${skippedTaken ? ` — ${skippedTaken} time(s) already have a slot` : ""}${skippedPast ? `, ${skippedPast} are in the past` : ""}.`);
+  if (rows.length > 1000) return fail(`That would create ${rows.length} slots. Please choose a shorter range (max 1000).`);
+  const { error, count } = await s.supabase.from("slots").upsert(rows, { onConflict: "date,start_time", ignoreDuplicates: true, count: "exact" });
   updateTag("slots");
-  return dbResult(error, `${count ?? rows.length} slot(s) added (existing ones were skipped).`);
+  const skipped = [skippedTaken && `${skippedTaken} already had a slot`, skippedPast && `${skippedPast} were in the past`].filter(Boolean).join(", ");
+  return dbResult(error, `${count ?? rows.length} slot(s) of 30 minutes added${skipped ? ` (skipped: ${skipped})` : ""}.`);
+}
+
+/** Replace FUTURE slots that were never booked with 30-minute slots (supabase/voice-calls.sql). */
+export async function convertSlotsTo30(): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const { data, error } = await s.supabase.rpc("convert_future_slots_to_30min");
+  updateTag("slots");
+  if (error) return fail(/convert_future_slots_to_30min/.test(error.message) ? "Run supabase/voice-calls.sql in Supabase first." : friendlyDbError(error.message));
+  const r = (data ?? {}) as { removed?: number; created?: number; kept_with_bookings?: number };
+  if (!r.removed) return { ok: true, message: `All future empty slots are already 30 minutes.${r.kept_with_bookings ? ` ${r.kept_with_bookings} longer slot(s) with a booking were left as they are.` : ""}` };
+  return {
+    ok: true,
+    message: `Done: ${r.removed} empty slot(s) replaced by ${r.created} slot(s) of 30 minutes.${r.kept_with_bookings ? ` ${r.kept_with_bookings} slot(s) with a booking were not touched.` : ""}`,
+  };
+}
+
+/** Admin → Settings: how long before a slot starts bookings close (minutes). */
+export async function saveBookingNotice(minutes: number | string): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const n = int(minutes);
+  if (n === null || Number.isNaN(n) || n < 0 || n > 2880) return fail("Please enter a number of minutes between 0 and 2880 (48 hours).");
+  const { data, error } = await s.supabase.from("booking_settings").update({ min_notice_minutes: n }).eq("id", 1).select("id");
+  updateTag("slots");
+  if (error) return fail(/booking_settings/.test(error.message) ? "Run supabase/voice-calls.sql in Supabase first." : friendlyDbError(error.message));
+  if (!data?.length) return fail("Run supabase/voice-calls.sql in Supabase first.");
+  return { ok: true, message: n === 0 ? "Saved — slots can be booked until they start." : `Saved — bookings close ${n} minutes before each slot.` };
 }
 
 export async function setSlotAvailable(id: string, available: boolean): Promise<ActionResult> {
@@ -272,8 +334,7 @@ export async function updateBooking(
   if (!error && patch.payment_status === "paid" && before?.payment_status !== "paid") notifyBookingConfirmed(id);
   // Other status changes (e.g. back to confirmed, or expired) → keep the calendar in step
   else if (!error && patch.status && patch.status !== before?.status && patch.status !== "cancelled" && patch.status !== "completed") {
-    const r = await syncBookingCalendar(id);
-    if (r.newLink) notifyMeetLinkReady(id);
+    await syncBookingCalendar(id);
   }
   return dbResult(error, patch.status === "cancelled" ? "Booking cancelled — the student has been emailed." : "Booking updated.");
 }
@@ -289,25 +350,17 @@ export async function rescheduleBooking(id: string, newSlotId: string): Promise<
   return { ok: true, message: "Booking moved — the student has been emailed the new time." };
 }
 
-// ---------------------------------------------------------------- GOOGLE MEET
-/** Admin pastes a Meet (or Zoom) link by hand → saved and emailed to the student. Empty = remove. */
-export async function setMeetLink(id: string, link: string): Promise<ActionResult> {
-  const s = await adminOrError();
+// ---------------------------------------------------------------- VOICE CALLS
+/** Admin / counsellor: "Called" · "No answer" · "Completed" + a short note (supabase/voice-calls.sql). */
+export async function setCallStatus(id: string, status: "scheduled" | "called" | "no_answer" | "completed", note?: string | null): Promise<ActionResult> {
+  if (!["scheduled", "called", "no_answer", "completed"].includes(status)) return fail("Unknown call status.");
+  if (note && note.length > 1000) return fail("Please keep the note under 1000 characters.");
+  const s = await staffOrError(); // counsellors too (only their own bookings — checked in Supabase)
   if (isError(s)) return s;
-  const url = link.trim();
-  if (url && (!/^https:\/\/\S+$/.test(url) || url.length > 300)) return fail("Please paste the full link, starting with https:// (for example https://meet.google.com/abc-defg-hij).");
-  const { data: b } = await s.supabase.from("bookings").select("status,meet_link").eq("id", id).maybeSingle();
-  if (!b) return fail("Booking not found.");
-  const { error } = await s.supabase
-    .from("bookings")
-    .update(url ? { meet_link: url, calendar_status: "manual", calendar_error: null } : { meet_link: null, calendar_status: null })
-    .eq("id", id);
-  if (error) return fail(/meet_link|calendar_status/.test(error.message) ? "Run supabase/google-calendar.sql in Supabase first." : friendlyDbError(error.message));
-  if (url && url !== b.meet_link && b.status === "confirmed") {
-    notifyMeetLinkReady(id);
-    return { ok: true, message: "Meet link saved — the student has been emailed." };
-  }
-  return { ok: true, message: url ? "Meet link saved." : "Meet link removed." };
+  const { error } = await s.supabase.rpc("staff_set_call", { p_booking: id, p_status: status, p_note: note == null ? null : note.trim() });
+  if (error) return fail(/staff_set_call/.test(error.message) ? "Run supabase/voice-calls.sql in Supabase first." : friendlyDbError(error.message));
+  const label = { scheduled: "Scheduled", called: "Called", no_answer: "No answer", completed: "Completed" }[status];
+  return { ok: true, message: `Saved: ${label}.` };
 }
 
 /** "Try Google Calendar again" for one booking. */
@@ -316,10 +369,9 @@ export async function retryBookingCalendar(id: string): Promise<ActionResult> {
   if (isError(s)) return s;
   const r = await syncBookingCalendar(id);
   if (r.result === "setup_missing") return fail("Run supabase/google-calendar.sql in Supabase first.");
-  if (r.result === "not_connected") return fail("Google Calendar is not connected. Connect it in Admin → Settings, or paste a Meet link by hand.");
-  if (r.result === "failed") return fail("Google Calendar did not respond. Please paste a Meet link by hand, or try again later.");
-  if (r.newLink) notifyMeetLinkReady(id);
-  return { ok: true, message: r.newLink ? "Meet link created — the student has been emailed." : "Calendar is up to date." };
+  if (r.result === "not_connected") return fail("Google Calendar is not connected. Connect it in Admin → Settings.");
+  if (r.result === "failed") return fail("Google Calendar did not respond. Please try again later.");
+  return { ok: true, message: "Calendar is up to date." };
 }
 
 export async function disconnectGoogleCalendar(): Promise<ActionResult> {
@@ -327,7 +379,7 @@ export async function disconnectGoogleCalendar(): Promise<ActionResult> {
   if (isError(s)) return s;
   await disconnectCalendar();
   await s.supabase.rpc("log_admin_event", { p_action: "google_calendar.disconnect", p_summary: "Disconnected Google Calendar", p_details: {} }).then(() => undefined, () => undefined);
-  return { ok: true, message: "Google Calendar disconnected. New bookings will show \"Meet link will be shared soon\"." };
+  return { ok: true, message: "Google Calendar disconnected. New bookings are no longer added to your calendar." };
 }
 
 // ---------------------------------------------------------------- EMAIL LOGS

@@ -1,5 +1,6 @@
 -- =====================================================================
---  GOOGLE CALENDAR + GOOGLE MEET for counselling bookings
+--  GOOGLE CALENDAR for counselling bookings (voice calls — the meet_link
+--  column below is no longer used)
 --  Run in Supabase → SQL Editor → New query → paste → Run. Safe to run again.
 --
 --  1. google_calendar_connection: the connected Google account (Admin →

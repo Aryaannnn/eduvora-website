@@ -28,7 +28,15 @@ export async function markBookingPaid(db: SupabaseClient, orderId: string, payme
   if (row?.id && row.payment_status === "paid") notifyBookingConfirmed(row.id);
   return { id: row?.id ?? null, error: null };
 }
-export const SLOT_TAKEN_MESSAGE = "Sorry, this slot was just booked. Please choose another time.";
+export const SLOT_TAKEN_MESSAGE = "This slot was just booked.";
+
+/** "98765 43210" / "+91 98765-43210" / "098765 43210" → "+919876543210" (null if not a valid Indian mobile) */
+export function indianMobile(raw: string): string | null {
+  let d = raw.replace(/\D/g, "");
+  if (d.length === 12 && d.startsWith("91")) d = d.slice(2);
+  else if (d.length === 11 && d.startsWith("0")) d = d.slice(1);
+  return /^[6-9]\d{9}$/.test(d) ? `+91${d}` : null;
+}
 export const NOT_COMPLETED_MESSAGE = "Payment not completed. Your slot was not booked. Please try again.";
 
 export type BookingInput = {
@@ -43,8 +51,9 @@ export function parseBookingInput(b: Record<string, unknown>): BookingInput | st
   if (!/^[0-9a-f-]{36}$/i.test(slotId)) return "Please choose a time slot.";
   const name = str(b.name, 80);
   if (name.length < 2) return "Please enter the student's name.";
-  const phone = str(b.phone, 16);
-  if (!/^[0-9+ ()-]{10,16}$/.test(phone) || phone.replace(/\D/g, "").length < 10) return "Please enter a valid 10-digit phone number.";
+  // The number we will CALL at the booked time: a 10-digit Indian mobile (saved as +91XXXXXXXXXX)
+  const phone = indianMobile(str(b.phone, 20));
+  if (!phone) return "Please enter the 10-digit mobile number we should call you on (e.g. 98765 43210).";
   const email = str(b.email, 120);
   if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return "Please enter a valid email (or leave it empty).";
   const classYear = str(b.classYear, 40);
@@ -60,7 +69,7 @@ type Held = { id: string; status: string; amount: number; slot_id: string };
 export type StartResult =
   | { kind: "free"; bookingId: string }
   | { kind: "order"; bookingId: string; orderId: string; amountPaise: number; currency: string }
-  | { kind: "slot_taken" }
+  | { kind: "slot_taken"; message?: string }
   | { kind: "error"; message: string; status: number };
 
 export async function startBooking(db: SupabaseClient, userId: string, input: BookingInput, coupon?: unknown): Promise<StartResult> {
@@ -76,6 +85,7 @@ export async function startBooking(db: SupabaseClient, userId: string, input: Bo
   });
   if (error) {
     if (/no longer available/i.test(error.message)) return { kind: "slot_taken" };
+    if (/too soon/i.test(error.message)) return { kind: "slot_taken", message: error.message };
     if (error.code === "PGRST202" || /could not find the function/i.test(error.message)) {
       return { kind: "error", status: 503, message: "Booking is being set up. (Admin: run supabase/booking-payment-first.sql in Supabase.)" };
     }
@@ -194,6 +204,7 @@ export async function bookWithCredit(db: SupabaseClient, userId: string, input: 
   });
   if (error) {
     if (/no longer available/i.test(error.message)) return { kind: "slot_taken" };
+    if (/too soon/i.test(error.message)) return { kind: "slot_taken", message: error.message };
     if (/no session credits/i.test(error.message)) return { kind: "error", status: 402, message: "You have no session credits left. Please pay for this slot or buy a package." };
     if (error.code === "PGRST202" || /could not find the function/i.test(error.message)) {
       return { kind: "error", status: 503, message: "Packages are being set up. (Admin: run supabase/packages.sql in Supabase.)" };

@@ -6,6 +6,7 @@ import { deleteEnquiry, updateEnquiryStatus } from "@/app/admin/actions";
 import { csvDateTimeIST, formatDateTime } from "@/lib/format";
 import { DownloadIcon, MailIcon, PhoneIcon, SearchIcon, TrashIcon, WhatsAppIcon } from "../Icons";
 import { AdminHeader, Notice, downloadCsv } from "./ui";
+import { siteConfig } from "@/config/site";
 
 export type AdminEnquiry = {
   id: string; name: string; phone: string; email: string | null; class_year: string | null; message: string | null;
@@ -106,7 +107,7 @@ export default function EnquiriesManager({ enquiries, canDelete = true }: { enqu
                   <div className="flex shrink-0 flex-col gap-2 sm:flex-row lg:flex-col lg:items-end">
                     <div className="flex gap-2">
                       <a href={`tel:+${phone}`} className="btn-primary !px-4 !py-2 text-sm"><PhoneIcon className="h-4 w-4" /> Call</a>
-                      <a href={wa} target="_blank" rel="noopener noreferrer" className="btn-primary !bg-[#25D366] !px-4 !py-2 text-sm"><WhatsAppIcon className="h-4 w-4" /> WhatsApp</a>
+                      {siteConfig.showWhatsApp && <a href={wa} target="_blank" rel="noopener noreferrer" className="btn-primary !bg-[#25D366] !px-4 !py-2 text-sm"><WhatsAppIcon className="h-4 w-4" /> WhatsApp</a>}
                     </div>
                     <div className="flex gap-2">
                       <select

@@ -179,7 +179,7 @@ export default function BlogEditor({ post }: { post: EditablePost | null }) {
                 <Image src={f.cover_image_url} alt="Cover" fill sizes="22rem" className="object-cover" />
               </div>
             ) : (
-              <p className="rounded-xl bg-slate-50 p-4 text-center text-xs text-slate-500 ring-1 ring-slate-200">No cover yet. 1200×675 px (16:9) looks best — it is also used when the post is shared on WhatsApp.</p>
+              <p className="rounded-xl bg-slate-50 p-4 text-center text-xs text-slate-500 ring-1 ring-slate-200">No cover yet. 1200×675 px (16:9) looks best — it is also used when the post is shared on social media or in chat apps.</p>
             )}
             <div className="flex gap-2">
               <button type="button" onClick={() => coverInput.current?.click()} disabled={uploading} className="btn-light flex-1 !py-2 text-sm disabled:opacity-60">{uploading ? "Uploading…" : f.cover_image_url ? "Change" : "Upload picture"}</button>

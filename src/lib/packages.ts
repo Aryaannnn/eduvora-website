@@ -46,9 +46,9 @@ export async function getPackages(): Promise<Package[]> {
 
 /** "3 sessions" / "1 session" / "Unlimited sessions" */
 export function sessionsLabel(p: Pick<Package, "package_sessions" | "package_unlimited">) {
-  if (p.package_unlimited) return "Unlimited sessions";
+  if (p.package_unlimited) return "Unlimited 30-minute sessions";
   const n = p.package_sessions ?? 1;
-  return `${n} session${n === 1 ? "" : "s"}`;
+  return `${n} × 30-minute session${n === 1 ? "" : "s"}`;
 }
 
 /** The student's credits (null if not logged in or packages.sql not run yet). */

@@ -24,7 +24,7 @@ const jakarta = Plus_Jakarta_Sans({ variable: "--font-jakarta", subsets: ["latin
 const homeTitle = `${siteConfig.businessName} | ${siteConfig.tagline}`;
 
 export const metadata: Metadata = {
-  // Full links to the share image for WhatsApp/Facebook (comes from NEXT_PUBLIC_SITE_URL)
+  // Full links to the share image for link previews (chat apps, Facebook) (comes from NEXT_PUBLIC_SITE_URL)
   metadataBase: new URL(siteConfig.siteUrl),
   // Pre-launch: hide the whole site from Google (switch in src/config/launch.ts)
   ...(PRE_LAUNCH ? { robots: { index: false, follow: false, googleBot: { index: false, follow: false } } } : {}),
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     template: `%s | ${siteConfig.businessName}`,
   },
   description: siteConfig.description,
-  // Link previews (WhatsApp, Facebook, LinkedIn, X). The image is src/app/opengraph-image.png
+  // Link previews (chat apps, Facebook, LinkedIn, X). The image is src/app/opengraph-image.png
   openGraph: {
     type: "website",
     siteName: siteConfig.businessName,
@@ -86,7 +86,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   );
 }
 
-// "Complete your profile" popup (shown right after sign-up) + WhatsApp community link if set
+// "Complete your profile" popup (shown right after sign-up) + community link if set (only when WhatsApp is on)
 async function ProfilePrompt() {
   const link = await getCommunityLink();
   return <CompleteProfilePrompt communityHref={link ? communityHref("signup") : null} />;

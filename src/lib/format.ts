@@ -32,6 +32,13 @@ export function formatDate(isoDate: string, withYear = false) {
   }).format(new Date(Date.UTC(y, m - 1, d)));
 }
 
+/** "+919876543210" → "+91 98765 43210" (anything else is shown as it is) */
+export function formatPhoneIN(phone: string | null | undefined) {
+  const d = String(phone ?? "").replace(/\D/g, "");
+  const local = d.length === 12 && d.startsWith("91") ? d.slice(2) : d.length === 10 ? d : null;
+  return local ? `+91 ${local.slice(0, 5)} ${local.slice(5)}` : String(phone ?? "");
+}
+
 /** "18:30:00" → "6:30 PM" */
 export function formatTime(time: string) {
   const [h, min] = time.split(":").map(Number);

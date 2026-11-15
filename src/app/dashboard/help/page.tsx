@@ -18,7 +18,7 @@ export default function HelpPage() {
         <RequireLogin path="/dashboard/help" />
       </Suspense>
       <PageHeader title="Help" subtitle="Stuck somewhere? We're one tap away." />
-      {/* Paid students see the full number with Call & WhatsApp buttons.
+      {/* Paid students see the full number with a Call button.
           Others see the masked number and how to unlock it. */}
       <div className="max-w-xl"><DirectContact /></div>
 

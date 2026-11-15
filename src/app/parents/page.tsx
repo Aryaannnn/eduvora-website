@@ -10,7 +10,7 @@ import Reveal from "@/components/Reveal";
 import SectionHeading from "@/components/SectionHeading";
 import Stars from "@/components/Stars";
 import JsonLd from "@/components/seo/JsonLd";
-import { whatsappLink } from "@/config/site";
+import { siteConfig, whatsappLink } from "@/config/site";
 import { founder } from "@/content/founder";
 import { parentsPage as c } from "@/content/parents";
 import { getApprovedReviews } from "@/lib/data";
@@ -29,9 +29,15 @@ function Buttons({ center = false, dark = false }: { center?: boolean; dark?: bo
       <Link href={bookHref} className="btn-accent !px-6 !py-3.5 text-base">
         <CalendarIcon className="h-5 w-5" /> {c.buttons.book}
       </Link>
-      <a href={whatsappLink(c.buttons.whatsappMessage)} target="_blank" rel="noopener noreferrer" className={`${dark ? "btn-outline" : "btn-light"} !px-6 !py-3.5 text-base`}>
-        <WhatsAppIcon className="h-5 w-5 text-[#25D366]" /> {c.buttons.whatsapp}
-      </a>
+      {siteConfig.showWhatsApp ? (
+        <a href={whatsappLink(c.buttons.whatsappMessage)} target="_blank" rel="noopener noreferrer" className={`${dark ? "btn-outline" : "btn-light"} !px-6 !py-3.5 text-base`}>
+          <WhatsAppIcon className="h-5 w-5 text-[#25D366]" /> {c.buttons.whatsapp}
+        </a>
+      ) : (
+        <Link href="/contact#enquiry" className={`${dark ? "btn-outline" : "btn-light"} !px-6 !py-3.5 text-base`}>
+          <MailIcon className="h-5 w-5" /> {c.buttons.enquiry}
+        </Link>
+      )}
     </div>
   );
 }
@@ -98,7 +104,7 @@ export default function ParentsPage() {
         </div>
       </section>
 
-      {/* Meet the counsellor */}
+      {/* About the counsellor */}
       <section className="section bg-slate-50">
         <div className="container-page grid items-center gap-12 lg:grid-cols-[0.8fr_1.2fr]">
           <Reveal><FounderPhoto /></Reveal>

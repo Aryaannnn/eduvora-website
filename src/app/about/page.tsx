@@ -14,13 +14,13 @@ import SectionHeading from "@/components/SectionHeading";
 import { siteConfig } from "@/config/site";
 import { founder } from "@/content/founder";
 
-export const metadata: Metadata = pageMeta({ title: "About EDUVORA – VITEEE Counselling Experts", description: "Meet EDUVORA: honest VITEEE counselling and VIT counselling guidance for students and parents, from rank planning to campus, branch and fee category choice.", path: "/about" });
+export const metadata: Metadata = pageMeta({ title: "About EDUVORA – VITEEE Counselling Experts", description: "EDUVORA: honest VITEEE counselling and VIT counselling guidance for students and parents, from rank planning to campus, branch and fee category choice.", path: "/about" });
 
 const values = [
   { icon: ShieldIcon, title: "Honest guidance", text: "We tell you what you need to hear, not what sells." },
   { icon: TargetIcon, title: "Exam-focused", text: "Everything we teach is built for VITEEE." },
   { icon: UsersIcon, title: "Personal attention", text: "Every student gets a plan made for them." },
-  { icon: HeadsetIcon, title: "Always reachable", text: "Quick replies on call and WhatsApp." },
+  { icon: HeadsetIcon, title: "Always reachable", text: "Quick replies by call and email." },
 ];
 
 // ✏️ The founder text comes from src/content/founder.ts
