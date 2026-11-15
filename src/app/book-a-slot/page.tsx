@@ -6,8 +6,10 @@ import BookingForm from "@/components/BookingForm";
 import PackageCards from "@/components/packages/PackageCards";
 import PackageComparison from "@/components/packages/PackageComparison";
 import PageHero from "@/components/PageHero";
-import NextSlotBanner from "@/components/booking/NextSlotBanner";
+import { SlotPickerSkeleton } from "@/components/booking/SlotPicker";
+import { connection } from "next/server";
 import { Suspense } from "react";
+import { getSlotBoard } from "@/lib/slot-board";
 import { siteConfig } from "@/config/site";
 
 export const metadata: Metadata = pageMeta({ title: "Book One-to-One VITEEE Counselling", description: "Book a 30-minute one-to-one VITEEE counselling voice call with Utkarsh Shrivastava: rank review, campus and branch choice, fee categories and documents.", path: "/book-a-slot" });
@@ -21,7 +23,6 @@ export default function BookASlotPage() {
         title="Book Your Counselling Slot"
         subtitle={`A private 30-minute one-to-one voice call with ${siteConfig.founder.name.split(" ")[0]} Sir. He calls you on your phone at the booked time — parents are welcome to join on speaker.`}
       >
-        <Suspense fallback={null}><NextSlotBanner /></Suspense>
         <div className="mt-6 flex flex-wrap gap-3">
           <a href="#packages" className="btn-outline !py-2.5">See Packages</a>
           <a href="#book" className="btn-outline !py-2.5">Book a Single Slot</a>
@@ -39,8 +40,16 @@ export default function BookASlotPage() {
         <h2 className="mb-2 text-2xl font-extrabold text-brand-700">Book a session</h2>
         <p className="mb-3 text-slate-600">Each session is a 30-minute voice call. Have a package? Your session credit is used automatically. Otherwise pay for a single slot. All times are India time (IST).</p>
         <RatingLine className="mb-8 !justify-start" />
-        <BookingForm />
+        <Suspense fallback={<SlotPickerSkeleton className="max-w-2xl" />}>
+          <Booking />
+        </Suspense>
       </section>
     </>
   );
+}
+
+/** Slots (free + booked) are loaded on the server for every visit; the form refreshes them every minute. */
+async function Booking() {
+  await connection();
+  return <BookingForm initialBoard={await getSlotBoard()} />;
 }

@@ -135,7 +135,7 @@ export const siteConfig = {
   },
 
   // Shown on the home page and the booking page when no counselling slot is open
-  noSlotsMessage: "New slots are added every week. Leave your details and we'll call you when a slot opens.",
+  noSlotsMessage: "New slots open soon. Please check back shortly.",
 
   // ✏️ WhatsApp buttons, icons and links everywhere on the website and in emails.
   //    false = all hidden (visitors use the free enquiry form, email and the call rules).

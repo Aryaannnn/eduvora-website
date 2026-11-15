@@ -38,9 +38,3 @@ export function dailyStarts(dayStart: string, dayEnd: string, breakStart?: strin
 
 /** Slot start as a real moment (India time), e.g. for "starts too soon" checks. */
 export const slotStartsAt = (date: string, start: string) => new Date(`${date}T${start.slice(0, 5)}:00+05:30`);
-
-/** The first slot that can still be booked (starts later than now + notice minutes). */
-export function firstBookable<T extends { date: string; start_time: string }>(slots: T[], noticeMinutes = 60, now = Date.now()): T | undefined {
-  const cutoff = now + noticeMinutes * 60_000;
-  return slots.find((s) => slotStartsAt(s.date, s.start_time).getTime() > cutoff);
-}

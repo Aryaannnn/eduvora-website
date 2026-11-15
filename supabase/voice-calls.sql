@@ -16,6 +16,8 @@
 --  6. Wording in your saved data: package features and the "Why EDUVORA?"
 --     card now say 30-minute voice call / call support (only these exact
 --     starting phrases are changed — anything you wrote yourself stays).
+--  7. slot_board(): every upcoming slot with free / booked — for the slot
+--     picker (home page + Book a Slot). Only times and prices, never who booked.
 -- =====================================================================
 
 -- ---------- 1. booking settings (one row) ----------
@@ -243,3 +245,24 @@ begin
   end if;
 end;
 $$;
+
+-- ---------- 7. slot board for the slot picker ----------
+-- Every slot from now until p_days ahead that is open OR booked / being paid for
+-- (slots you closed yourself are left out), minus slots that start sooner than the
+-- notice time. booked = true → shown greyed out as "Booked".
+create or replace function public.slot_board(p_days integer default 60)
+returns table (id uuid, date date, start_time time, end_time time, price integer, booked boolean)
+language sql stable security definer set search_path = public
+as $$
+  select s.id, s.date, s.start_time, s.end_time, s.price, not s.is_available as booked
+    from public.slots s
+   where s.date between (now() at time zone 'Asia/Kolkata')::date
+                    and (now() at time zone 'Asia/Kolkata')::date + least(greatest(coalesce(p_days, 60), 1), 120)
+     and (s.date + s.start_time) at time zone 'Asia/Kolkata' > now() + make_interval(mins => public.booking_notice_minutes())
+     and (s.is_available or exists (
+           select 1 from public.bookings b
+            where b.slot_id = s.id and b.status in ('awaiting_payment', 'pending', 'confirmed', 'completed')))
+   order by s.date, s.start_time;
+$$;
+revoke all on function public.slot_board(integer) from public;
+grant execute on function public.slot_board(integer) to anon, authenticated, service_role;

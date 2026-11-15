@@ -25,7 +25,7 @@ import Reveal from "@/components/Reveal";
 import SectionHeading from "@/components/SectionHeading";
 import { faqs } from "@/data/misc";
 import HomePredictor from "@/components/predictor/HomePredictor";
-import { getApprovedReviews, getProducts, getUpcomingSlots, getVideoTestimonials } from "@/lib/data";
+import { getApprovedReviews, getProducts, getVideoTestimonials } from "@/lib/data";
 import VideoTestimonials from "@/components/reviews/VideoTestimonials";
 import { getFreeResources } from "@/lib/free-resources";
 import { getNextDates } from "@/lib/important-dates";
@@ -40,13 +40,12 @@ export const metadata: Metadata = pageMeta({
 
 export default async function Home() {
   // All of this comes from Supabase (cached for a few minutes)
-  const [materials, courses, mockTests, papers, reviews, slots, free, nextDates, videos] = await Promise.all([
+  const [materials, courses, mockTests, papers, reviews, free, nextDates, videos] = await Promise.all([
     getProducts("study_material"),
     getProducts("crash_course"),
     getProducts("mock_test"),
     getProducts("previous_paper"),
     getApprovedReviews(),
-    getUpcomingSlots(6),
     getFreeResources(),
     getNextDates(3),
     getVideoTestimonials(),
@@ -71,13 +70,13 @@ export default async function Home() {
 
       {/* 2. Founder — Utkarsh Shrivastava (photo, bio, stats, "Read Full Story", "Book a Direct Call").
              Less space on top, so it sits neatly under the slideshow. */}
-      <FounderSection className="!pt-10 !pb-12 sm:!pt-14 sm:!pb-16" />
+      <FounderSection eagerPhoto className="!pt-10 !pb-12 sm:!pt-14 sm:!pb-16" />
 
       {/* 3. Trust strip — the student number comes from Admin → Settings */}
       <TrustStrip />
 
-      {/* 4. How it works (3 steps) + next open counselling slots */}
-      <HowItWorks slots={slots} />
+      {/* 4. How it works (3 steps) + the slot picker (next available slots) */}
+      <HowItWorks />
 
       {/* 5. Counselling packages (hidden when there are none) */}
       <section className="section">

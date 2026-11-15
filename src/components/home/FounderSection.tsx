@@ -7,12 +7,13 @@ import Reveal from "../Reveal";
 
 // Home page founder section (short version). Text lives in src/content/founder.ts
 // Sits right under the hero slideshow: phones show the photo on top, text below.
-export default function FounderSection({ className = "" }: { className?: string }) {
+// eagerPhoto: right under the slideshow the photo is visible on phones straight away → load it first
+export default function FounderSection({ className = "", eagerPhoto = false }: { className?: string; eagerPhoto?: boolean }) {
   return (
     <section aria-labelledby="founder-heading" className={`section ${className}`}>
       <div className="container-page grid items-center gap-10 sm:gap-12 lg:grid-cols-[0.85fr_1.15fr]">
         <Reveal className="relative mx-auto w-full max-w-[18rem] pb-6 sm:max-w-sm">
-          <FounderPhoto />
+          <FounderPhoto eager={eagerPhoto} />
           <div className="absolute bottom-0 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded-2xl bg-white px-5 py-3 text-center shadow-xl ring-1 ring-slate-200">
             <p className="font-extrabold text-brand-700">{founder.name}</p>
             <p className="text-xs font-semibold text-accent-700">{founder.shortTitle}</p>

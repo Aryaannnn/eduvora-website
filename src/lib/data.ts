@@ -7,10 +7,9 @@
 // =====================================================================
 import { applyPriceLabels } from "./price-labels";
 import { cacheLife, cacheTag } from "next/cache";
-import { todayInIndia } from "./format";
 import { getPublicSupabase } from "./supabase/public";
 import { hiddenSample, productsWithoutSamples } from "./sample";
-import type { Product, ProductCategory, Review, SiteStat, Slot } from "./types";
+import type { Product, ProductCategory, Review, SiteStat } from "./types";
 
 // content_links is private, so we always list the public columns by name
 export const PRODUCT_COLUMNS =
@@ -61,24 +60,6 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
   const p = (data as unknown as Product) ?? null;
   if (!p || hiddenSample(p.title)) return null; // SAMPLE item once Live → "not found"
   return (await applyPriceLabels(productsWithoutSamples([p])))[0];
-}
-
-export async function getUpcomingSlots(limit = 8): Promise<Slot[]> {
-  "use cache";
-  cacheTag("slots");
-  const supabase = getPublicSupabase();
-  if (!supabase) return (ok(), []);
-  const { data, error } = await supabase
-    .from("slots")
-    .select("id,date,start_time,end_time,price")
-    .eq("is_available", true)
-    .gte("date", todayInIndia())
-    .order("date")
-    .order("start_time")
-    .limit(limit);
-  if (error) return (retrySoon("getUpcomingSlots", error.message), []);
-  ok();
-  return (data ?? []) as Slot[];
 }
 
 export async function getApprovedReviews(): Promise<Review[]> {
