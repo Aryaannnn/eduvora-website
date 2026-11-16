@@ -22,7 +22,7 @@ export default function RefundPolicyPage() {
       <ul>
         <li><strong>Counselling session (30-minute voice call):</strong> free reschedule or full refund up to {h} hours before your slot.</li>
         <li><strong>Live crash courses / batches:</strong> refund up to {d} days before the batch starts; full refund if we cancel the batch. Once classes begin, no refund.</li>
-        <li><strong>Study material, previous year papers and mock test packs:</strong> non-refundable once you get access (they are digital products, read online in your dashboard).</li>
+        <li><strong>Study material, previous year papers and mock test packs:</strong> delivered as a personal, watermarked PDF (or online tests) — non-refundable once opened or downloaded.</li>
         <li><strong>Can&apos;t access what you paid for?</strong> We fix it or refund you within {r.techIssueDays} days.</li>
         <li><strong>Refunds</strong> go back to your original payment method within {r.processingTime}.</li>
       </ul>
@@ -47,7 +47,8 @@ export default function RefundPolicyPage() {
       <h2>3. Study material, previous year papers and mock test packs</h2>
       <ul>
         <li>These are <strong>digital products</strong>. Once you get access (to the material or the tests), they are <strong>non-refundable</strong>.</li>
-        <li>Material is for <strong>personal online reading only</strong> in your dashboard. It can&apos;t be downloaded or printed, and <strong>sharing it is not allowed</strong> (every page carries your name and details).</li>
+        <li>Material is delivered as a <strong>personal PDF watermarked with your name, phone number and email</strong>. Once you <strong>open or download</strong> it, it is <strong>non-refundable</strong>.</li>
+        <li><strong>Sharing it is not allowed.</strong> Every copy carries your details and an ID, and every open and download is logged, so shared copies can be traced to the account.</li>
         <li>
           <strong>Technical problem?</strong> If you paid but cannot open or read the content, tell us. We will fix the problem
           or give you a full refund <strong>within {r.techIssueDays} days</strong>.

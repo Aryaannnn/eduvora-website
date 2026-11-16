@@ -337,6 +337,17 @@ export async function saveContactMode(input: { mode: string; openNote: string; p
   };
 }
 
+/** Admin → Settings: how many times a student may open/download each PDF per day (supabase/pdf-downloads.sql). */
+export async function savePdfDailyLimit(limit: number | string): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const n = int(limit);
+  if (n === null || Number.isNaN(n) || n < 1 || n > 500) return fail("Please enter a number between 1 and 500.");
+  const { data, error } = await s.supabase.from("pdf_settings").update({ daily_limit: n }).eq("id", 1).select("id");
+  if (error || !data?.length) return fail(error && !/pdf_settings/.test(error.message) ? friendlyDbError(error.message) : "Run supabase/pdf-downloads.sql in Supabase first.");
+  return { ok: true, message: `Saved — each student can open or download each PDF ${n} time${n === 1 ? "" : "s"} a day.` };
+}
+
 /** Admin → Settings: how long before a slot starts bookings close (minutes). */
 export async function saveBookingNotice(minutes: number | string): Promise<ActionResult> {
   const s = await adminOrError();

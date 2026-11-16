@@ -19,12 +19,9 @@ const since = (days: number) => new Date(Date.now() - days * 86400000).toISOStri
 
 async function Content() {
   const s = await requireAdmin("/admin/products/downloads");
-  const { data, error } = await s.supabase
-    .from("file_downloads")
-    .select("id,user_id,file_name,file_type,action,watermarked,status,error,device,created_at,products(title)")
-    .gte("created_at", since(30))
-    .order("created_at", { ascending: false })
-    .limit(10000);
+  const load = (cols: string) => s.supabase.from("file_downloads").select(cols).gte("created_at", since(30)).order("created_at", { ascending: false }).limit(10000);
+  let { data, error } = await load("id,copy_id,user_id,file_name,file_type,action,watermarked,status,error,device,created_at,products(title)");
+  if (error?.code === "42703") ({ data, error } = await load("id,user_id,file_name,file_type,action,watermarked,status,error,device,created_at,products(title)")); // pdf-downloads.sql not run yet
   const raw = (data ?? []) as unknown as (Omit<DownloadRow, "student" | "email" | "product"> & { user_id: string | null; products: { title: string } | null })[];
   const people = await profilesById(s, raw.map((r) => r.user_id).filter(Boolean) as string[]);
   const rows: DownloadRow[] = raw.map((r) => ({

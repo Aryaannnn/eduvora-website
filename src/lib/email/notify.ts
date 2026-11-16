@@ -214,11 +214,11 @@ ${callBlock(b)}
       to: r.email as string,
       subject: `Your free ${title} 📘`,
       html: layout({
-        preheader: `Here is your free ${title}. Read it online any time in the next 30 days.`,
+        preheader: `Here is your free ${title}. Open or download it any time in the next 30 days.`,
         title: "Your free guide is ready 📘",
         body: `<p>Hi ${esc(first)},</p>
 <p>Thank you for your interest in EDUVORA! Here is your free <strong>${esc(title)}</strong>:</p>
-<p>${button("Read the guide online", url(`/api/guide/${r.id}`))}</p>
+<p>${button("Get the guide (PDF)", url(`/api/guide/${r.id}`))}</p>
 <p style="font-size:13px;color:#64748b">The link works for 30 days.</p>
 ${note(`<strong>Want help with your own rank, campus or branch?</strong><br>Send us a free enquiry and our team will call you back — no payment needed.<br><br>${button("Book a free enquiry call", url("/contact#enquiry"), "navy")}`, "gold")}
 <p style="font-size:12px;color:#94a3b8">You're getting this email because you asked for the free guide on our website. You won't get marketing emails unless you sign up.</p>`,
@@ -510,7 +510,7 @@ export async function sendCheckoutReminders(): Promise<{ r2h: number; r24h: numb
   return out;
 }
 
-/** Free guide popup → email the link to read it online (in the background). */
+/** Free guide popup → email the link to the guide (in the background). */
 export function notifyFreeGuide(requestId: string) {
   inBackground(async () => {
     if (await sendKind("free_guide", requestId)) {

@@ -33,8 +33,9 @@ export default async function ShippingPolicyPage() {
       <h2>2. How each service is delivered</h2>
       <ul>
         <li>
-          <strong>Study material, previous year papers and guides:</strong> read online in your dashboard (personal use only — they
-          can&apos;t be downloaded or printed).
+          <strong>Study material, previous year papers and guides:</strong> delivered as a <strong>personal PDF watermarked with your
+          name, phone number and email</strong> — open it in your browser or download it from your dashboard. Once opened or
+          downloaded it is non-refundable. Sharing it is not allowed; every copy can be traced to the account.
         </li>
         <li><strong>Mock tests:</strong> taken online in your dashboard.</li>
         <li>

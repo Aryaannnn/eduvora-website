@@ -40,11 +40,12 @@ export default function TermsPage() {
         recording, selling or sharing them without written permission is not allowed.
       </p>
       <p>
-        Study material, previous year papers and other PDFs are for <strong>personal online reading only</strong> inside
-        your dashboard. They can&apos;t be downloaded or printed, and sharing them, your login or screenshots is not allowed.
-        Every page shows your name, phone number, email and the time, and every page you read is logged, so shared copies
-        can be traced to the account. An account can be signed in on up to 2 devices at a time; signing in on a third
-        device signs out the oldest one. We may suspend accounts that share material.
+        Study material, previous year papers and other PDFs are delivered as a <strong>personal PDF</strong> (open it in your
+        browser or download it) for your own study only. Every page is watermarked with your name, phone number, email,
+        the date and a copy ID, and every open and download is logged, so shared copies can be traced to the account.
+        Sharing, selling or uploading these files, or your login, is not allowed. Once a PDF is opened or downloaded it is
+        non-refundable. An account can be signed in on up to 2 devices at a time; signing in on a third device signs out
+        the oldest one. We may suspend accounts that share material.
       </p>
 
       <h2>5. Student conduct</h2>

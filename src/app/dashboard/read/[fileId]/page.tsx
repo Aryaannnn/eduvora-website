@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { siteConfig } from "@/config/site";
 import { Suspense } from "react";
 import SecureReader from "@/components/reader/SecureReader";
 import { DashSkeleton } from "@/components/dashboard/ui";
@@ -28,6 +30,8 @@ export default function ReadPage(props: PageProps<"/dashboard/read/[fileId]">) {
 
 async function Content({ params }: { params: Promise<{ fileId: string }> }) {
   const { fileId } = await params;
+  // In-website reader switched off (src/config/site.ts → inWebsiteReader) → the watermarked PDF
+  if (!siteConfig.inWebsiteReader) redirect(`/api/files/${fileId}?mode=open`);
   const s = await requireUser(`/dashboard/read/${fileId}`);
   const db = getAdminSupabase();
   if (!db) return <Message title="Reading is not available right now" text="Please try again in a little while." />;

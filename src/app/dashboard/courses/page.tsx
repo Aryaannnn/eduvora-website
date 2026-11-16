@@ -9,6 +9,8 @@ import { getProducts } from "@/lib/data";
 import { formatDateTime } from "@/lib/format";
 import { getFreeResources, suggestFor, type Suggestion } from "@/lib/free-resources";
 import { formatBytes } from "@/lib/product-files";
+import { siteConfig } from "@/config/site";
+import PdfButtons from "@/components/files/PdfButtons";
 
 export const metadata: Metadata = { title: "My Courses & Material" };
 
@@ -38,7 +40,7 @@ async function CoursesContent({ searchParams }: { searchParams: PageProps<"/dash
   const links = await Promise.all(courses.map((c) => getProductContent(s, c.products!.id)));
 
   // PDFs of the products they bought — Row Level Security only returns files of
-  // PAID (or free) products, in the admin's order. Read online only (no downloads);
+  // PAID (or free) products, in the admin's order. Delivered as watermarked PDFs;
   // ZIP files can't be read in the browser, so students don't see them.
   const ids = paid.map((p) => p.products!.id);
   const { data: fileRows } = ids.length
@@ -173,8 +175,9 @@ function TestButtons({ row, empty }: { row: PurchaseRow; empty?: string }) {
 
 type StudentFile = { id: string; product_id: string; display_name: string; file_type: "pdf" | "zip"; size_bytes: number; sort_order: number };
 
-// Each file: name + "Read" — opens the secure reader (/dashboard/read/<id>):
-// read online only, watermarked with the student's details, no download/print.
+// Each file: "Open PDF" (new tab) + "Download" — the student's personal copy,
+// watermarked on the server with their name, phone and email (/api/files/<id>).
+// (siteConfig.inWebsiteReader = true → "Read" in the in-website reader instead.)
 function FileList({ files, empty, itemTitle = "", suggestion }: { files?: StudentFile[]; empty?: string; itemTitle?: string; suggestion?: Suggestion }) {
   if (!files?.length) return empty ? <p className="mt-3 text-sm text-slate-500">{empty}</p> : null;
   return (
@@ -187,11 +190,15 @@ function FileList({ files, empty, itemTitle = "", suggestion }: { files?: Studen
           </span>
           <div className="min-w-0 flex-1">
             <p className="truncate font-semibold text-slate-900">{f.display_name}</p>
-            <p className="text-xs text-slate-500">Read online · {formatBytes(Number(f.size_bytes))}</p>
+            <p className="text-xs text-slate-500">{siteConfig.inWebsiteReader ? "Read online" : "PDF · watermarked with your name"} · {formatBytes(Number(f.size_bytes))}</p>
           </div>
-          <Link href={`/dashboard/read/${f.id}`} className="btn-primary !px-4 !py-2 text-sm" aria-label={`Read ${f.display_name} online`}>
-            <BookIcon className="h-4 w-4" /> Read
-          </Link>
+          {siteConfig.inWebsiteReader ? (
+            <Link href={`/dashboard/read/${f.id}`} className="btn-primary !px-4 !py-2 text-sm" aria-label={`Read ${f.display_name} online`}>
+              <BookIcon className="h-4 w-4" /> Read
+            </Link>
+          ) : (
+            <PdfButtons fileId={f.id} name={f.display_name} />
+          )}
         </li>
       ))}
     </ul>

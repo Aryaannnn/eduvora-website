@@ -4,6 +4,7 @@ import ProductsManager, { type AdminProduct } from "@/components/admin/ProductsM
 import { DashSkeleton } from "@/components/dashboard/ui";
 import { requireAdmin } from "@/lib/admin";
 import ReaderUsageCard, { type ReaderUsage } from "@/components/admin/ReaderUsageCard";
+import { siteConfig } from "@/config/site";
 
 export const metadata: Metadata = { title: "Products" };
 
@@ -46,7 +47,7 @@ async function Content() {
   );
   return (
     <ProductsManager products={products} storage={{ usedBytes: used.error ? null : Number(used.data ?? 0), filesBytes }}>
-      <ReaderUsageCard usage={usage} />
+      {siteConfig.inWebsiteReader && <ReaderUsageCard usage={usage} />}
     </ProductsManager>
   );
 }

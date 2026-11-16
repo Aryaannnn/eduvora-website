@@ -17,6 +17,7 @@ import { discountPercent, formatDate, formatPrice } from "@/lib/format";
 import { getSeatsLeft, seatLimitOf } from "@/lib/seats";
 import JsonLd from "@/components/seo/JsonLd";
 import { breadcrumbLd, courseLd, pageMeta } from "@/lib/seo";
+import ProductPdfs from "@/components/files/ProductPdfs";
 
 export async function generateMetadata(props: PageProps<"/courses/[slug]">): Promise<Metadata> {
   const { slug } = await props.params;
@@ -154,6 +155,9 @@ async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
           )}
         </div>
       </section>
+
+      {/* Students who have access: this course's PDFs (Open PDF / Download, personal watermarked copies) */}
+      <ProductPdfs productId={course.id} className="container-page mt-8 !max-w-5xl" />
 
       <div className="container-page grid gap-10 py-10 sm:py-14 lg:grid-cols-[1fr_23rem]">
         <aside className="lg:order-2" id="enroll">

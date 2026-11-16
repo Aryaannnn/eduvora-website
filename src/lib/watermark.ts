@@ -1,10 +1,13 @@
 // =====================================================================
-//  PDF WATERMARK (server only)
-//  Adds to EVERY page of the student's copy:
-//   • a light diagonal "Licensed to <Name> • <Email> • EDUVORA" (grey, 15%)
-//   • a small footer: download date + Download ID (traceable in
-//     Admin → Products → Downloads)
-//  The original file in storage is never changed.
+//  PDF WATERMARK (server only, pdf-lib)
+//  Every page of the student's personal copy gets:
+//   • in the middle, diagonal, light grey (15%):
+//       "Licensed to <Name> • <Phone> • <Email>"
+//   • a small footer:
+//       "EDUVORA • For personal use only • Downloaded on <date, IST> • ID <short ID>"
+//  + PDF metadata: author EDUVORA, subject with the student's email and the ID.
+//  The ID is logged (Admin → Products → Downloads) so a shared copy can be traced.
+//  The original file in storage is never changed, and never sent to students.
 // =====================================================================
 import "server-only";
 import { createHash } from "node:crypto";
@@ -12,14 +15,14 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { degrees, PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import { siteConfig } from "@/config/site";
 
-export type WatermarkInfo = { name: string; email: string; downloadId: string; when: Date };
+export type WatermarkInfo = { name: string; phone: string; email: string; copyId: string; when: Date; title: string };
 
 /** The standard PDF font can only print basic Latin letters — turn anything else into close letters or remove it. */
 export function pdfSafe(s: string) {
   return s
     .normalize("NFKD")
     .replace(/[̀-ͯ]/g, "")
-    .replace(/[^\x20-\x7E]/g, "")
+    .replace(/[^ -~]/g, "")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -27,50 +30,53 @@ export function pdfSafe(s: string) {
 const istStamp = (d: Date) =>
   new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "Asia/Kolkata" }).format(d) + " IST";
 
+/** "1A2B3C4D" — printed on the copy, searchable in Admin → Products → Downloads */
+export const shortCopyId = (id: string) => id.replace(/-/g, "").slice(0, 8).toUpperCase();
+
 /** Returns the watermarked PDF. Throws if the PDF can't be read (e.g. password-protected) — never returns the original. */
 export async function watermarkPdf(original: Uint8Array, info: WatermarkInfo): Promise<Uint8Array> {
   const doc = await PDFDocument.load(original, { updateMetadata: false });
-  const font = await doc.embedFont(StandardFonts.Helvetica);
+  const font = await doc.embedFont(StandardFonts.HelveticaBold);
+  const small = await doc.embedFont(StandardFonts.Helvetica);
   const name = pdfSafe(info.name).slice(0, 60) || "Student";
+  const phone = pdfSafe(info.phone).slice(0, 20);
   const email = pdfSafe(info.email).slice(0, 80);
   const brand = pdfSafe(siteConfig.businessName) || "EDUVORA";
-  const mark = `Licensed to ${name}${email ? ` • ${email}` : ""} • ${brand}`;
-  const shortId = info.downloadId.slice(0, 8).toUpperCase();
-  const footer = `Licensed to ${name}${email ? ` (${email})` : ""} · Downloaded ${istStamp(info.when)} · ID ${shortId} · Personal use only - do not share`;
-  const grey = rgb(0.45, 0.45, 0.45);
+  const mark = `Licensed to ${[name, phone, email].filter(Boolean).join(" • ")}`;
+  const shortId = shortCopyId(info.copyId);
+  const footer = `${brand} • For personal use only • Downloaded on ${istStamp(info.when)} • ID ${shortId}`;
 
   const pages = doc.getPages();
   if (pages.length === 0) throw new Error("This PDF has no pages.");
 
   for (const page of pages) {
     const { width: w, height: h } = page.getSize();
-    const angle = Math.atan2(h, w); // corner to corner
+    // Diagonal, through the middle of the page, about 70% of the diagonal long
+    const angle = Math.atan2(h, w);
     const diag = Math.hypot(w, h);
-    // text size: about half the diagonal long, kept readable but light
-    const size = Math.max(9, Math.min(26, (diag * 0.5) / Math.max(1, font.widthOfTextAtSize(mark, 1))));
+    const size = Math.max(10, Math.min(30, (diag * 0.7) / Math.max(1, font.widthOfTextAtSize(mark, 1))));
     const tw = font.widthOfTextAtSize(mark, size);
-    // three PARALLEL diagonal lines: through the centre, and one on each side of it
-    const gap = Math.min(w, h) * 0.27;
-    for (const k of [-1, 0, 1]) {
-      const cx = w / 2 - k * gap * Math.sin(angle);
-      const cy = h / 2 + k * gap * Math.cos(angle);
-      page.drawText(mark, {
-        x: cx - (tw / 2) * Math.cos(angle) + (size / 2) * Math.sin(angle),
-        y: cy - (tw / 2) * Math.sin(angle) - (size / 2) * Math.cos(angle),
-        size,
-        font,
-        color: grey,
-        opacity: 0.15,
-        rotate: degrees((angle * 180) / Math.PI),
-      });
-    }
+    page.drawText(mark, {
+      x: w / 2 - (tw / 2) * Math.cos(angle) + (size / 2) * Math.sin(angle),
+      y: h / 2 - (tw / 2) * Math.sin(angle) - (size / 2) * Math.cos(angle),
+      size,
+      font,
+      color: rgb(0.5, 0.5, 0.5),
+      opacity: 0.15,
+      rotate: degrees((angle * 180) / Math.PI),
+    });
     // small footer line
-    let fs = 6.5;
-    while (fs > 4 && font.widthOfTextAtSize(footer, fs) > w - 24) fs -= 0.25;
-    page.drawText(footer, { x: 12, y: 8, size: fs, font, color: rgb(0.35, 0.35, 0.35), opacity: 0.6 });
+    let fs = 7;
+    while (fs > 4 && small.widthOfTextAtSize(footer, fs) > w - 24) fs -= 0.25;
+    page.drawText(footer, { x: 12, y: 8, size: fs, font: small, color: rgb(0.35, 0.35, 0.35), opacity: 0.7 });
   }
 
+  doc.setTitle(`${brand} - ${pdfSafe(info.title) || "Study material"}`);
+  doc.setAuthor(brand);
+  doc.setSubject(`Licensed to ${email || name} - ID ${shortId} - personal use only`);
+  doc.setCreator(brand);
   doc.setProducer(`${brand} (licensed copy ${shortId})`);
+  doc.setModificationDate(info.when);
   return doc.save();
 }
 

@@ -123,7 +123,7 @@ export default function FilesManager({ productId }: { productId: string }) {
       setFiles((fs) => (replaceId ? (fs ?? []).map((f) => (f.id === replaceId ? saved : f)) : [...(fs ?? []), saved]));
       patchUpload(key, { progress: 100, status: "done" });
       setTimeout(() => setUploads((u) => u.filter((x) => x.key !== key)), 4000);
-      if (saved.file_type === "pdf") void preparePages(saved.id); // pages → WebP for the fast reader (once)
+      if (saved.file_type === "pdf" && siteConfig.inWebsiteReader) void preparePages(saved.id); // pages → WebP for the in-website reader (once)
     } catch (e) {
       patchUpload(key, { status: "error", error: (e as Error).message });
     }
@@ -196,7 +196,7 @@ export default function FilesManager({ productId }: { productId: string }) {
     <div className="space-y-3">
       {files?.some((f) => f.file_type === "zip") && (
         <p role="alert" className="rounded-xl bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900 ring-1 ring-amber-200">
-          ⚠️ This item has ZIP file(s). Students can&apos;t see or read ZIP files — please upload the material as PDF instead (then delete the ZIP).
+          ⚠️ This item has ZIP file(s). Students don&apos;t get ZIP files — please upload the material as PDF instead (then delete the ZIP).
         </p>
       )}
       {/* Drop zone */}
@@ -222,7 +222,7 @@ export default function FilesManager({ productId }: { productId: string }) {
         <p className="mt-3 text-xs text-slate-500">
           PDF (.pdf) · <strong>max {siteConfig.uploads.maxFileMB} MB per file</strong> · you can select several at once · private, buyers only
         </p>
-        <p className="mt-2 text-xs text-slate-500">Students read PDFs online only (watermarked, no download). <strong>ZIP files can&apos;t be read in the browser and are hidden from students — please upload PDFs instead.</strong></p>
+        <p className="mt-2 text-xs text-slate-500">{siteConfig.inWebsiteReader ? "Students read PDFs online only (watermarked, no download)." : "Students get each PDF as their own copy, watermarked with their name, phone and email (Open PDF / Download)."} <strong>ZIP files are hidden from students — please upload PDFs instead.</strong></p>
         <input ref={chooser} type="file" multiple accept=".pdf,.zip,application/pdf,application/zip" className="sr-only" onChange={(e) => { if (e.target.files) addFiles(e.target.files); e.target.value = ""; }} />
         <input ref={replacer} type="file" accept=".pdf,.zip,application/pdf,application/zip" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; if (f) void replace(f); e.target.value = ""; }} />
       </div>
@@ -295,13 +295,14 @@ export default function FilesManager({ productId }: { productId: string }) {
                 <p className="text-xs text-slate-500">
                   {f.file_type.toUpperCase()} · {formatBytes(Number(f.size_bytes))} · added {formatDateTime(f.created_at)}{f.download_count ? <> · <DownloadIcon className="inline h-3 w-3" /> {f.download_count} old download{f.download_count === 1 ? "" : "s"}</> : null}
                 </p>
-                {f.file_type === "pdf" && <PagesStatus f={f} progress={preparing[f.id]} />}
+                {f.file_type === "pdf" && siteConfig.inWebsiteReader && <PagesStatus f={f} progress={preparing[f.id]} />}
+                {f.file_type === "pdf" && !siteConfig.inWebsiteReader && <p className="mt-1 text-xs font-semibold text-emerald-700">✓ Students get Open PDF + Download (their own watermarked copy)</p>}
               </div>
               <div className="flex flex-wrap gap-1.5">
                 <button type="button" onClick={() => move(i, i - 1)} disabled={i === 0} className="btn-light !px-2 !py-1 text-xs disabled:opacity-30" aria-label="Move up">↑</button>
                 <button type="button" onClick={() => move(i, i + 1)} disabled={i === files.length - 1} className="btn-light !px-2 !py-1 text-xs disabled:opacity-30" aria-label="Move down">↓</button>
                 {f.file_type === "pdf" && <button type="button" onClick={() => void preview(f)} className="btn-light !px-2.5 !py-1 text-xs">Preview</button>}
-                {f.file_type === "pdf" && (
+                {f.file_type === "pdf" && siteConfig.inWebsiteReader && (
                   <button type="button" disabled={!!preparing[f.id]} onClick={() => void preparePages(f.id)} className="btn-light !px-2.5 !py-1 text-xs disabled:opacity-50" title="Turn the pages into pictures for the reader again">
                     {preparing[f.id] ? "Preparing…" : "Re-process"}
                   </button>

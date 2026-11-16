@@ -1,6 +1,7 @@
 // Old link from "Download Free" buttons: /api/download/<product id>
-// → the product's FIRST PDF in the secure reader (read online only, no downloads).
+// → the product's FIRST PDF: "Open PDF" (personal watermarked copy) — or the in-website reader if switched on.
 import { NextResponse, type NextRequest } from "next/server";
+import { siteConfig } from "@/config/site";
 import { getSession } from "@/lib/dashboard";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 
@@ -13,5 +14,5 @@ export async function GET(request: NextRequest, ctx: RouteContext<"/api/download
 
   const { data } = await db.from("product_files").select("id").eq("product_id", id).eq("file_type", "pdf").order("sort_order").order("created_at").limit(1);
   if (!data?.[0]) return new NextResponse("No file has been added to this item yet. Please contact us.", { status: 404 });
-  return NextResponse.redirect(new URL(`/dashboard/read/${data[0].id}`, request.url));
+  return NextResponse.redirect(new URL(siteConfig.inWebsiteReader ? `/dashboard/read/${data[0].id}` : `/api/files/${data[0].id}?mode=open`, request.url));
 }

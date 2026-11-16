@@ -9,12 +9,13 @@ import { getContactAccess } from "@/lib/contact";
 import { requireUser } from "@/lib/dashboard";
 import { formatDateTime, formatPrice } from "@/lib/format";
 import { creditsLine, getCredits } from "@/lib/packages";
+import ProductPdfs from "@/components/files/ProductPdfs";
 
 export const metadata: Metadata = { title: "Payment Successful", robots: { index: false } };
 
 type Order = {
   id: string; amount: number; status: "created" | "pending" | "paid" | "failed" | "abandoned"; invoice_number: string | null;
-  razorpay_order_id: string | null; razorpay_payment_id: string | null; created_at: string; paid_at?: string | null;
+  razorpay_order_id: string | null; razorpay_payment_id: string | null; created_at: string; paid_at?: string | null; product_id?: string | null;
   products: { title: string; category: string } | null;
 };
 
@@ -42,7 +43,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/payment-suc
   const { data } = id
     ? await s.supabase
         .from("purchases")
-        .select("id,amount,status,invoice_number,razorpay_order_id,razorpay_payment_id,created_at,products(title,category)")
+        .select("id,amount,status,invoice_number,razorpay_order_id,razorpay_payment_id,created_at,product_id,products(title,category)")
         .eq("id", id)
         .eq("user_id", s.user.id)
         .maybeSingle()
@@ -139,6 +140,9 @@ async function Content({ searchParams }: { searchParams: PageProps<"/payment-suc
           )}
         </div>
       </div>
+
+      {/* The PDFs of what they just bought: Open PDF / Download (personal watermarked copies) */}
+      {order?.status === "paid" && order.product_id && <ProductPdfs productId={order.product_id} />}
 
       {/* The number (Call + WhatsApp): Open mode = everyone, Private mode = paid students */}
       {access.unlocked && !free && <DirectContact paidOnly />}

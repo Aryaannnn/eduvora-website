@@ -66,7 +66,7 @@ const slides: Slide[] = [
     cta: { label: "Buy Study Material", href: "/study-material" },
     icon: BookIcon,
     color: "from-sky-500 to-cyan-600",
-    points: ["Read online in your dashboard", "Branch-wise rank trends", "Instant access"],
+    points: ["Download PDF (watermarked with your name)", "Branch-wise rank trends", "Instant access"],
   },
   {
     eyebrow: "Score higher, faster",

@@ -2,6 +2,7 @@
 // The link works for 30 days. Material is READ ONLINE ONLY: the guide opens in the
 // secure reader (/dashboard/read/<file>) after a quick free login / sign-up.
 import { NextResponse, type NextRequest } from "next/server";
+import { siteConfig } from "@/config/site";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 
 const DAYS = 30;
@@ -18,7 +19,8 @@ export async function GET(request: NextRequest, ctx: RouteContext<"/api/guide/[i
   const { data: f } = await db.from("product_files").select("id").eq("product_id", r.product_id).eq("file_type", "pdf").order("sort_order").order("created_at").limit(1).maybeSingle();
   if (!f) return back("unavailable");
   await db.from("guide_requests").update({ downloads: Number(r.downloads ?? 0) + 1 }).eq("id", r.id);
-  const res = NextResponse.redirect(new URL(`/dashboard/read/${f.id}`, request.url), 302); // login first if needed (proxy)
+  // login first if needed; then the personal watermarked PDF (or the in-website reader if switched on)
+  const res = NextResponse.redirect(new URL(siteConfig.inWebsiteReader ? `/dashboard/read/${f.id}` : `/api/files/${f.id}?mode=open`, request.url), 302);
   res.headers.set("Cache-Control", "private, no-store");
   res.headers.set("X-Robots-Tag", "noindex");
   return res;

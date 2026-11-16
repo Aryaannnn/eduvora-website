@@ -138,8 +138,15 @@ export const siteConfig = {
     // Short notes shown next to the payment buttons
     counsellingNote: `Free reschedule or full refund up to ${RESCHEDULE_HOURS} hours before your slot. No refund within ${RESCHEDULE_HOURS} hours or if the session is missed.`,
     liveBatchNote: `Refund available up to ${LIVE_BATCH_REFUND_DAYS} days before the batch starts; full refund if we cancel the batch. Once classes begin, no refund.`,
-    digitalNote: "Digital product, read online in your dashboard — non-refundable once access is given. If you can't access it, we'll fix it or refund within 7 days.",
+    digitalNote: "Digital product — a personal PDF watermarked with your name. Non-refundable once opened or downloaded. If you can't access it, we'll fix it or refund within 7 days.",
   },
+
+  // ✏️ Course PDFs:
+  //    false = students get two buttons per PDF: "Open PDF" (new browser tab) and
+  //            "Download" — a personal copy watermarked on the server with their
+  //            name, phone and email (src/lib/pdf-delivery.ts)
+  //    true  = the in-website reader instead (no download; src/components/reader)
+  inWebsiteReader: false,
 
   // ✏️ Do we PROMISE emails (invoice / receipt / booking confirmation by email)?
   //    false = the website only promises what is always true: "Invoice available

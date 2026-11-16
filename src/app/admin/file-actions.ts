@@ -11,6 +11,7 @@ import { adminOrError, isError, type ActionResult } from "@/lib/admin";
 import { checkFile, kindOf, MIME, niceName, slugName, type ProductFile } from "@/lib/product-files";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import { removePages } from "@/lib/pdf-pages";
+import { clearCopiesOfFile } from "@/lib/pdf-delivery";
 
 const BUCKET = "materials";
 const fail = (error: string): ActionResult<never> => ({ ok: false, error });
@@ -73,8 +74,9 @@ export async function finishFileUpload(input: { productId: string; path: string;
       .single();
     if (error) return fail(error.message);
     await db.storage.from(BUCKET).remove([old.file_path]);
+    await clearCopiesOfFile(db, replaceId).catch(() => {}); // students' watermarked copies of the OLD file
     await syncProductFilePath(db, productId);
-    return { ok: true, data: { file: row as ProductFile }, message: "File replaced." };
+    return { ok: true, data: { file: row as ProductFile }, message: "File replaced. Students get the new version from now on." };
   }
 
   const { data: last } = await db.from("product_files").select("sort_order").eq("product_id", productId).order("sort_order", { ascending: false }).limit(1);
@@ -105,6 +107,7 @@ export async function deleteProductFile(id: string): Promise<ActionResult> {
   if ("ok" in db) return db;
   const { data: f } = await db.from("product_files").select("file_path,product_id").eq("id", id).maybeSingle();
   if (!f) return fail("File not found.");
+  await clearCopiesOfFile(db, id).catch(() => {}); // students' watermarked copies
   const { error } = await db.from("product_files").delete().eq("id", id);
   if (error) return fail(error.message);
   await db.storage.from(BUCKET).remove([f.file_path]);
