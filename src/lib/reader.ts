@@ -153,3 +153,13 @@ export async function renderPage(src: PDFDocument, n: number, mark: Mark): Promi
   page.drawText(footer, { x: 8, y: fsz * 0.9, size: fsz, font: bold, color: rgb(0.3, 0.32, 0.38), maxWidth: w - 16 });
   return out.save({ useObjectStreams: true });
 }
+
+// ---------------------------------------------------------------- fast mode: pre-made WebP pages
+export type PageInfo = { ready: boolean; pages: number; version: number };
+
+/** Are this file's WebP pages ready? (null = supabase/reader-pages.sql not run yet) */
+export async function pageInfo(db: SupabaseClient, fileId: string): Promise<PageInfo | null> {
+  const { data, error } = await db.from("product_files").select("page_count,pages_status,pages_version").eq("id", fileId).maybeSingle();
+  if (error || !data) return null;
+  return { ready: data.pages_status === "ready" && Number(data.page_count) > 0, pages: Number(data.page_count ?? 0), version: Number(data.pages_version ?? 0) };
+}

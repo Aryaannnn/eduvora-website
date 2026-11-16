@@ -18,6 +18,7 @@ import {
   startFileUpload,
 } from "@/app/admin/file-actions";
 import { siteConfig } from "@/config/site";
+import { processPdfPages, type PagesProgress } from "@/lib/process-pages-client";
 import { formatDateTime } from "@/lib/format";
 import { checkFile, formatBytes, type ProductFile } from "@/lib/product-files";
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/supabase/env";
@@ -89,6 +90,26 @@ export default function FilesManager({ productId }: { productId: string }) {
 
   const patchUpload = (key: string, p: Partial<Upload>) => setUploads((u) => u.map((x) => (x.key === key ? { ...x, ...p } : x)));
 
+  // ---- Fast reader: turn a PDF's pages into WebP pictures (progress per file) ----
+  const [preparing, setPreparing] = useState<Record<string, PagesProgress>>({});
+  const patchFile = (id: string, p: Partial<ProductFile>) => setFiles((fs) => (fs ?? []).map((f) => (f.id === id ? { ...f, ...p } : f)));
+  async function preparePages(id: string) {
+    setPreparing((m) => ({ ...m, [id]: { done: 0, total: 0 } }));
+    patchFile(id, { pages_status: "processing", pages_error: null });
+    try {
+      const r = await processPdfPages(id, (p) => setPreparing((m) => ({ ...m, [id]: p })));
+      patchFile(id, { pages_status: "ready", page_count: r.pages, pages_done: r.pages, pages_bytes: r.bytes });
+    } catch (e) {
+      patchFile(id, { pages_status: "failed", pages_error: (e as Error).message });
+    } finally {
+      setPreparing((m) => {
+        const next = { ...m };
+        delete next[id];
+        return next;
+      });
+    }
+  }
+
   async function uploadOne(file: File, replaceId?: string) {
     const key = `${file.name}-${file.size}-${Date.now()}-${Math.random()}`;
     setUploads((u) => [...u, { key, name: file.name, size: file.size, progress: 0, status: "uploading" }]);
@@ -102,6 +123,7 @@ export default function FilesManager({ productId }: { productId: string }) {
       setFiles((fs) => (replaceId ? (fs ?? []).map((f) => (f.id === replaceId ? saved : f)) : [...(fs ?? []), saved]));
       patchUpload(key, { progress: 100, status: "done" });
       setTimeout(() => setUploads((u) => u.filter((x) => x.key !== key)), 4000);
+      if (saved.file_type === "pdf") void preparePages(saved.id); // pages → WebP for the fast reader (once)
     } catch (e) {
       patchUpload(key, { status: "error", error: (e as Error).message });
     }
@@ -271,13 +293,19 @@ export default function FilesManager({ productId }: { productId: string }) {
                   <p className="truncate font-semibold text-slate-900">{f.display_name}</p>
                 )}
                 <p className="text-xs text-slate-500">
-                  {f.file_type.toUpperCase()} · {formatBytes(Number(f.size_bytes))} · added {formatDateTime(f.created_at)} · <DownloadIcon className="inline h-3 w-3" /> {f.download_count} download{f.download_count === 1 ? "" : "s"}
+                  {f.file_type.toUpperCase()} · {formatBytes(Number(f.size_bytes))} · added {formatDateTime(f.created_at)}{f.download_count ? <> · <DownloadIcon className="inline h-3 w-3" /> {f.download_count} old download{f.download_count === 1 ? "" : "s"}</> : null}
                 </p>
+                {f.file_type === "pdf" && <PagesStatus f={f} progress={preparing[f.id]} />}
               </div>
               <div className="flex flex-wrap gap-1.5">
                 <button type="button" onClick={() => move(i, i - 1)} disabled={i === 0} className="btn-light !px-2 !py-1 text-xs disabled:opacity-30" aria-label="Move up">↑</button>
                 <button type="button" onClick={() => move(i, i + 1)} disabled={i === files.length - 1} className="btn-light !px-2 !py-1 text-xs disabled:opacity-30" aria-label="Move down">↓</button>
                 {f.file_type === "pdf" && <button type="button" onClick={() => void preview(f)} className="btn-light !px-2.5 !py-1 text-xs">Preview</button>}
+                {f.file_type === "pdf" && (
+                  <button type="button" disabled={!!preparing[f.id]} onClick={() => void preparePages(f.id)} className="btn-light !px-2.5 !py-1 text-xs disabled:opacity-50" title="Turn the pages into pictures for the reader again">
+                    {preparing[f.id] ? "Preparing…" : "Re-process"}
+                  </button>
+                )}
                 <button type="button" onClick={() => setRenaming({ id: f.id, name: f.display_name })} className="btn-light !px-2.5 !py-1 text-xs"><EditIcon className="h-3.5 w-3.5" /> Rename</button>
                 <button type="button" onClick={() => { replaceTarget.current = f.id; replacer.current?.click(); }} className="btn-light !px-2.5 !py-1 text-xs"><UploadIcon className="h-3.5 w-3.5" /> Replace</button>
                 <button type="button" disabled={busyId === f.id} onClick={() => void remove(f)} className="btn-light !px-2.5 !py-1 text-xs !text-red-600 disabled:opacity-50"><TrashIcon className="h-3.5 w-3.5" /> Delete</button>
@@ -289,4 +317,25 @@ export default function FilesManager({ productId }: { productId: string }) {
       {files && files.length > 1 && <p className="text-xs text-slate-500">Tip: drag the ⋮⋮ handle (or use ↑ ↓) to change the order students see.</p>}
     </div>
   );
+}
+
+/** "Ready for reading · 24 pages · 3.1 MB" / progress bar / error */
+function PagesStatus({ f, progress }: { f: ProductFile; progress?: PagesProgress }) {
+  if (progress) {
+    const pct = progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
+    return (
+      <div className="mt-1.5 max-w-sm">
+        <p className="text-xs font-semibold text-brand-700">Preparing pages for reading… {progress.total ? `${progress.done} of ${progress.total}` : "starting"}</p>
+        <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-200"><div className="h-full rounded-full bg-brand-600 transition-all" style={{ width: `${pct}%` }} /></div>
+      </div>
+    );
+  }
+  if (f.pages_status === undefined) return <p className="mt-1 text-xs text-amber-700">Run supabase/reader-pages.sql to turn on the fast reader.</p>;
+  if (f.pages_status === "ready") {
+    const avg = f.page_count ? Number(f.pages_bytes ?? 0) / f.page_count : 0;
+    return <p className="mt-1 text-xs font-semibold text-emerald-700">✓ Ready for reading · {f.page_count} pages · {formatBytes(Number(f.pages_bytes ?? 0))} ({formatBytes(avg)} per page)</p>;
+  }
+  if (f.pages_status === "failed") return <p className="mt-1 text-xs font-semibold text-red-700">⚠️ Pages could not be prepared: {f.pages_error || "unknown error"} — fix the PDF if needed and press Re-process.</p>;
+  if (f.pages_status === "processing") return <p className="mt-1 text-xs font-semibold text-amber-700">Pages were being prepared but didn&apos;t finish — press Re-process.</p>;
+  return <p className="mt-1 text-xs font-semibold text-amber-700">Not prepared yet (students get the slower reader) — press Re-process.</p>;
 }

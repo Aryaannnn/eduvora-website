@@ -2,15 +2,20 @@
 
 // =====================================================================
 //  SECURE READER (browser)
-//  • Each page is fetched from /api/reader/<file>/<page> (one watermarked page,
-//    never the original file) and drawn on a <canvas> with pdf.js — no text
-//    layer, so nothing can be selected or copied.
-//  • No download / print / save buttons. Right-click, Ctrl/⌘ + S, P, C, A, U, X
-//    are blocked, and printing shows a blank page.
-//  • When the tab or window isn't active, the pages are blurred.
-//  • The reading token is renewed every few minutes (access checked again).
-//  Note: no website can fully stop photos of the screen — that's why every page
-//  carries the student's name, phone, email and the time.
+//  FAST mode ("images") — the PDF was turned into WebP pictures once, when the
+//  admin uploaded it:
+//    • only the page being read + the next page are requested, through
+//      60-second signed links the server makes after checking access
+//    • the student's watermark (name · phone · email · date/time) is drawn ON
+//      TOP of each page here, in the browser — no image work on the server
+//    • pages already opened stay in memory → instant when you scroll back or zoom
+//  FALLBACK mode ("pdf") — for files not prepared yet: one server-watermarked
+//  page at a time, drawn with pdf.js.
+//  Both: drawn on a <canvas> (nothing to select or copy), no download / print /
+//  save buttons, right-click and Ctrl/⌘ + S, P, C, A, U, X blocked, printing
+//  blank, pages blurred when the tab or window isn't active.
+//  Note: no website can stop photos of the screen — that's why every page shows
+//  the student's details and every page view is logged.
 // =====================================================================
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -29,14 +34,57 @@ function loadPdfJs() {
 const NOTE = "This material is for your personal use only. Sharing or screenshots are traceable to your account.";
 const ZOOMS = [1, 1.25, 1.5, 2];
 
-type Props = { fileId: string; title: string; pages: number; token: string; expiresAt: number; reader: string };
+type Watermark = { name: string; phone: string; email: string };
+type Props = {
+  fileId: string; title: string; pages: number; token: string; expiresAt: number; reader: string;
+  mode?: "images" | "pdf";
+  watermark: Watermark;
+};
+/** What a page needs to draw itself */
+type Source = { kind: "image"; img: HTMLImageElement } | { kind: "pdf"; data: ArrayBuffer };
 
-export default function SecureReader({ fileId, title, pages, token: firstToken, expiresAt: firstExpiry, reader }: Props) {
+const istNow = () =>
+  new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "Asia/Kolkata" }).format(new Date()) + " IST";
+
+/** The student's watermark over the whole page: light, diagonal, repeating + a footer line. */
+function drawWatermark(ctx: CanvasRenderingContext2D, w: number, h: number, wm: Watermark) {
+  const line = [wm.name, wm.phone, wm.email, istNow()].filter(Boolean).join("  ·  ");
+  const size = Math.max(11, Math.round(w / 62));
+  ctx.save();
+  ctx.font = `600 ${size}px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
+  ctx.fillStyle = "rgba(55, 65, 85, 0.15)";
+  ctx.textBaseline = "middle";
+  const tw = ctx.measureText(line).width;
+  const stepX = tw + size * 5;
+  const stepY = size * 8;
+  ctx.translate(w / 2, h / 2);
+  ctx.rotate((-30 * Math.PI) / 180);
+  const reach = Math.hypot(w, h);
+  let row = 0;
+  for (let y = -reach; y <= reach; y += stepY, row++) {
+    for (let x = -reach + (row % 2) * (stepX / 2); x <= reach; x += stepX) ctx.fillText(line, x, y);
+  }
+  ctx.restore();
+  // footer
+  const fs = Math.max(10, Math.round(w / 95));
+  ctx.save();
+  ctx.fillStyle = "rgba(255,255,255,0.88)";
+  ctx.fillRect(0, h - fs * 2.4, w, fs * 2.4);
+  ctx.font = `700 ${fs}px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
+  ctx.fillStyle = "rgba(55, 65, 85, 0.85)";
+  ctx.textBaseline = "middle";
+  ctx.fillText(`Licensed to ${line} · Personal use only — sharing or screenshots are traceable`, fs, h - fs * 1.2, w - fs * 2);
+  ctx.restore();
+}
+
+export default function SecureReader({ fileId, title, pages, token: firstToken, expiresAt: firstExpiry, reader, mode = "pdf", watermark }: Props) {
   const tokenRef = useRef({ token: firstToken, expiresAt: firstExpiry });
   const [active, setActive] = useState(true); // false → blurred
   const [error, setError] = useState("");
   const [zoom, setZoom] = useState(1);
   const [current, setCurrent] = useState(1);
+  // Pages already loaded (kept in memory only — never saved on the device)
+  const cache = useRef(new Map<number, Promise<Source>>());
 
   // ---- keep the reading token fresh (access is checked again on the server) ----
   const refresh = useCallback(async () => {
@@ -55,6 +103,10 @@ export default function SecureReader({ fileId, title, pages, token: firstToken, 
       if (tokenRef.current.expiresAt - Date.now() < 90_000) void refresh();
     }, 30_000);
     return () => clearInterval(t);
+  }, [refresh]);
+  const freshToken = useCallback(async () => {
+    if (tokenRef.current.expiresAt - Date.now() < 15_000) await refresh();
+    return tokenRef.current.token;
   }, [refresh]);
 
   // ---- blur when the tab/window is not active ----
@@ -102,21 +154,78 @@ export default function SecureReader({ fileId, title, pages, token: firstToken, 
     };
   }, []);
 
-  const getPage = useCallback(
-    async (n: number): Promise<ArrayBuffer> => {
-      if (tokenRef.current.expiresAt - Date.now() < 15_000) await refresh();
-      let res = await fetch(`/api/reader/${fileId}/${n}?t=${encodeURIComponent(tokenRef.current.token)}`, { cache: "no-store" });
-      if (res.status === 401 && (await refresh())) {
-        res = await fetch(`/api/reader/${fileId}/${n}?t=${encodeURIComponent(tokenRef.current.token)}`, { cache: "no-store" });
+  // ---- FAST mode: signed links for a page (+ the next one), pictures cached in memory ----
+  const loadImages = useCallback(
+    async (wanted: number[]) => {
+      const todo = wanted.filter((n) => n >= 1 && n <= pages && !cache.current.has(n));
+      if (todo.length === 0) return;
+      const request = (async () => {
+        const call = async () =>
+          fetch(`/api/reader/${fileId}/pages`, { method: "POST", headers: { "Content-Type": "application/json" }, cache: "no-store", body: JSON.stringify({ t: await freshToken(), pages: todo }) });
+        let res = await call();
+        if (res.status === 401 && (await refresh())) res = await call();
+        const d = (await res.json().catch(() => ({}))) as { urls?: Record<string, string>; error?: string };
+        if (!res.ok || !d.urls) throw new Error(d.error ?? "This page couldn't be loaded.");
+        return d.urls;
+      })();
+      for (const n of todo) {
+        const p = request.then(
+          (urls) =>
+            new Promise<Source>((resolve, reject) => {
+              const url = urls[n];
+              if (!url) return reject(new Error("This page couldn't be loaded."));
+              const img = new Image();
+              img.decoding = "async";
+              img.referrerPolicy = "no-referrer";
+              img.onload = () => resolve({ kind: "image", img });
+              img.onerror = () => reject(new Error("This page couldn't be loaded. Please try again."));
+              img.src = url; // a 60-second link — used once, then the picture stays in memory
+            }),
+        );
+        p.catch(() => cache.current.delete(n)); // failed → try again next time
+        cache.current.set(n, p);
       }
+    },
+    [fileId, pages, freshToken, refresh],
+  );
+
+  // ---- FALLBACK mode: one server-watermarked page as a tiny PDF ----
+  const loadPdfPage = useCallback(
+    async (n: number): Promise<Source> => {
+      const get = async () => fetch(`/api/reader/${fileId}/${n}?t=${encodeURIComponent(await freshToken())}`, { cache: "no-store" });
+      let res = await get();
+      if (res.status === 401 && (await refresh())) res = await get();
       if (!res.ok) {
         const d = (await res.json().catch(() => ({}))) as { error?: string };
         throw new Error(d.error ?? "This page couldn't be loaded.");
       }
-      return res.arrayBuffer();
+      return { kind: "pdf", data: await res.arrayBuffer() };
     },
-    [fileId, refresh],
+    [fileId, freshToken, refresh],
   );
+
+  /** The page to draw (from memory if already loaded). FAST mode also fetches the next page ahead. */
+  const getSource = useCallback(
+    (n: number): Promise<Source> => {
+      if (mode === "images") {
+        void loadImages([n, n + 1]);
+        return cache.current.get(n)!;
+      }
+      let p = cache.current.get(n);
+      if (!p) {
+        p = loadPdfPage(n);
+        p.catch(() => cache.current.delete(n));
+        cache.current.set(n, p);
+      }
+      return p;
+    },
+    [mode, loadImages, loadPdfPage],
+  );
+
+  // Reading page n → get n + 1 ready too (FAST mode)
+  useEffect(() => {
+    if (mode === "images") void loadImages([current, current + 1]);
+  }, [current, mode, loadImages]);
 
   return (
     <div className="secure-reader select-none" style={{ WebkitTouchCallout: "none" }}>
@@ -146,7 +255,7 @@ export default function SecureReader({ fileId, title, pages, token: firstToken, 
       <div className="relative">
         <div className={`mx-auto space-y-4 overflow-x-auto transition ${active ? "" : "pointer-events-none blur-xl"}`} aria-hidden={!active}>
           {Array.from({ length: pages }, (_, i) => (
-            <Page key={i + 1} n={i + 1} zoom={zoom} getPage={getPage} onVisible={setCurrent} />
+            <Page key={i + 1} n={i + 1} zoom={zoom} lazyMargin={mode === "images" ? "300px 0px" : "800px 0px"} getSource={getSource} watermark={mode === "images" ? watermark : null} onVisible={setCurrent} />
           ))}
         </div>
         {!active && (
@@ -162,15 +271,26 @@ export default function SecureReader({ fileId, title, pages, token: firstToken, 
   );
 }
 
-/** One page: loads when it comes near the screen, drawn on a canvas. */
-function Page({ n, zoom, getPage, onVisible }: { n: number; zoom: number; getPage: (n: number) => Promise<ArrayBuffer>; onVisible: (n: number) => void }) {
+/** One page: loads only when it comes near the screen, drawn on a canvas (+ the watermark in FAST mode). */
+function Page({ n, zoom, lazyMargin, getSource, watermark, onVisible }: {
+  n: number; zoom: number; lazyMargin: string; getSource: (n: number) => Promise<Source>; watermark: Watermark | null; onVisible: (n: number) => void;
+}) {
   const box = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
-  const data = useRef<ArrayBuffer | null>(null);
-  const [near, setNear] = useState(n <= 2);
+  const [near, setNear] = useState(n === 1);
   const [state, setState] = useState<"waiting" | "loading" | "ready" | "error">("waiting");
   const [ratio, setRatio] = useState(1.414); // A4 until we know
   const [msg, setMsg] = useState("");
+  const [attempt, setAttempt] = useState(0);
+  // The space available (0 while the page is still being streamed in) — redraws on resize / rotation
+  const [space, setSpace] = useState(0);
+  useEffect(() => {
+    const parent = box.current?.parentElement;
+    if (!parent) return;
+    const ro = new ResizeObserver(() => setSpace(Math.round(parent.clientWidth / 8) * 8)); // ignore tiny changes
+    ro.observe(parent);
+    return () => ro.disconnect();
+  }, []);
 
   useEffect(() => {
     const el = box.current;
@@ -182,38 +302,49 @@ function Page({ n, zoom, getPage, onVisible }: { n: number; zoom: number; getPag
           if (e.intersectionRatio > 0.4) onVisible(n);
         }
       },
-      { rootMargin: "800px 0px", threshold: [0, 0.4] },
+      { rootMargin: lazyMargin, threshold: [0, 0.4] },
     );
     io.observe(el);
     return () => io.disconnect();
-  }, [n, onVisible]);
+  }, [n, onVisible, lazyMargin]);
 
   useEffect(() => {
-    if (!near) return;
+    if (!near || space === 0) return;
     let cancelled = false;
     (async () => {
       try {
-        if (!data.current) {
-          setState("loading");
-          data.current = await getPage(n);
-        }
-        const pdfjs = await loadPdfJs();
-        const doc = await pdfjs.getDocument({ data: new Uint8Array(data.current.slice(0)), isEvalSupported: false }).promise;
-        const page = await doc.getPage(1);
-        const base = page.getViewport({ scale: 1 });
-        const width = Math.min(box.current?.parentElement?.clientWidth ?? 800, 900) * zoom;
-        const scale = width / base.width;
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        const vp = page.getViewport({ scale: scale * dpr });
+        setState((s) => (s === "ready" ? s : "loading"));
+        const src = await getSource(n);
         const c = canvas.current;
-        if (!c || cancelled) return void doc.destroy();
-        c.width = Math.floor(vp.width);
-        c.height = Math.floor(vp.height);
-        c.style.width = `${Math.floor(vp.width / dpr)}px`;
-        c.style.height = `${Math.floor(vp.height / dpr)}px`;
-        setRatio(base.height / base.width);
-        await page.render({ canvasContext: c.getContext("2d")!, viewport: vp }).promise;
-        await doc.destroy();
+        if (!c || cancelled) return;
+        const cssWidth = Math.min(space, 900) * zoom;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        if (src.kind === "image") {
+          const r = src.img.naturalHeight / src.img.naturalWidth;
+          c.width = Math.round(cssWidth * dpr);
+          c.height = Math.round(cssWidth * r * dpr);
+          c.style.width = `${Math.round(cssWidth)}px`;
+          c.style.height = `${Math.round(cssWidth * r)}px`;
+          const ctx = c.getContext("2d")!;
+          ctx.imageSmoothingQuality = "high";
+          ctx.drawImage(src.img, 0, 0, c.width, c.height);
+          if (watermark) drawWatermark(ctx, c.width, c.height, watermark);
+          setRatio(r);
+        } else {
+          const pdfjs = await loadPdfJs();
+          const doc = await pdfjs.getDocument({ data: new Uint8Array(src.data.slice(0)), isEvalSupported: false }).promise;
+          const page = await doc.getPage(1);
+          const base = page.getViewport({ scale: 1 });
+          const vp = page.getViewport({ scale: (cssWidth / base.width) * dpr });
+          if (cancelled) return void doc.destroy();
+          c.width = Math.floor(vp.width);
+          c.height = Math.floor(vp.height);
+          c.style.width = `${Math.floor(vp.width / dpr)}px`;
+          c.style.height = `${Math.floor(vp.height / dpr)}px`;
+          setRatio(base.height / base.width);
+          await page.render({ canvasContext: c.getContext("2d")!, viewport: vp }).promise;
+          await doc.destroy();
+        }
         if (!cancelled) setState("ready");
       } catch (e) {
         if (!cancelled) {
@@ -225,7 +356,7 @@ function Page({ n, zoom, getPage, onVisible }: { n: number; zoom: number; getPag
     return () => {
       cancelled = true;
     };
-  }, [near, zoom, n, getPage]);
+  }, [near, zoom, n, getSource, watermark, attempt, space]);
 
   return (
     <div ref={box} className="relative mx-auto w-fit max-w-none">
@@ -238,8 +369,14 @@ function Page({ n, zoom, getPage, onVisible }: { n: number; zoom: number; getPag
         role="img"
       />
       {state !== "ready" && (
-        <div className="grid w-[min(100%,900px)] place-items-center rounded bg-white text-sm text-slate-400 ring-1 ring-slate-200" style={{ aspectRatio: `1 / ${ratio}`, width: "min(90vw, 900px)" }}>
-          {state === "error" ? <span className="px-4 text-center text-red-700">Page {n}: {msg} <button type="button" onClick={() => { setState("waiting"); data.current = null; setNear(false); setTimeout(() => setNear(true), 0); }} className="underline">Try again</button></span> : `Page ${n}…`}
+        <div className="grid place-items-center rounded bg-white text-sm text-slate-400 ring-1 ring-slate-200" style={{ aspectRatio: `1 / ${ratio}`, width: `min(90vw, ${Math.round(900 * zoom)}px)` }}>
+          {state === "error" ? (
+            <span className="px-4 text-center text-red-700">
+              Page {n}: {msg} <button type="button" onClick={() => setAttempt((a) => a + 1)} className="underline">Try again</button>
+            </span>
+          ) : (
+            `Page ${n}…`
+          )}
         </div>
       )}
     </div>

@@ -30,7 +30,7 @@ const CATEGORIES: { id: ProductInput["category"]; label: string }[] = [
 const catLabel = (c: string) => CATEGORIES.find((x) => x.id === c)?.label ?? c;
 const COLLEGES = ["VIT Vellore", "VIT Chennai", "VIT-AP", "VIT Bhopal"];
 
-export default function ProductsManager({ products, storage }: { products: AdminProduct[]; storage?: StorageInfo }) {
+export default function ProductsManager({ products, storage, children }: { products: AdminProduct[]; storage?: StorageInfo; children?: React.ReactNode }) {
   const router = useRouter();
   const [category, setCategory] = useState("all");
   const [college, setCollege] = useState("all");
@@ -60,6 +60,8 @@ export default function ProductsManager({ products, storage }: { products: Admin
         <Link href="/admin/products/reading" className="btn-light">Reading log</Link>
         <button type="button" onClick={() => setEditing("new")} className="btn-primary"><PlusIcon /> Add product</button>
       </AdminHeader>
+      {/* Online reader: usage this month + "Process all PDFs" */}
+      {children}
 
       {/* Filters */}
       <div className="card mb-4 grid gap-3 p-4 sm:grid-cols-3">

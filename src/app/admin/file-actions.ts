@@ -10,6 +10,7 @@ import { updateTag } from "next/cache";
 import { adminOrError, isError, type ActionResult } from "@/lib/admin";
 import { checkFile, kindOf, MIME, niceName, slugName, type ProductFile } from "@/lib/product-files";
 import { getAdminSupabase } from "@/lib/supabase/admin";
+import { removePages } from "@/lib/pdf-pages";
 
 const BUCKET = "materials";
 const fail = (error: string): ActionResult<never> => ({ ok: false, error });
@@ -107,6 +108,7 @@ export async function deleteProductFile(id: string): Promise<ActionResult> {
   const { error } = await db.from("product_files").delete().eq("id", id);
   if (error) return fail(error.message);
   await db.storage.from(BUCKET).remove([f.file_path]);
+  await removePages(db, id).catch(() => {}); // its reader page pictures too
   await syncProductFilePath(db, f.product_id);
   return { ok: true, message: "File deleted." };
 }
@@ -138,4 +140,23 @@ export async function listProductFiles(productId: string): Promise<ActionResult<
   const { data, error } = await db.from("product_files").select("*").eq("product_id", productId).order("sort_order").order("created_at");
   if (error) return fail(/product_files/.test(error.message) ? "Run supabase/product-files.sql in Supabase to turn on file uploads." : error.message);
   return { ok: true, data: { files: (data ?? []) as ProductFile[] } };
+}
+
+/** Admin → Products → "Process all PDFs": every PDF and whether its reader pages are ready. */
+export async function listPdfsForReader(): Promise<ActionResult<{ files: { id: string; name: string; product: string; status: string }[] }>> {
+  const db = await adminDb();
+  if ("ok" in db) return db;
+  const { data, error } = await db.from("product_files").select("id,display_name,pages_status,products(title)").eq("file_type", "pdf").order("created_at");
+  if (error) return fail(/pages_status/.test(error.message) ? "Run supabase/reader-pages.sql in Supabase first." : error.message);
+  return {
+    ok: true,
+    data: {
+      files: (data ?? []).map((f) => ({
+        id: f.id as string,
+        name: f.display_name as string,
+        product: (f.products as unknown as { title?: string } | null)?.title ?? "",
+        status: (f.pages_status as string) ?? "none",
+      })),
+    },
+  };
 }

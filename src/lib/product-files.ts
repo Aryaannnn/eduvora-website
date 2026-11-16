@@ -15,6 +15,12 @@ export type ProductFile = {
   sort_order: number;
   download_count: number;
   created_at: string;
+  // Fast reader (supabase/reader-pages.sql): pages turned into WebP pictures once
+  page_count?: number | null;
+  pages_status?: "none" | "processing" | "ready" | "failed";
+  pages_done?: number;
+  pages_bytes?: number;
+  pages_error?: string | null;
 };
 
 /** "Notes.PDF" → "pdf", "Set.zip" → "zip", anything else → null */

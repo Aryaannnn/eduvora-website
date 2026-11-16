@@ -14,6 +14,9 @@ const supabaseHost = (() => {
 const nextConfig: NextConfig = {
   /* config options here */
   cacheComponents: true,
+  // PDF → WebP pages for the secure reader (server only): loaded from node_modules
+  // at runtime, not bundled (pdf.js loads its own worker file; the canvas is a native module)
+  serverExternalPackages: ["pdfjs-dist", "@napi-rs/canvas"],
   partialPrefetching: true,
   // Image qualities the website may use (90 keeps the logo's thin letters sharp)
   images: {
@@ -30,6 +33,8 @@ const nextConfig: NextConfig = {
   // actions, and the pages that send the confirmation email.
   outputFileTracingIncludes: {
     "/api/**": ["./public/logo-email.png", "./private-assets/**"],
+    // pdf.js fonts + character maps for drawing PDF pages on the server
+    "/api/admin/files/**": ["./node_modules/pdfjs-dist/standard_fonts/**", "./node_modules/pdfjs-dist/cmaps/**", "./node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs"],
     "/admin/**": ["./public/logo-email.png", "./private-assets/**"],
     "/invoice/**": ["./public/logo-email.png", "./private-assets/**"],
     "/booking-confirmed": ["./public/logo-email.png", "./private-assets/**"],

@@ -10,7 +10,7 @@
 // =====================================================================
 import { SENTRY_DSN } from "./sentry-scrub";
 
-export type FailureArea = "payment" | "booking" | "email" | "login" | "calendar";
+export type FailureArea = "payment" | "booking" | "email" | "login" | "calendar" | "reader";
 
 export function reportFailure(area: FailureArea, what: string, err?: unknown, extra?: Record<string, string | number | boolean | null | undefined>) {
   const detail = err instanceof Error ? err.message : typeof err === "string" ? err : "";
