@@ -39,6 +39,13 @@ export default function TermsPage() {
         All notes, videos, tests and other material are our property and are for personal study only. Copying,
         recording, selling or sharing them without written permission is not allowed.
       </p>
+      <p>
+        Study material, previous year papers and other PDFs are for <strong>personal online reading only</strong> inside
+        your dashboard. They can&apos;t be downloaded or printed, and sharing them, your login or screenshots is not allowed.
+        Every page shows your name, phone number, email and the time, and every page you read is logged, so shared copies
+        can be traced to the account. An account can be signed in on up to 2 devices at a time; signing in on a third
+        device signs out the oldest one. We may suspend accounts that share material.
+      </p>
 
       <h2>5. Student conduct</h2>
       <p>

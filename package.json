@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:predictor": "node --no-warnings --test scripts/test-predictor.mjs"
+    "test:predictor": "node --no-warnings --test scripts/test-predictor.mjs",
+    "postinstall": "node scripts/copy-pdf-worker.mjs"
   },
   "dependencies": {
     "@sentry/nextjs": "11.11.0",
@@ -23,6 +24,7 @@
     "fflate": "^0.8.3",
     "next": "16.4.5",
     "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "4.10.38",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "sanitize-html": "^2.18.1"

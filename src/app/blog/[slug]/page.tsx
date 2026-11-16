@@ -8,12 +8,14 @@ import { CategoryBadge, Cover } from "@/components/blog/PostCard";
 import PostCard from "@/components/blog/PostCard";
 import { CalendarIcon, CheckIcon, ClockIcon, HomeIcon, UserIcon } from "@/components/Icons";
 import { siteConfig } from "@/config/site";
+import ComingSoon, { comingSoonMeta } from "@/components/ComingSoon";
 import { cleanArticleHtml, getPostBySlug, getPublishedPosts, relatedPosts, withHeadingIds } from "@/lib/blog";
 import { CATEGORY_NAME } from "@/lib/blog-shared";
 import { formatDayIST } from "@/lib/format";
 import { SITE_URL } from "@/lib/site-url";
 
 export async function generateMetadata(props: PageProps<"/blog/[slug]">): Promise<Metadata> {
+  if (!siteConfig.showBlog) return comingSoonMeta("Blog");
   const { slug } = await props.params;
   const post = await getPostBySlug(slug);
   if (!post) return { title: "Article not found", robots: { index: false } };
@@ -40,6 +42,7 @@ export default function BlogPostPage(props: PageProps<"/blog/[slug]">) {
 }
 
 async function Post({ params }: { params: Promise<{ slug: string }> }) {
+  if (!siteConfig.showBlog) return <ComingSoon title="VITEEE Blog" text="Preparation tips and counselling guides are coming soon. Meanwhile, try the free Rank Predictor or book a counselling call." />;
   const { slug } = await params;
   const post = await getPostBySlug(slug);
   if (!post) notFound();

@@ -4,9 +4,10 @@
 //  scripts/test-predictor.mjs  →  run:  npm run test:predictor
 // =====================================================================
 
-export const MAX_MARKS = 125;
+/** VITEEE full marks (the exam is marked out of 500) */
+export const MAX_MARKS = 500;
 /** How many marks of "uncertainty" we allow either side when turning marks into a rank range */
-export const MARKS_SPREAD = 2;
+export const MARKS_SPREAD = 8;
 
 export type RankBand = { min_marks: number; max_marks: number; min_rank: number; max_rank: number };
 export type Cutoff = { id?: string; campus: string; branch: string; fee_category: number; counselling_phase: number; closing_rank: number };

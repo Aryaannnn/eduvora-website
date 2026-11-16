@@ -13,11 +13,11 @@ export const founder = {
 
   // 2–3 lines for the home page and About page
   summary:
-    "A third-year Mechanical Engineering student at VIT Vellore and the Founder of Eduvora, Utkarsh has spent over 2 years guiding 1,000+ students through VITEEE and other competitive exams — helping them understand admissions, explore opportunities and make the right academic choices.",
+    "A third-year Mechanical Engineering student at VIT Vellore and the Founder of Eduvora, Utkarsh has spent over 2 years guiding 700+ students through VITEEE and other competitive exams — helping them understand admissions, explore opportunities and make the right academic choices.",
 
   // Highlight cards (icon: "students" | "years" | "college")
   highlights: [
-    { icon: "students", label: "1,000+ Students Guided" },
+    { icon: "students", label: "700+ Students Guided" },
     { icon: "years", label: "2+ Years of Counselling" },
     { icon: "college", label: "VIT Vellore, Mechanical Engineering" },
   ],
@@ -25,7 +25,7 @@ export const founder = {
   // ---------- Full story (/founder) — one item per paragraph ----------
   story: [
     "Utkarsh Shrivastava is a third-year Mechanical Engineering student at VIT Vellore and the Founder of Eduvora, an emerging educational platform built with one powerful vision: to make the journey of every aspiring student smarter, simpler, and more successful.",
-    "With over 2 years of experience in student counselling and academic guidance, Utkarsh has successfully guided 1,000+ students in navigating their educational journeys, preparing for competitive examinations, and making informed career decisions. His expertise primarily focuses on VITEEE and other competitive entrance examinations, where he helps students understand admission processes, explore opportunities, and make the right academic choices.",
+    "With over 2 years of experience in student counselling and academic guidance, Utkarsh has successfully guided 700+ students in navigating their educational journeys, preparing for competitive examinations, and making informed career decisions. His expertise primarily focuses on VITEEE and other competitive entrance examinations, where he helps students understand admission processes, explore opportunities, and make the right academic choices.",
     "What started as a passion for helping fellow students has evolved into a mission to create something bigger. Through Eduvora, he aims to bring together reliable counselling, quality study materials, exam-oriented resources, and practical guidance under one platform.",
     "As a student himself, he understands the challenges, confusion, and pressure that aspirants experience during their preparation journey. This firsthand understanding drives his commitment to building an education ecosystem that prioritises accessibility, transparency, and student success.",
   ],

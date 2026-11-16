@@ -8,6 +8,7 @@
 //               (3) refreshes the public website cache (updateTag) so changes show at once.
 // =====================================================================
 import { revalidatePath, updateTag } from "next/cache";
+import { siteConfig } from "@/config/site";
 import { adminOrError, friendlyDbError, isError, staffOrError, type ActionResult } from "@/lib/admin";
 import { yearInIndia } from "@/lib/format";
 import { SUBJECTS } from "@/lib/subjects";
@@ -194,7 +195,7 @@ export async function addSlot(input: { date: string; start: string; price: numbe
   if (isError(s)) return s;
   if (!DATE.test(input.date) || !TIME.test(input.start)) return fail("Please choose a date and a start time.");
   const end = slotEnd(input.start);
-  if (!end) return fail("A 30-minute slot can't start that late (it would end after midnight).");
+  if (!end || end > siteConfig.slotsLatestEnd) return fail("Slots must end by 6:00 PM (business hours 10:00 AM – 6:00 PM). The latest start is 5:30 PM.");
   const now = nowInIndia();
   if (input.date < now.date || (input.date === now.date && toMinutes(input.start) <= now.minutes)) return fail("That time has already passed. Please choose a future time.");
   const price = int(input.price);
@@ -228,6 +229,7 @@ export async function addSlotsBulk(input: {
   if (isError(s)) return s;
   if (!DATE.test(input.from) || !DATE.test(input.to) || input.to < input.from) return fail("Please choose a valid date range.");
   if (!TIME.test(input.dayStart) || !TIME.test(input.dayEnd) || input.dayEnd <= input.dayStart) return fail("The daily end time must be after the daily start time.");
+  if (input.dayEnd > siteConfig.slotsLatestEnd) return fail("The daily end time can't be after 6:00 PM (business hours 10:00 AM – 6:00 PM).");
   const hasBreak = !!(input.breakStart || input.breakEnd);
   if (hasBreak && (!TIME.test(input.breakStart ?? "") || !TIME.test(input.breakEnd ?? "") || (input.breakEnd ?? "") <= (input.breakStart ?? ""))) {
     return fail("Please fill both break times (or leave both empty).");

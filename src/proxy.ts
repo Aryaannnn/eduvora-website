@@ -17,6 +17,12 @@ const ADMIN_IDLE_MS = 2 * 60 * 60 * 1000;
 const ADMIN_SEEN = "eduvora_admin_seen";
 const isAdminArea = (p: string) => p === "/admin" || p.startsWith("/admin/");
 
+// At most 2 logged-in devices per student (supabase/secure-reader.sql → enforce_device_limit).
+// Checked at most every 2 minutes per browser; the OLDEST login is signed out.
+const DEVICE_CHECK = "eduvora_dc";
+const DEVICE_CHECK_MS = 2 * 60 * 1000;
+const MAX_DEVICES = 2;
+
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
   if (!isSupabaseConfigured) return response;
@@ -112,6 +118,29 @@ export async function proxy(request: NextRequest) {
         return to2fa;
       }
     }
+    // ---------- 2 devices per student ----------
+    if (!isAdminArea(path)) {
+      const { data: c } = await supabase.auth.getClaims();
+      const sid = (c?.claims as { session_id?: string } | undefined)?.session_id;
+      const [markSid, markAt] = (request.cookies.get(DEVICE_CHECK)?.value ?? "").split(".");
+      if (sid && (markSid !== sid || !(Date.now() - Number(markAt) < DEVICE_CHECK_MS))) {
+        const { data: allowed, error } = await supabase.rpc("enforce_device_limit", { p_keep: MAX_DEVICES, p_user_agent: (request.headers.get("user-agent") ?? "").slice(0, 200) || null });
+        if (!error && allowed === false) {
+          // A newer login on another device pushed this one out → sign it out properly
+          await supabase.auth.signOut({ scope: "local" });
+          const out = path.startsWith("/api/")
+            ? NextResponse.json({ error: "You were logged out because your account was signed in on another device." }, { status: 401 })
+            : NextResponse.redirect(Object.assign(request.nextUrl.clone(), { pathname: "/login", search: `?loggedOut=device&next=${encodeURIComponent(path)}` }));
+          response.cookies.getAll().forEach((ck) => out.cookies.set(ck)); // the cleared login cookies
+          out.cookies.delete(DEVICE_CHECK);
+          out.headers.set("Cache-Control", "private, no-store");
+          return out;
+        }
+        // (error = secure-reader.sql not run yet → no limit)
+        response.cookies.set(DEVICE_CHECK, `${sid}.${Date.now()}`, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 60 * 60 * 24 });
+      }
+    }
+
     // Any activity keeps an admin's timer fresh (started on their first admin page)
     if (isAdminArea(path) || seen) response.cookies.set(ADMIN_SEEN, String(Date.now()), { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 60 * 60 * 24 });
   }

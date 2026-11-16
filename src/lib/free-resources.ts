@@ -76,7 +76,7 @@ export const CATEGORY_PAGE: Record<ProductCategory, string> = {
 export type Suggestion = { title: string; price: number; href: string; kind: "product" | "counselling" };
 
 /**
- * After a free download: one related PAID item to suggest.
+ * Next to a free item: one related PAID item to suggest.
  * Papers / tests → a paid test pack or crash course; material → crash course.
  * Nothing suitable → counselling booking.
  */

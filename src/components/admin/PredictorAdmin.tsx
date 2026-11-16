@@ -313,7 +313,7 @@ function Bands({ bands, years, activeYear, run, setMsg }: { bands: AdminBand[]; 
           <p className="font-bold text-slate-900">Quick check</p>
           <p className="text-xs text-slate-500">Uses the same calculation as the website.</p>
           <label className="mt-3 block text-sm font-semibold text-slate-700" htmlFor="tm">Marks</label>
-          <input id="tm" type="number" min={0} max={125} step={0.5} value={testMarks} onChange={(e) => setTestMarks(e.target.value)} className="input mt-1" />
+          <input id="tm" type="number" min={0} max={500} step={1} value={testMarks} onChange={(e) => setTestMarks(e.target.value)} className="input mt-1" />
           <p className="mt-3 text-sm text-slate-700">
             {test ? <>Predicted rank <strong>~{fmt(test.rank)}</strong><br /><span className="text-xs text-slate-500">range {fmt(test.minRank)} – {fmt(test.maxRank)}</span></> : "Add data for this year first."}
           </p>

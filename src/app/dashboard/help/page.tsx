@@ -19,7 +19,7 @@ export default function HelpPage() {
       </Suspense>
       <PageHeader title="Help" subtitle="Stuck somewhere? We're one tap away." />
       {/* Contact mode Open: everyone sees the number. Private: paid students & admins see it here.
-          Others see the masked number and how to unlock it. */}
+          Others see the free enquiry note instead. */}
       <div className="max-w-xl"><DirectContact paidOnly /></div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">

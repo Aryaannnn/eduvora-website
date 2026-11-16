@@ -4,6 +4,7 @@
 // Same protection as other admin actions: server role check + Supabase RLS.
 import { updateTag } from "next/cache";
 import { adminOrError, friendlyDbError, isError, type ActionResult } from "@/lib/admin";
+import { MAX_MARKS } from "@/lib/predictor";
 
 const CAMPUSES = ["VIT Vellore", "VIT Chennai", "VIT-AP", "VIT Bhopal"];
 const fail = (error: string): ActionResult => ({ ok: false, error });
@@ -38,7 +39,7 @@ export type BandInput = { id?: string; year: number | string; min_marks: number 
 function cleanBand(b: BandInput): { row?: { year: number; min_marks: number; max_marks: number; min_rank: number; max_rank: number }; error?: string } {
   const row = { year: num(b.year), min_marks: num(b.min_marks), max_marks: num(b.max_marks), min_rank: num(b.min_rank), max_rank: num(b.max_rank) };
   if (!Number.isInteger(row.year) || row.year < 2000 || row.year > 2100) return { error: "year must be like 2026" };
-  if (!(row.min_marks >= 0 && row.max_marks <= 125 && row.max_marks >= row.min_marks)) return { error: "marks must be 0–125 and max ≥ min" };
+  if (!(row.min_marks >= 0 && row.max_marks <= MAX_MARKS && row.max_marks >= row.min_marks)) return { error: `marks must be 0–${MAX_MARKS} and max ≥ min` };
   if (!(Number.isInteger(row.min_rank) && Number.isInteger(row.max_rank) && row.min_rank >= 1 && row.max_rank >= row.min_rank))
     return { error: "ranks must be whole numbers ≥ 1, and max_rank (worst) ≥ min_rank (best)" };
   return { row };

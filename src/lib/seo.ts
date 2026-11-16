@@ -72,6 +72,20 @@ export function organizationLd() {
         email: siteConfig.email,
         founder: { "@type": "Person", name: siteConfig.founder.name, url: absoluteUrl("/founder") },
         areaServed: "IN",
+        // Business hours (src/config/site.ts → openingHours)
+        contactPoint: {
+          "@type": "ContactPoint",
+          contactType: "customer support",
+          email: siteConfig.email,
+          areaServed: "IN",
+          availableLanguage: ["en", "hi"],
+          hoursAvailable: {
+            "@type": "OpeningHoursSpecification",
+            dayOfWeek: siteConfig.openingHours.days,
+            opens: siteConfig.openingHours.opens,
+            closes: siteConfig.openingHours.closes,
+          },
+        },
         ...(sameAs.length ? { sameAs } : {}),
       },
       {

@@ -72,6 +72,7 @@ async function Content() {
   const calendar = (
     <>
       <GoogleCalendarCard status={cal} expectedEmail={siteConfig.email} />
+      {siteConfig.showFeeCalculator && (
       <Link href="/admin/settings/fees" className="card card-hover mb-8 flex items-center justify-between gap-4 p-5 sm:p-6">
         <span>
           <span className="block text-lg font-extrabold text-slate-900">💰 Fees &amp; Campuses</span>
@@ -79,6 +80,7 @@ async function Content() {
         </span>
         <span className="btn-light shrink-0">Open →</span>
       </Link>
+      )}
     </>
   );
   const community = <CommunitySettingsForm initial={(wc.data?.whatsapp_link as string | null) ?? ""} setupMissing={!!wc.error} />;

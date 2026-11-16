@@ -38,7 +38,7 @@ export default function TestCard({ product }: { product: Product }) {
           {product.original_price && <span className="ml-1.5 text-xs text-slate-500 line-through">{formatPrice(product.original_price)}</span>}
         </div>
         {product.is_free ? (
-          // Free: log in → unlocked → opens in My Courses (tests & downloads are there)
+          // Free: log in → unlocked → opens in My Courses (tests & material are there)
           <div className="shrink-0"><BuyButton productId={product.id} label="Get Free" className="btn-accent !px-5 !py-2.5" trust={false} free /></div>
         ) : (
           <div className="shrink-0"><BuyButton productId={product.id} label={product.price > 0 ? "Buy" : "Get Free"} className="btn-primary !px-5 !py-2.5" trust={false} /></div>

@@ -3,8 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { DashSkeleton, EmptyBox, PageHeader, Panel } from "@/components/dashboard/ui";
 import FreeBadge from "@/components/FreeBadge";
-import FreeDownloadButton from "@/components/free/FreeDownloadButton";
-import { BookIcon, CheckIcon, ClipboardIcon, DownloadIcon, ExternalIcon, FileIcon, LockIcon, RocketIcon } from "@/components/Icons";
+import { BookIcon, CheckIcon, ClipboardIcon, ExternalIcon, FileIcon, LockIcon, RocketIcon } from "@/components/Icons";
 import { getMyPurchases, getProductContent, paidOnly, requireUser, type PurchaseRow } from "@/lib/dashboard";
 import { getProducts } from "@/lib/data";
 import { formatDateTime } from "@/lib/format";
@@ -38,16 +37,17 @@ async function CoursesContent({ searchParams }: { searchParams: PageProps<"/dash
   // Private class links come from a Supabase function that checks payment again
   const links = await Promise.all(courses.map((c) => getProductContent(s, c.products!.id)));
 
-  // Files (PDF / ZIP) of the products they bought — Row Level Security only
-  // returns files of PAID (or free) products, in the admin's order
+  // PDFs of the products they bought — Row Level Security only returns files of
+  // PAID (or free) products, in the admin's order. Read online only (no downloads);
+  // ZIP files can't be read in the browser, so students don't see them.
   const ids = paid.map((p) => p.products!.id);
   const { data: fileRows } = ids.length
-    ? await s.supabase.from("product_files").select("id,product_id,display_name,file_type,size_bytes,sort_order").in("product_id", ids).order("sort_order").order("created_at")
+    ? await s.supabase.from("product_files").select("id,product_id,display_name,file_type,size_bytes,sort_order").in("product_id", ids).eq("file_type", "pdf").order("sort_order").order("created_at")
     : { data: [] };
   const filesOf = new Map<string, StudentFile[]>();
   for (const f of (fileRows ?? []) as StudentFile[]) filesOf.set(f.product_id, [...(filesOf.get(f.product_id) ?? []), f]);
 
-  // Free tests anyone logged in can take, and paid items to suggest after a free download
+  // Free tests anyone logged in can take, and paid items to suggest next to free items
   const [free, ...catalogue] = await Promise.all([
     getFreeResources(),
     getProducts("crash_course"),
@@ -173,14 +173,13 @@ function TestButtons({ row, empty }: { row: PurchaseRow; empty?: string }) {
 
 type StudentFile = { id: string; product_id: string; display_name: string; file_type: "pdf" | "zip"; size_bytes: number; sort_order: number };
 
-// Each file: PDF/ZIP icon, name, size, View (PDF) + Download.
-// The buttons go to /api/files/<id>, which checks the payment on the server
-// and then opens a private link that expires after 60 seconds.
-// Free items: the Download button also shows a small "next step" suggestion popup.
+// Each file: name + "Read" — opens the secure reader (/dashboard/read/<id>):
+// read online only, watermarked with the student's details, no download/print.
 function FileList({ files, empty, itemTitle = "", suggestion }: { files?: StudentFile[]; empty?: string; itemTitle?: string; suggestion?: Suggestion }) {
   if (!files?.length) return empty ? <p className="mt-3 text-sm text-slate-500">{empty}</p> : null;
   return (
-    <ul className="mt-3 space-y-2">
+    <>
+    <ul className="mt-3 space-y-2" aria-label={itemTitle ? `Files in ${itemTitle}` : "Files"}>
       {files.map((f) => (
         <li key={f.id} className="flex flex-wrap items-center gap-3 rounded-xl bg-white p-3 ring-1 ring-slate-200">
           <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl text-[11px] font-extrabold text-white ${f.file_type === "pdf" ? "bg-red-500" : "bg-amber-500"}`}>
@@ -188,20 +187,25 @@ function FileList({ files, empty, itemTitle = "", suggestion }: { files?: Studen
           </span>
           <div className="min-w-0 flex-1">
             <p className="truncate font-semibold text-slate-900">{f.display_name}</p>
-            <p className="text-xs text-slate-500">{f.file_type.toUpperCase()} · {formatBytes(Number(f.size_bytes))}</p>
+            <p className="text-xs text-slate-500">Read online · {formatBytes(Number(f.size_bytes))}</p>
           </div>
-          <div className="flex gap-2">
-            {f.file_type === "pdf" && (
-              <a href={`/api/files/${f.id}?view=1`} target="_blank" rel="noopener noreferrer" className="btn-light !px-3 !py-2 text-sm">View</a>
-            )}
-            {suggestion ? (
-              <FreeDownloadButton href={`/api/files/${f.id}`} itemTitle={itemTitle || f.display_name} suggestion={suggestion} />
-            ) : (
-              <a href={`/api/files/${f.id}`} className="btn-primary !px-3 !py-2 text-sm"><DownloadIcon /> Download</a>
-            )}
-          </div>
+          <Link href={`/dashboard/read/${f.id}`} className="btn-primary !px-4 !py-2 text-sm" aria-label={`Read ${f.display_name} online`}>
+            <BookIcon className="h-4 w-4" /> Read
+          </Link>
         </li>
       ))}
     </ul>
+    {/* Free item → one related next step (paid item or counselling) */}
+    {suggestion && (
+      <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl bg-accent-400/10 px-3 py-2 text-sm text-slate-700 ring-1 ring-accent-400/40">
+        <RocketIcon className="h-4 w-4 text-accent-700" />
+        {suggestion.kind === "counselling" ? (
+          <>Want a personal plan for your rank? <Link href={suggestion.href} className="font-bold text-brand-700 underline">Book counselling</Link></>
+        ) : (
+          <>Next step: <Link href={suggestion.href} className="font-bold text-brand-700 underline">{suggestion.title}</Link></>
+        )}
+      </p>
+    )}
+    </>
   );
 }

@@ -1,3 +1,5 @@
+import { siteConfig } from "@/config/site";
+
 // =====================================================================
 //  NAVBAR MENU  ✏️ edit the links here
 //  Desktop: Home | Courses | Rank Predictor | Resources ▾ | Reviews | Contact
@@ -24,12 +26,13 @@ export const isGroup = (i: NavItem): i is NavGroup => "children" in i;
 // When you add an "Important Dates" or "Blog" page, add it here, e.g.:
 //   { href: "/important-dates", label: "Important Dates", hint: "VITEEE & counselling dates" },
 //   { href: "/blog", label: "Blog", hint: "Tips and guides", comingSoon: true },
+// Fee Calculator and Blog only when switched on (src/config/site.ts)
 const resources: NavLink[] = [
   { href: "/free-resources", label: "Free Resources", hint: "Free tests, papers & PDF guides", free: true },
   { href: "/important-dates", label: "Important Dates", hint: "Exam, results & counselling dates" },
-  { href: "/fee-calculator", label: "Fee Calculator", hint: "Estimate fees & compare campuses" },
+  ...(siteConfig.showFeeCalculator ? [{ href: "/fee-calculator", label: "Fee Calculator", hint: "Estimate fees & compare campuses" }] : []),
   { href: "/parents", label: "For Parents", hint: "How counselling works for families" },
-  { href: "/blog", label: "Blog", hint: "Preparation & counselling guides" },
+  ...(siteConfig.showBlog ? [{ href: "/blog", label: "Blog", hint: "Preparation & counselling guides" }] : []),
   { href: "/study-material", label: "Study Material", hint: "Admission kits & notes" },
   { href: "/mock-tests", label: "Mock Tests", hint: "Full mocks & MCQ practice" },
   { href: "/previous-year-papers", label: "PYQ Papers", hint: "Previous year VITEEE papers" },

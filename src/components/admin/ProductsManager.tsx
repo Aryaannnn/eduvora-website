@@ -57,7 +57,7 @@ export default function ProductsManager({ products, storage }: { products: Admin
   return (
     <>
       <AdminHeader title="Products" subtitle="Crash courses, study material, previous papers and mock tests. Changes show on the website immediately.">
-        <Link href="/admin/products/downloads" className="btn-light">Downloads</Link>
+        <Link href="/admin/products/reading" className="btn-light">Reading log</Link>
         <button type="button" onClick={() => setEditing("new")} className="btn-primary"><PlusIcon /> Add product</button>
       </AdminHeader>
 
@@ -106,7 +106,7 @@ export default function ProductsManager({ products, storage }: { products: Admin
                     {(p.files_count ?? (p.file_path ? 1 : 0)) > 0 && (
                       <span className="inline-flex items-center gap-1 text-emerald-700">
                         <FileIcon className="h-3.5 w-3.5" /> {p.files_count ?? 1} file{(p.files_count ?? 1) === 1 ? "" : "s"}
-                        {p.downloads ? <span className="text-slate-400">· {p.downloads} downloads</span> : null}
+                        {p.downloads ? <span className="text-slate-400">· {p.downloads} old downloads</span> : null}
                       </span>
                     )}
                   </p>

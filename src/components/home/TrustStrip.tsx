@@ -2,9 +2,9 @@ import { getSiteStats } from "@/lib/data";
 import { GraduationIcon, HeadsetIcon, ShieldIcon, UsersIcon } from "../Icons";
 
 // Thin strip right under the slideshow:
-// "1,000+ students guided • Guided by a current VIT student • Secure payments by Razorpay • Parents welcome on calls"
+// "700+ students guided • Guided by a current VIT student • Secure payments by Razorpay • Parents welcome on calls"
 // ✏️ The number comes from Admin → Settings → "Our results" (the stat whose label
-//    mentions "student", e.g. "Students guided" = 1000 + "+"). Empty number → that item is hidden.
+//    mentions "student", e.g. "Students guided" = 700 + "+"). Empty number → that item is hidden.
 export default async function TrustStrip() {
   const stats = await getSiteStats();
   const students = stats.find((s) => /student/i.test(s.label));

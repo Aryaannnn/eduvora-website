@@ -7,15 +7,17 @@ import CampusCompare from "@/components/fees/CampusCompare";
 import FeeCalculator from "@/components/fees/FeeCalculator";
 import { CalendarIcon, ExternalIcon } from "@/components/Icons";
 import PageHero from "@/components/PageHero";
+import ComingSoon, { comingSoonMeta } from "@/components/ComingSoon";
 import { siteConfig } from "@/config/site";
 import { getSession } from "@/lib/dashboard";
 import { getFeeData } from "@/lib/fees";
 import { FEE_NOTE } from "@/lib/fees-shared";
 
-export const metadata: Metadata = pageMeta({ title: "VIT Fee Calculator & Campus Comparison", description: "Estimate your VIT fee category and 4-year tuition from your VITEEE rank, and compare VIT campuses side by side. Estimates — confirm on vit.ac.in.", path: "/fee-calculator" });
+export const metadata: Metadata = !siteConfig.showFeeCalculator ? comingSoonMeta("Fee Calculator") : pageMeta({ title: "VIT Fee Calculator & Campus Comparison", description: "Estimate your VIT fee category and 4-year tuition from your VITEEE rank, and compare VIT campuses side by side. Estimates — confirm on vit.ac.in.", path: "/fee-calculator" });
 
 // ✏️ Fee data and campus details: Admin → Settings → Fees & Campuses.
 export default async function FeeCalculatorPage({ searchParams }: PageProps<"/fee-calculator">) {
+  if (!siteConfig.showFeeCalculator) return <ComingSoon title="Fee Calculator & Campus Comparison" text="Our VIT fee calculator and campus comparison are coming soon. Meanwhile, try the free Rank Predictor or ask us in a counselling call." />;
   const { campuses, fees } = await getFeeData();
   const sample = campuses.some((c) => c.is_sample) || fees.some((f) => f.is_sample);
   return (

@@ -99,7 +99,7 @@ export const siteConfig = {
   whatsappMessage: "Hi, I need help with VITEEE counselling", // ready-to-send WhatsApp message
   // Default texts for the two modes (edit them in Admin → Settings → Contact mode)
   contactTexts: {
-    openNote: "WhatsApp us anytime – replies 10 AM to 8 PM, Mon to Sat. Counselling calls are for booked students.",
+    openNote: "WhatsApp us anytime – replies 10 AM to 6 PM, Mon to Sat. Counselling calls are for booked students.",
     privateNote: "We'll call you back within a few hours.",
   },
   email: SUPPORT_EMAIL,
@@ -107,7 +107,11 @@ export const siteConfig = {
   //    To show it again: write your real address below and set showAddress: true
   showAddress: false,
   address: "Your office address, City, State, PIN",
-  officeHours: "Mon – Sat, 10:00 AM – 8:00 PM",
+  officeHours: "Mon – Sat, 10:00 AM – 6:00 PM",
+  // Same hours for Google (structured data) — 24-hour clock, India time
+  openingHours: { days: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"], opens: "10:00", closes: "18:00" },
+  // Counselling slots never go past this time (Admin → Slots)
+  slotsLatestEnd: "18:00",
 
   // ---------- Social media ----------
   instagram: "https://www.instagram.com/utkarsh_unfolded",
@@ -134,8 +138,14 @@ export const siteConfig = {
     // Short notes shown next to the payment buttons
     counsellingNote: `Free reschedule or full refund up to ${RESCHEDULE_HOURS} hours before your slot. No refund within ${RESCHEDULE_HOURS} hours or if the session is missed.`,
     liveBatchNote: `Refund available up to ${LIVE_BATCH_REFUND_DAYS} days before the batch starts; full refund if we cancel the batch. Once classes begin, no refund.`,
-    digitalNote: "Digital product — non-refundable once access is given. If you can't access it, we'll fix it or refund within 7 days.",
+    digitalNote: "Digital product, read online in your dashboard — non-refundable once access is given. If you can't access it, we'll fix it or refund within 7 days.",
   },
+
+  // ✏️ Pages switched OFF for now (true = back on everywhere: menus, footer, home page,
+  //    sitemap, predictor links, admin menu). While off, the pages show "Coming soon"
+  //    and are not indexed. All code and data are kept.
+  showFeeCalculator: false,
+  showBlog: false,
 
   // Shown on the home page and the booking page when no counselling slot is open
   noSlotsMessage: "New slots open soon. Please check back shortly.",

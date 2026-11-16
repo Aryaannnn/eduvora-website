@@ -602,7 +602,7 @@ export async function buildInvoicePdf(inv: InvoiceData, opts: InvoicePdfOptions 
     const w = sig.width * k, h = sig.height * k;
     page.drawImage(sig, { x: sigX + (sigW - w) / 2, y: Y(lineT - 2), width: w, height: h });
   }
-  label(`For ${s.name}`, sigX + (sigW - width(`FOR ${s.name.toUpperCase()}`, 7.5, bold)) / 2, lineT - 60, GREY);
+  label(`From ${s.name}`, sigX + (sigW - width(`FROM ${s.name.toUpperCase()}`, 7.5, bold)) / 2, lineT - 60, GREY);
   hr(lineT, sigX, R, DARK, 0.8);
   const sn = siteConfig.invoice.signatory;
   text(sn.name, sigX + (sigW - width(sn.name, 9.5, bold)) / 2, lineT + 13, 9.5, bold, NAVY);

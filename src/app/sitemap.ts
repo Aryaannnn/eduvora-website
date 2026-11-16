@@ -7,14 +7,17 @@ import type { MetadataRoute } from "next";
 import { getPublishedPosts } from "@/lib/blog";
 import { getProducts, getSuccessStories } from "@/lib/data";
 import { SITE_URL } from "@/lib/site-url";
+import { siteConfig } from "@/config/site";
 
+// Fee Calculator and Blog only when switched on (src/config/site.ts)
 const STATIC = [
   "", "/courses", "/study-material", "/mock-tests", "/previous-year-papers", "/free-resources", "/predictor", "/book-a-slot",
-  "/important-dates", "/fee-calculator", "/blog", "/reviews", "/about", "/founder", "/parents", "/contact", "/privacy-policy", "/terms-and-conditions", "/refund-policy",
+  "/important-dates", ...(siteConfig.showFeeCalculator ? ["/fee-calculator"] : []), ...(siteConfig.showBlog ? ["/blog"] : []),
+  "/reviews", "/about", "/founder", "/parents", "/contact", "/privacy-policy", "/terms-and-conditions", "/refund-policy",
 ];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [posts, courses, stories] = await Promise.all([getPublishedPosts(), getProducts("crash_course"), getSuccessStories()]);
+  const [posts, courses, stories] = await Promise.all([siteConfig.showBlog ? getPublishedPosts() : Promise.resolve([]), getProducts("crash_course"), getSuccessStories()]);
   return [
     ...(stories.length ? [{ url: `${SITE_URL}/success-stories`, changeFrequency: "weekly" as const, priority: 0.6 }] : []),
     ...STATIC.map((p) => ({ url: `${SITE_URL}${p}`, changeFrequency: (p === "" || p === "/blog" || p === "/important-dates" ? "daily" : "weekly") as "daily" | "weekly", priority: p === "" ? 1 : p === "/blog" ? 0.8 : 0.6 })),

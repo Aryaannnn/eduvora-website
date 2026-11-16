@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 const benefits = [
   "Access your courses and recorded classes",
   "Take mock tests and track your scores",
-  "Download your study material anytime",
+  "Read your study material online anytime",
   "See and manage your counselling bookings",
 ];
 
@@ -94,6 +94,13 @@ async function LoggedOutNotice({ searchParams }: { searchParams: PageProps<"/log
     return (
       <p role="status" className="mt-4 rounded-xl bg-amber-50 px-4 py-2.5 text-center text-sm font-semibold text-amber-900 ring-1 ring-amber-200">
         🔒 For security, admins are logged out after 2 hours without activity. Please sign in again.
+      </p>
+    );
+  }
+  if (sp.loggedOut === "device") {
+    return (
+      <p role="status" className="mt-4 rounded-xl bg-amber-50 px-4 py-2.5 text-center text-sm font-semibold text-amber-900 ring-1 ring-amber-200">
+        🔒 You were logged out because your account was signed in on another device. Each account can be used on up to 2 devices at a time.
       </p>
     );
   }

@@ -60,7 +60,7 @@ export function parseBookingInput(b: Record<string, unknown>): BookingInput | st
   if (classYear && !CLASS_YEARS.includes(classYear)) return "Please choose your class / year.";
   const marksRaw = b.expectedMarks;
   const marks = marksRaw === "" || marksRaw === null || marksRaw === undefined ? null : Number(marksRaw);
-  if (marks !== null && !(Number.isFinite(marks) && marks >= 0 && marks <= 125)) return "Expected marks must be between 0 and 125.";
+  if (marks !== null && !(Number.isFinite(marks) && marks >= 0 && marks <= 500)) return "Expected marks must be between 0 and 500.";
   return { slotId, name, phone, email, classYear, expectedMarks: marks, message: str(b.message, 1000) };
 }
 

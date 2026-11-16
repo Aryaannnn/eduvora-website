@@ -32,7 +32,7 @@ create policy "site_stats: admin writes" on public.site_stats for all to authent
 -- Starting values (only once). The two you haven't confirmed are left EMPTY (= hidden).
 insert into public.site_stats (label, value, suffix, sort_order)
 select * from (values
-  ('Students guided',      1000, '+', 0),
+  ('Students guided',       700, '+', 0),
   ('VIT selections',       null, '+', 1),
   ('Years of counselling', 2,    '+', 2),
   ('Parents satisfied',    null, '%', 3)

@@ -30,6 +30,7 @@ import VideoTestimonials from "@/components/reviews/VideoTestimonials";
 import { getFreeResources } from "@/lib/free-resources";
 import { getNextDates } from "@/lib/important-dates";
 import { NextDatesList, OFFICIAL_NOTE } from "@/components/dates/DateBits";
+import { siteConfig } from "@/config/site";
 
 export const metadata: Metadata = pageMeta({
   title: "VITEEE Counselling & Rank Predictor | EDUVORA",
@@ -83,13 +84,13 @@ export default async function Home() {
         <div className="container-page"><PackageCards /></div>
       </section>
 
-      {/* 6. Free Rank & College Predictor (+ Fee Calculator) */}
+      {/* 6. Free Rank & College Predictor (+ Fee Calculator when switched on) */}
       <section className="section bg-slate-50" id="predictor">
         <div className="container-page">
           <SectionHeader eyebrow="Free rank predictor" title="What rank will your marks get you?" subtitle="See your likely VITEEE rank range for free. The VIT campus and branch you can get, with your chances, comes with counselling." href="/predictor" linkText="Open full predictor" />
           {/* Locked unless the visitor has paid for counselling (checked on the server); its code loads only when scrolled near */}
           <Reveal className="mt-10"><HomePredictor returnTo="/#predictor" /></Reveal>
-          <Reveal className="mt-6">
+          {siteConfig.showFeeCalculator && <Reveal className="mt-6">
             <Link href="/fee-calculator" className="card card-hover flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
               <span className="flex items-center gap-4">
                 <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-accent-400 text-2xl" aria-hidden>💰</span>
@@ -100,7 +101,7 @@ export default async function Home() {
               </span>
               <span className="btn-primary shrink-0">Calculate fees <ArrowRightIcon className="h-4 w-4" /></span>
             </Link>
-          </Reveal>
+          </Reveal>}
         </div>
       </section>
 

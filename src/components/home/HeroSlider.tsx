@@ -66,7 +66,7 @@ const slides: Slide[] = [
     cta: { label: "Buy Study Material", href: "/study-material" },
     icon: BookIcon,
     color: "from-sky-500 to-cyan-600",
-    points: ["PDF + printed", "Branch-wise rank trends", "Instant download"],
+    points: ["Read online in your dashboard", "Branch-wise rank trends", "Instant access"],
   },
   {
     eyebrow: "Score higher, faster",
@@ -287,7 +287,7 @@ export default function HeroSlider() {
 
 // ---------- "Marks → Rank → College & Branch" picture (desktop) ----------
 const flowSteps = [
-  { icon: ClipboardIcon, label: "Your marks", value: "95 / 125" },
+  { icon: ClipboardIcon, label: "Your marks", value: "380 / 500" },
   { icon: TargetIcon, label: "Predicted rank", value: "~2,750" },
   { icon: GraduationIcon, label: "College & branch", value: "VIT Vellore · CSE" },
 ];

@@ -69,7 +69,7 @@ export default function PredictorTool({
   initialHistory?: PastPrediction[];
 }) {
   const [inputType, setInputType] = useState<"marks" | "rank">("marks");
-  const [marks, setMarks] = useState(90);
+  const [marks, setMarks] = useState(360);
   const [rankInput, setRankInput] = useState("");
   const [campus, setCampus] = useState("");
   const [branch, setBranch] = useState("");
@@ -196,7 +196,7 @@ export default function PredictorTool({
                     type="range"
                     min={0}
                     max={MAX_MARKS}
-                    step={0.5}
+                    step={1}
                     value={marks}
                     onChange={(e) => setMarks(Number(e.target.value))}
                     className="h-3 flex-1 cursor-pointer appearance-none rounded-full bg-gradient-to-r from-rose-200 via-amber-200 to-emerald-300 accent-brand-600"
@@ -208,7 +208,7 @@ export default function PredictorTool({
                     inputMode="decimal"
                     min={0}
                     max={MAX_MARKS}
-                    step={0.5}
+                    step={1}
                     value={marks}
                     onChange={(e) => setMarks(Math.min(MAX_MARKS, Math.max(0, Number(e.target.value) || 0)))}
                     className="input !w-24 text-center !text-xl font-extrabold"
@@ -336,7 +336,7 @@ export default function PredictorTool({
 
       <div className="flex flex-col gap-3 sm:flex-row print:hidden">
         <Link href="/book-a-slot" className="btn-primary !py-3.5 text-base"><CalendarIcon className="h-5 w-5" /> Book Counselling with {founderFirst} Sir</Link>
-        {prediction && (
+        {prediction && siteConfig.showFeeCalculator && (
           <Link href={`/fee-calculator?rank=${prediction.rank}`} className="btn-light !py-3.5 text-base">💰 Estimate my fees</Link>
         )}
         {full && mode === "dashboard" && prediction && (

@@ -14,13 +14,13 @@ import { getProducts } from "@/lib/data";
 export const metadata: Metadata = pageMeta({ title: "VIT Admission Kits & VITEEE Study Material", description: "Campus-wise VIT admission kits for VIT Vellore, Chennai, AP and Bhopal: rank trends, fees, branches and checklists for VIT counselling.", path: "/study-material" });
 
 const perks = [
-  { icon: ZapIcon, title: "Instant access", text: "PDF kits are sent right after payment." },
+  { icon: ZapIcon, title: "Instant access", text: "Read online in your dashboard right after payment." },
   { icon: FileIcon, title: "Updated every year", text: "Latest rank trends, fees and programme lists." },
-  { icon: MailIcon, title: "Delivered to you", text: "Printed kits are shipped to your address." },
+  { icon: MailIcon, title: "Read anywhere", text: "On your phone or laptop, inside your EDUVORA dashboard." },
 ];
 
 const materialFaqs = [
-  { q: "How will I receive the material?", a: "After payment, PDF material is unlocked in your Dashboard (My Courses & Material), where you can download it anytime. Printed kits are shipped within 3–5 working days." },
+  { q: "How will I receive the material?", a: "After payment, the material is unlocked in your Dashboard (My Courses & Material), where you can read it online anytime. It is for your personal use only and can't be downloaded, printed or shared." },
   { q: "Is the material useful before results?", a: "Yes — understanding branches, fees and campuses early helps you set a target rank and plan better." },
   { q: "Can I buy kits for more than one campus?", a: "Yes. Many students compare two or three campuses. Contact us for a combo discount." },
 ];

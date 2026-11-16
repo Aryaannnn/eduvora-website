@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { addSlot, addSlotsBulk, addTestSlots, convertSlotsTo30, deleteSlot, deleteTestSlots, setSlotAvailable } from "@/app/admin/actions";
 import { dailyStarts, slotEnd } from "@/lib/slot-time";
+import { siteConfig } from "@/config/site";
 import { formatDate, formatPrice, formatTime } from "@/lib/format";
 import { PlusIcon, TrashIcon } from "../Icons";
 import { AdminHeader, Label, Modal, Notice, Toggle } from "./ui";
@@ -70,7 +71,7 @@ Removes every test slot that has NO paid booking, together with its unpaid and s
             type="button"
             disabled={pending}
             onClick={() => {
-              if (confirm("Convert future EMPTY slots to 30 minutes?\n\nEach empty slot that isn't 30 minutes long is replaced by back-to-back 30-minute slots (same price, same Open setting). Slots that are booked, being paid for, or were ever booked are NOT touched.")) run(() => convertSlotsTo30());
+              if (confirm("Convert future EMPTY slots to 30 minutes?\n\nEach empty slot that isn't 30 minutes long is replaced by back-to-back 30-minute slots (same price, same Open setting), up to 6:00 PM. Slots that are booked, being paid for, or were ever booked are NOT touched.")) run(() => convertSlotsTo30());
             }}
             className="btn-primary !py-2.5 text-sm disabled:opacity-60"
           >
@@ -133,7 +134,7 @@ function SingleSlotForm({ today, onClose, onSubmit, pending }: { today: string; 
     <Modal title="Add one 30-minute slot" onClose={onClose}>
       <form onSubmit={(e) => { e.preventDefault(); onSubmit(v); }} className="grid gap-4 sm:grid-cols-2">
         <div className="sm:col-span-2"><Label htmlFor="ss-date">Date</Label><input id="ss-date" type="date" min={today} value={v.date} onChange={(e) => setV({ ...v, date: e.target.value })} className="input" required /></div>
-        <div><Label htmlFor="ss-start">Start time (India time)</Label><input id="ss-start" type="time" step={1800} value={v.start} onChange={(e) => setV({ ...v, start: e.target.value })} className="input" required /></div>
+        <div><Label htmlFor="ss-start">Start time (India time)</Label><input id="ss-start" type="time" step={1800} max="17:30" value={v.start} onChange={(e) => setV({ ...v, start: e.target.value })} className="input" required /></div>
         <div>
           <Label>End time (automatic)</Label>
           <p className="input bg-slate-50 font-semibold text-slate-700">{end ?? "—"}</p>
@@ -156,7 +157,7 @@ function BulkSlotForm({ today, onClose, onSubmit, pending }: {
   const [to, setTo] = useState(today);
   const [weekdays, setWeekdays] = useState([1, 2, 3, 4, 5, 6]);
   const [dayStart, setDayStart] = useState("10:00");
-  const [dayEnd, setDayEnd] = useState("19:00");
+  const [dayEnd, setDayEnd] = useState(siteConfig.slotsLatestEnd); // 6:00 PM — no slots after business hours
   const [useBreak, setUseBreak] = useState(true);
   const [breakStart, setBreakStart] = useState("13:00");
   const [breakEnd, setBreakEnd] = useState("14:00");
@@ -191,7 +192,7 @@ function BulkSlotForm({ today, onClose, onSubmit, pending }: {
         </fieldset>
         <div className="grid gap-4 sm:grid-cols-2">
           <div><Label htmlFor="bs-ds">Daily start time</Label><input id="bs-ds" type="time" step={1800} value={dayStart} onChange={(e) => setDayStart(e.target.value)} className="input" required /></div>
-          <div><Label htmlFor="bs-de">Daily end time</Label><input id="bs-de" type="time" step={1800} value={dayEnd} onChange={(e) => setDayEnd(e.target.value)} className="input" required /></div>
+          <div><Label htmlFor="bs-de">Daily end time</Label><input id="bs-de" type="time" step={1800} max={siteConfig.slotsLatestEnd} value={dayEnd} onChange={(e) => setDayEnd(e.target.value)} className="input" required /></div>
         </div>
         <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
           <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
@@ -208,7 +209,7 @@ function BulkSlotForm({ today, onClose, onSubmit, pending }: {
           {perDay.length > 0
             ? <>Each chosen day gets <strong>{perDay.length}</strong> slot{perDay.length === 1 ? "" : "s"} of 30 minutes: {perDay.slice(0, 4).join(", ")}{perDay.length > 4 ? ` … ${perDay[perDay.length - 1]}` : ""}.</>
             : "No 30-minute slot fits between those times."}
-          {" "}Times in the past and times that already have a slot are skipped.
+          {" "}Times in the past, times that already have a slot and anything after 6:00 PM are skipped.
         </p>
         <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
           <button type="button" onClick={onClose} className="btn-light">Cancel</button>

@@ -206,7 +206,8 @@ begin
     while steps < 48 and t >= r.start_time and t + interval '30 minutes' > t and t + interval '30 minutes' <= r.end_time loop
       insert into public.slots (date, start_time, end_time, price, is_available)
       select r.date, t, t + interval '30 minutes', r.price, r.is_available
-       where not exists (
+       where t + interval '30 minutes' <= time '18:00'   -- business hours: nothing after 6:00 PM
+         and not exists (
          select 1 from public.slots x
           where x.date = r.date and x.start_time < t + interval '30 minutes' and x.end_time > t
        );

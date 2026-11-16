@@ -18,7 +18,7 @@
 create table if not exists public.contact_settings (
   id            integer primary key default 1 check (id = 1),
   mode          text not null default 'open' check (mode in ('open', 'private')),
-  open_note     text not null default 'WhatsApp us anytime – replies 10 AM to 8 PM, Mon to Sat. Counselling calls are for booked students.'
+  open_note     text not null default 'WhatsApp us anytime – replies 10 AM to 6 PM, Mon to Sat. Counselling calls are for booked students.'
                 check (char_length(btrim(open_note)) between 1 and 300),
   private_note  text not null default 'We''ll call you back within a few hours.'
                 check (char_length(btrim(private_note)) between 1 and 300),

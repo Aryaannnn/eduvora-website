@@ -7,7 +7,7 @@ const icons: Record<FounderHighlightIcon, typeof UsersIcon> = {
   college: GraduationIcon,
 };
 
-// "1,000+ Students Guided" · "2+ Years of Counselling" · "VIT Vellore, Mechanical Engineering"
+// "700+ Students Guided" · "2+ Years of Counselling" · "VIT Vellore, Mechanical Engineering"
 export default function FounderHighlights({ className = "" }: { className?: string }) {
   return (
     <ul className={`grid gap-3 sm:grid-cols-3 ${className}`}>

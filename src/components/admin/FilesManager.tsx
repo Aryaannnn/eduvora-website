@@ -172,6 +172,11 @@ export default function FilesManager({ productId }: { productId: string }) {
 
   return (
     <div className="space-y-3">
+      {files?.some((f) => f.file_type === "zip") && (
+        <p role="alert" className="rounded-xl bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900 ring-1 ring-amber-200">
+          ⚠️ This item has ZIP file(s). Students can&apos;t see or read ZIP files — please upload the material as PDF instead (then delete the ZIP).
+        </p>
+      )}
       {/* Drop zone */}
       <div
         onDragOver={(e) => {
@@ -189,12 +194,13 @@ export default function FilesManager({ productId }: { productId: string }) {
         className={`rounded-2xl border-2 border-dashed p-5 text-center transition ${dragOver ? "border-brand-500 bg-brand-50" : "border-slate-300 bg-slate-50/60"}`}
       >
         <UploadIcon className="mx-auto h-7 w-7 text-brand-600" />
-        <p className="mt-2 text-sm font-semibold text-slate-700">Drag &amp; drop PDF or ZIP files here</p>
+        <p className="mt-2 text-sm font-semibold text-slate-700">Drag &amp; drop PDF files here</p>
         <p className="text-xs text-slate-500">or</p>
         <button type="button" onClick={() => chooser.current?.click()} className="btn-primary mt-2 !px-4 !py-2 text-sm">Choose files</button>
         <p className="mt-3 text-xs text-slate-500">
-          PDF (.pdf) or ZIP (.zip) only · <strong>max {siteConfig.uploads.maxFileMB} MB per file</strong> · you can select several at once · private, buyers only
+          PDF (.pdf) · <strong>max {siteConfig.uploads.maxFileMB} MB per file</strong> · you can select several at once · private, buyers only
         </p>
+        <p className="mt-2 text-xs text-slate-500">Students read PDFs online only (watermarked, no download). <strong>ZIP files can&apos;t be read in the browser and are hidden from students — please upload PDFs instead.</strong></p>
         <input ref={chooser} type="file" multiple accept=".pdf,.zip,application/pdf,application/zip" className="sr-only" onChange={(e) => { if (e.target.files) addFiles(e.target.files); e.target.value = ""; }} />
         <input ref={replacer} type="file" accept=".pdf,.zip,application/pdf,application/zip" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; if (f) void replace(f); e.target.value = ""; }} />
       </div>
@@ -254,6 +260,7 @@ export default function FilesManager({ productId }: { productId: string }) {
               <span className="cursor-grab select-none text-lg leading-none text-slate-300" title="Drag to reorder" aria-hidden>⋮⋮</span>
               <Badge kind={f.file_type} />
               <div className="min-w-0 flex-1">
+                {f.file_type === "zip" && <p className="text-[11px] font-bold uppercase tracking-wide text-amber-700">Hidden from students — upload a PDF instead</p>}
                 {renaming?.id === f.id ? (
                   <form onSubmit={(e) => { e.preventDefault(); void saveRename(); }} className="flex gap-2">
                     <input autoFocus value={renaming.name} onChange={(e) => setRenaming({ id: f.id, name: e.target.value })} maxLength={120} className="input !py-1.5 text-sm" aria-label="File display name" />

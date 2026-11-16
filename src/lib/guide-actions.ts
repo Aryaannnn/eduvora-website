@@ -1,6 +1,6 @@
 "use server";
 // The free guide popup → saves the request, adds the person to Admin → Leads
-// ("Free guide"), emails the download link and returns it for the page.
+// ("Free guide"), emails the link to read it online and returns it for the page.
 // Spam limits: hidden bot field, max 5 requests per hour from one device/network,
 // and the guide is emailed to the same address at most once a day.
 import { createHash } from "node:crypto";
@@ -46,7 +46,7 @@ export async function requestFreeGuide(form: FormData): Promise<GuideResult> {
     if ((count ?? 0) >= 5) return { ok: false, error: "Too many requests. Please try again in an hour." };
   }
 
-  // Emailed this address in the last 24 hours? Don't email again (but still give the download)
+  // Emailed this address in the last 24 hours? Don't email again (but still give the link)
   let emailAgain = !!email;
   if (email) {
     const dayAgo = new Date(Date.now() - 86_400_000).toISOString();
