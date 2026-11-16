@@ -66,6 +66,8 @@ export default function TermsPage() {
       <h2>8. Contact</h2>
       <p>
         Questions about these terms? Email <a href={`mailto:${site.email}`}>{site.email}</a> or use the contact page (<a href="/contact">/contact</a>).
+        How access to our digital services is given after payment is explained in the{" "}
+        <a href="/shipping-policy">Shipping &amp; Delivery Policy</a>; refunds in the <a href="/refund-policy">Refund &amp; Cancellation Policy</a>.
       </p>
     </LegalPage>
   );

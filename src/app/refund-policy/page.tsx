@@ -65,7 +65,7 @@ export default function RefundPolicyPage() {
         Email us at <a href={emailLink}>{siteConfig.email}</a> and include:
       </p>
       <ul>
-        <li>your <strong>Payment ID</strong> (you can find it in Dashboard → Payment History, on your invoice or in your payment email),</li>
+        <li>your <strong>Payment ID</strong> (you can find it in Dashboard → Payment History, or on your invoice),</li>
         <li>your name and the phone number or email you used to sign up,</li>
         <li>what you bought and why you are asking for a refund.</li>
       </ul>

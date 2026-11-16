@@ -113,7 +113,10 @@ export default function ProductsManager({ products, storage, children }: { produ
                     )}
                   </p>
                 </td>
-                <td className="px-4 py-3 text-slate-600">{catLabel(p.category)}</td>
+                <td className="px-4 py-3 text-slate-600">
+                  {catLabel(p.category)}
+                  {categoryHint(p) && <p className="mt-1 max-w-[14rem] text-xs font-semibold text-amber-700">⚠️ {categoryHint(p)}</p>}
+                </td>
                 <td className="whitespace-nowrap px-4 py-3 font-semibold text-slate-900">
                   {formatPrice(p.price)}
                   {p.original_price ? <span className="ml-1 text-xs font-normal text-slate-400 line-through">{formatPrice(p.original_price)}</span> : null}
@@ -327,4 +330,17 @@ function StorageBar({ storage }: { storage: StorageInfo }) {
       </p>
     </div>
   );
+}
+
+/**
+ * The website places products by their CATEGORY (never by the title). This only
+ * warns the admin when a title looks like a different category, e.g. a
+ * "… Crash Course" saved as Study material shows under "Campus-wise admission kits".
+ */
+function categoryHint(p: AdminProduct): string {
+  const t = p.title.toLowerCase();
+  if (p.category !== "crash_course" && /crash course|live batch|live classes/.test(t)) return "Title says crash course — change the category to Crash course to show it with the courses.";
+  if (p.category !== "mock_test" && /mock test|test series/.test(t)) return "Title says mock test — check the category.";
+  if (p.category !== "previous_paper" && /previous year|pyq/.test(t)) return "Title says previous year papers — check the category.";
+  return "";
 }

@@ -9,7 +9,7 @@ export const faqs = [
   { q: "Which campus is right for me — Vellore, Chennai, AP or Bhopal?", a: "It depends on your rank, preferred branch, budget and location. Our study material and counselling sessions compare all four campuses so you can decide confidently." },
   { q: "What documents are needed for VIT counselling?", a: "Usually your VITEEE admit card and rank card, Class 10 and 12 marksheets, ID proof and photographs. We share a full checklist before your counselling date." },
   { q: "Can my parents join the counselling call?", a: "Yes — we encourage it. Many important decisions (fees, hostel, campus) are best made together." },
-  { q: "Is my payment safe?", a: "Yes. Payments are processed securely through Razorpay using UPI, cards or net banking, and you get a confirmation and invoice by email." },
+  { q: "Is my payment safe?", a: "Yes. Payments are processed securely through Razorpay using UPI, cards or net banking, and your invoice is available in your dashboard right after payment." },
   {
     q: "Can I reschedule or cancel my slot?",
     a: `Yes. You can reschedule for free up to ${siteConfig.refunds.counsellingHours} hours before your slot, and cancelling more than ${siteConfig.refunds.counsellingHours} hours before gives a full refund. See our Refund & Cancellation Policy for details.`,

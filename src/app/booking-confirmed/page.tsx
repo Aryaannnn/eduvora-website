@@ -141,7 +141,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/booking-con
 
         {b.invoice_number && (
           <p className="relative -mb-3 mt-4 text-center text-xs text-slate-500">
-            <a href={`/api/invoices/${b.id}`} download className="font-semibold text-brand-700 underline">Download invoice PDF</a> · a copy is also in your email
+            <a href={`/api/invoices/${b.id}`} download className="font-semibold text-brand-700 underline">Download invoice PDF</a> · {siteConfig.emailsEnabled ? "a copy is also in your email" : "always available in your dashboard"}
           </p>
         )}
         {b.status === "confirmed" && slot && (
@@ -149,7 +149,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/booking-con
             <PhoneIcon className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700" />
             <p>
               <strong>{founderFirst} Sir will call you on {formatPhoneIN(b.phone)} on {formatDate(slot.date, true)} at {formatTime(slot.start_time)} IST.</strong>{" "}
-              Please keep your phone available. Parents are welcome to join on speaker. Wrong number? Reply to your confirmation email.
+              Please keep your phone available. Parents are welcome to join on speaker. Wrong number? {siteConfig.emailsEnabled ? "Reply to your confirmation email." : "Send us a message from the Help page in your dashboard."}
             </p>
           </div>
         )}

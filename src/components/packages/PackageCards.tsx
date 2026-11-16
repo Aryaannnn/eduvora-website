@@ -5,6 +5,7 @@ import { getPackages, sessionsLabel, type Package } from "@/lib/packages";
 import BuyButton from "../BuyButton";
 import { CalendarIcon, CheckIcon, ShieldIcon } from "../Icons";
 import Reveal from "../Reveal";
+import { deliveryText } from "@/config/site";
 
 // =====================================================================
 //  COUNSELLING PACKAGE PRICING CARDS
@@ -38,7 +39,7 @@ export default async function PackageCards({ heading = true }: { heading?: boole
         ))}
       </div>
       <p className="mt-6 flex items-center justify-center gap-1.5 text-center text-xs font-semibold text-slate-500">
-        <ShieldIcon className="h-3.5 w-3.5 text-emerald-600" /> 100% Secure Payments by Razorpay · invoice by email
+        <ShieldIcon className="h-3.5 w-3.5 text-emerald-600" /> 100% Secure Payments by Razorpay · {deliveryText.invoiceShort}
       </p>
       {/* "Rating: x/5 from N reviews" — only with 5+ approved reviews */}
       <RatingLine className="mt-2" />

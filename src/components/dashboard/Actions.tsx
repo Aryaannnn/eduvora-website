@@ -8,6 +8,7 @@ import { cancelMyBooking } from "@/lib/booking-actions";
 import { LogoutIcon, ReceiptIcon } from "../Icons";
 import { useLogout } from "@/lib/useLogout";
 import { Spinner } from "../Spinner";
+import { deliveryText } from "@/config/site";
 
 export function LogoutButton({ className = "" }: { className?: string }) {
   const { logout, loggingOut } = useLogout();
@@ -34,7 +35,7 @@ export function CancelBookingButton({ bookingId, slotDate, slotTime, paid }: { b
           : hoursLeft >= h
             ? `\n\nYour slot is more than ${h} hours away, so you get a FULL REFUND (within ${siteConfig.refunds.processingTime}).`
             : `\n\nYour slot is less than ${h} hours away, so there is NO REFUND. (Free reschedule or full refund is only up to ${h} hours before.)`;
-        if (!confirm(`Cancel this booking?${refund}\n\nTip: to change the time instead, reply to your confirmation email.`)) return;
+        if (!confirm(`Cancel this booking?${refund}\n\nTip: to change the time instead, ${deliveryText.changeTime}.`)) return;
         setBusy(true);
         const res = await cancelMyBooking(bookingId); // server: cancels + removes the Google Calendar event
         setBusy(false);

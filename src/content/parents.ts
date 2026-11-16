@@ -50,7 +50,7 @@ export const parentsPage = {
     title: "How a session works",
     items: [
       { title: "Choose a time", text: "Pick a slot on the Book a Slot page. Pay securely online, or use a session from a counselling package." },
-      { title: "Get your confirmation", text: "You receive a confirmation email with the date and time. Utkarsh Sir calls the number you gave when booking." },
+      { title: "Get your confirmation", text: "Your booking is confirmed on screen and in My Bookings, with the date and time. Utkarsh Sir calls the number you gave when booking." },
       { title: "Keep a few things ready", text: "Your child's expected marks or rank, the campuses and branches you are considering, your budget and your questions." },
       { title: "The call", text: "A private 30-minute voice call. We go through your child's options together and answer every question — from you and from your child." },
       { title: "Your plan", text: "You leave with a clear plan for campus, branch and fee category, and know what to do next in counselling." },
@@ -63,7 +63,7 @@ export const parentsPage = {
     items: [
       {
         q: "How much does counselling cost?",
-        a: "The prices of single sessions and counselling packages are shown on the Book a Slot page before you pay. There are no hidden charges, and you get an invoice by email.",
+        a: "The prices of single sessions and counselling packages are shown on the Book a Slot page before you pay. There are no hidden charges, and your invoice is available in your dashboard.",
       },
       {
         q: "Will you tell us the college fees?",
@@ -106,7 +106,7 @@ export const parentsPage = {
     title: "How we keep your payment and data safe",
     items: [
       { title: "Secure payments", text: "Payments go through Razorpay using UPI, cards or net banking. We never see or store your card or bank details." },
-      { title: "Invoice by email", text: "Every payment gets an invoice by email, and you can download it again any time from the dashboard." },
+      { title: "Invoice in your dashboard", text: "Every payment gets an invoice, available any time in the dashboard (Payment History)." },
       { title: "Clear refund rules", text: `${r.counsellingNote}` },
       { title: "Your data stays private", text: "We use your details only to provide counselling and support. You can download or delete your data any time from My Profile." },
       { title: "No pressure", text: "Ask your questions first — by a free enquiry or email — and book only when your family is ready." },

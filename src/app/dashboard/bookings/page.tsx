@@ -105,7 +105,7 @@ async function BookingsContent() {
         </ul>
       )}
       <p className="mt-6 text-sm text-slate-500">
-        Need to reschedule? Reply to your confirmation email, or send us a message from the <Link href="/dashboard/help" className="font-semibold text-brand-700 underline">Help</Link> page.{" "}
+        Need to reschedule? {siteConfig.emailsEnabled ? "Reply to your confirmation email, or send" : "Send"} us a message from the <Link href="/dashboard/help" className="font-semibold text-brand-700 underline">Help</Link> page.{" "}
         {siteConfig.refunds.counsellingNote} See our{" "}
         <Link href="/refund-policy" className="font-semibold text-brand-700 underline">Refund &amp; Cancellation Policy</Link>.
       </p>

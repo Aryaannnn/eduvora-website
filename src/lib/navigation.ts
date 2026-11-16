@@ -52,4 +52,5 @@ export const legalLinks = [
   { href: "/privacy-policy", label: "Privacy Policy" },
   { href: "/terms-and-conditions", label: "Terms & Conditions" },
   { href: "/refund-policy", label: "Refund & Cancellation Policy" },
+  { href: "/shipping-policy", label: "Shipping & Delivery Policy" },
 ];

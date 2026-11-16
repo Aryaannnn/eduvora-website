@@ -1,10 +1,11 @@
 import { LockIcon, MailIcon, ReceiptIcon, ShieldIcon, ZapIcon } from "../Icons";
 import Reveal from "../Reveal";
+import { deliveryText } from "@/config/site";
 
 const methods = ["UPI", "Visa", "Mastercard", "RuPay", "Net Banking", "Wallets"];
 const points = [
   { icon: ZapIcon, title: "Instant confirmation", text: "Your booking or order is confirmed right after payment." },
-  { icon: MailIcon, title: "Invoice on email", text: "Your payment receipt and invoice are emailed to you." },
+  { icon: MailIcon, title: deliveryText.invoiceTitle, text: deliveryText.invoiceLine },
   { icon: ShieldIcon, title: "Bank-grade security", text: "Encrypted payments — we never see or store your card details." },
   { icon: ReceiptIcon, title: "Clear refund policy", text: "Simple, fair rules for cancellations and refunds." },
 ];

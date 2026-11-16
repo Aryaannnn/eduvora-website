@@ -141,6 +141,12 @@ export const siteConfig = {
     digitalNote: "Digital product, read online in your dashboard — non-refundable once access is given. If you can't access it, we'll fix it or refund within 7 days.",
   },
 
+  // ✏️ Do we PROMISE emails (invoice / receipt / booking confirmation by email)?
+  //    false = the website only promises what is always true: "Invoice available
+  //    in your dashboard". Set to true once your email sending (Resend) is verified.
+  //    (This only changes the wording — emails that do get sent still arrive.)
+  emailsEnabled: false,
+
   // ✏️ Pages switched OFF for now (true = back on everywhere: menus, footer, home page,
   //    sitemap, predictor links, admin menu). While off, the pages show "Coming soon"
   //    and are not indexed. All code and data are kept.
@@ -179,3 +185,14 @@ export const unlockLink = "/unlock";
 export const emailLink = `mailto:${siteConfig.email}`;
 
 // "Buy Now" / "Enroll Now" buttons use Razorpay — see src/components/BuyButton.tsx
+
+/** Invoice / confirmation wording that follows siteConfig.emailsEnabled */
+export const deliveryText = {
+  invoiceShort: siteConfig.emailsEnabled ? "invoice by email" : "invoice in your dashboard",
+  invoiceTitle: siteConfig.emailsEnabled ? "Invoice on email" : "Invoice in your dashboard",
+  invoiceLine: siteConfig.emailsEnabled
+    ? "Your payment receipt and invoice are emailed to you and are always in your dashboard."
+    : "Invoice available in your dashboard (Payment History) right after payment.",
+  invoiceSentence: siteConfig.emailsEnabled ? "you get an invoice by email" : "your invoice is available in your dashboard",
+  changeTime: siteConfig.emailsEnabled ? "reply to your confirmation email" : "send us a message from the Help page",
+};
