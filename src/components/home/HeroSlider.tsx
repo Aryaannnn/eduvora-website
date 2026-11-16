@@ -287,8 +287,8 @@ export default function HeroSlider() {
 
 // ---------- "Marks → Rank → College & Branch" picture (desktop) ----------
 const flowSteps = [
-  { icon: ClipboardIcon, label: "Your marks", value: "380 / 500" },
-  { icon: TargetIcon, label: "Predicted rank", value: "~2,750" },
+  { icon: ClipboardIcon, label: "Your marks", value: "300 / 400" },
+  { icon: TargetIcon, label: "Predicted rank", value: "~3,050" },
   { icon: GraduationIcon, label: "College & branch", value: "VIT Vellore · CSE" },
 ];
 

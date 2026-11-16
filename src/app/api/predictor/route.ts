@@ -11,6 +11,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getSession } from "@/lib/dashboard";
 import { getPredictorAccess, loadPredictorDataOnServer, parsePredictInput, runPrediction } from "@/lib/predictor-server";
 import { getAdminSupabase } from "@/lib/supabase/admin";
+import { MAX_MARKS } from "@/lib/predictor";
 
 const headers = { "Cache-Control": "private, no-store" };
 const SAVED_COLS = "id,marks,entered_rank,predicted_min_rank,predicted_max_rank,preferred_campus,preferred_branch,created_at";
@@ -23,7 +24,7 @@ export async function POST(request: NextRequest) {
 
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
   const parsed = parsePredictInput(body);
-  if (!parsed) return NextResponse.json({ error: "Please enter valid marks or rank." }, { status: 400, headers });
+  if (!parsed) return NextResponse.json({ error: `Please enter marks between 0 and ${MAX_MARKS} (full marks are ${MAX_MARKS}), or a valid rank.` }, { status: 400, headers });
 
   // Free students can never ask for the full list or use the filters
   const input = access.allowed ? parsed : { ...parsed, full: false, campus: undefined, branch: undefined, feeCategory: undefined };

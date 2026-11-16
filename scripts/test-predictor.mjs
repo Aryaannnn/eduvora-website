@@ -14,44 +14,44 @@ import {
 
 // Same bands as the SAMPLE data in supabase/predictor.sql
 const bands = [
-  { min_marks: 440, max_marks: 500, min_rank: 1, max_rank: 500 },
-  { min_marks: 400, max_marks: 440, min_rank: 500, max_rank: 1500 },
-  { min_marks: 360, max_marks: 400, min_rank: 1500, max_rank: 4000 },
-  { min_marks: 320, max_marks: 360, min_rank: 4000, max_rank: 8000 },
-  { min_marks: 280, max_marks: 320, min_rank: 8000, max_rank: 15000 },
-  { min_marks: 240, max_marks: 280, min_rank: 15000, max_rank: 25000 },
-  { min_marks: 200, max_marks: 240, min_rank: 25000, max_rank: 40000 },
-  { min_marks: 160, max_marks: 200, min_rank: 40000, max_rank: 60000 },
-  { min_marks: 120, max_marks: 160, min_rank: 60000, max_rank: 85000 },
-  { min_marks: 0, max_marks: 120, min_rank: 85000, max_rank: 120000 },
+  { min_marks: 352, max_marks: 400, min_rank: 1, max_rank: 500 },
+  { min_marks: 320, max_marks: 352, min_rank: 500, max_rank: 1500 },
+  { min_marks: 288, max_marks: 320, min_rank: 1500, max_rank: 4000 },
+  { min_marks: 256, max_marks: 288, min_rank: 4000, max_rank: 8000 },
+  { min_marks: 224, max_marks: 256, min_rank: 8000, max_rank: 15000 },
+  { min_marks: 192, max_marks: 224, min_rank: 15000, max_rank: 25000 },
+  { min_marks: 160, max_marks: 192, min_rank: 25000, max_rank: 40000 },
+  { min_marks: 128, max_marks: 160, min_rank: 40000, max_rank: 60000 },
+  { min_marks: 96, max_marks: 128, min_rank: 60000, max_rank: 85000 },
+  { min_marks: 0, max_marks: 96, min_rank: 85000, max_rank: 120000 },
 ];
 
 test("exact band edges give the band's ranks", () => {
-  assert.equal(rankAtMarks(500, bands).rank, 1);
-  assert.equal(rankAtMarks(440, bands).rank, 500);
-  assert.equal(rankAtMarks(400, bands).rank, 1500);
+  assert.equal(rankAtMarks(400, bands).rank, 1);
+  assert.equal(rankAtMarks(352, bands).rank, 500);
+  assert.equal(rankAtMarks(320, bands).rank, 1500);
   assert.equal(rankAtMarks(0, bands).rank, 120000);
 });
 
 test("smooth (linear) calculation inside a band", () => {
-  // 380 marks is halfway through 360–400 → halfway between 4000 and 1500
-  assert.equal(rankAtMarks(380, bands).rank, 2750);
-  // 290 marks is a quarter through 280–320 → 15000 - 0.25 × 7000
-  assert.equal(rankAtMarks(290, bands).rank, 13250);
+  // 304 marks is halfway through 288–320 → halfway between 4000 and 1500
+  assert.equal(rankAtMarks(304, bands).rank, 2750);
+  // 232 marks is a quarter through 224–256 → 15000 - 0.25 × 7000
+  assert.equal(rankAtMarks(232, bands).rank, 13250);
 });
 
 test("more marks always means a better (smaller) rank", () => {
   let previous = Infinity;
-  for (let m = 0; m <= 500; m += 1) {
+  for (let m = 0; m <= 400; m += 1) {
     const r = rankAtMarks(m, bands).rank;
     assert.ok(r <= previous, `rank went up at ${m} marks`);
     previous = r;
   }
 });
 
-test("predicted range for 380 marks (±8 marks)", () => {
-  const p = predictFromMarks(380, bands);
-  // 388 marks → 2250, 372 marks → 3250, rounded to nice numbers
+test("predicted range for 304 marks (±6.4 marks)", () => {
+  const p = predictFromMarks(304, bands);
+  // 310.4 marks → 2250, 297.6 marks → 3250, rounded to nice numbers
   assert.deepEqual(
     { min: p.minRank, max: p.maxRank, rank: p.rank, coverage: p.coverage },
     { min: 2250, max: 3250, rank: 2750, coverage: "ok" },
@@ -59,33 +59,33 @@ test("predicted range for 380 marks (±8 marks)", () => {
 });
 
 test("top and bottom of the scale stay sensible", () => {
-  const top = predictFromMarks(500, bands);
+  const top = predictFromMarks(400, bands);
   assert.equal(top.minRank, 1);
   assert.ok(top.maxRank <= 100, `top max rank ${top.maxRank}`);
   const bottom = predictFromMarks(0, bands);
   assert.equal(bottom.maxRank, 120000);
 });
 
-test("marks outside 0–500 are clamped; no data returns null", () => {
-  assert.equal(predictFromMarks(800, bands).marks, 500);
+test("marks outside 0–400 are clamped; no data returns null", () => {
+  assert.equal(predictFromMarks(640, bands).marks, 400);
   assert.equal(predictFromMarks(-5, bands).marks, 0);
-  assert.equal(predictFromMarks(360, []), null);
+  assert.equal(predictFromMarks(288, []), null);
   assert.equal(predictFromMarks(Number.NaN, bands), null);
 });
 
 test("marks outside the data's range are flagged", () => {
-  const partial = [{ min_marks: 200, max_marks: 400, min_rank: 1000, max_rank: 40000 }];
-  assert.equal(predictFromMarks(440, partial).coverage, "above");
-  assert.equal(predictFromMarks(80, partial).coverage, "below");
+  const partial = [{ min_marks: 160, max_marks: 320, min_rank: 1000, max_rank: 40000 }];
+  assert.equal(predictFromMarks(352, partial).coverage, "above");
+  assert.equal(predictFromMarks(64, partial).coverage, "below");
 });
 
 test("gaps between bands are bridged smoothly", () => {
   const gappy = [
-    { min_marks: 0, max_marks: 160, min_rank: 60000, max_rank: 100000 },
-    { min_marks: 240, max_marks: 500, min_rank: 1, max_rank: 20000 },
+    { min_marks: 0, max_marks: 128, min_rank: 60000, max_rank: 100000 },
+    { min_marks: 192, max_marks: 400, min_rank: 1, max_rank: 20000 },
   ];
   // 50 marks is halfway across the 40→60 gap: halfway between 60000 and 20000
-  assert.equal(rankAtMarks(200, gappy).rank, 40000);
+  assert.equal(rankAtMarks(160, gappy).rank, 40000);
 });
 
 test("entering a rank directly", () => {
@@ -108,7 +108,7 @@ const cutoffs = [
 ];
 
 test("college list: best chances first, filters work", () => {
-  const p = predictFromMarks(380, bands); // 2250–3250
+  const p = predictFromMarks(304, bands); // 2250–3250
   const list = matchColleges(p, cutoffs);
   assert.deepEqual(list.map((c) => c.chance), ["high", "high", "high", "low"]);
   assert.equal(list[0].closing_rank, 3750); // most competitive High option first

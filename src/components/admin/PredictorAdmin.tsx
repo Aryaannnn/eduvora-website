@@ -19,6 +19,7 @@ import { csvDateTimeIST, formatDateTime, todayInIndia } from "@/lib/format";
 import { predictFromMarks } from "@/lib/predictor";
 import { DownloadIcon, EditIcon, PhoneIcon, PlusIcon, SearchIcon, TrashIcon, UploadIcon, WhatsAppIcon } from "../Icons";
 import { AdminHeader, Label, Modal, Notice, downloadCsv } from "./ui";
+import { MAX_MARKS } from "@/lib/predictor";
 
 export type AdminBand = { id: string; year: number; min_marks: number; max_marks: number; min_rank: number; max_rank: number; is_sample: boolean };
 export type AdminCutoff = { id: string; year: number; campus: string; branch: string; fee_category: number; counselling_phase: number; closing_rank: number; is_sample: boolean };
@@ -313,7 +314,7 @@ function Bands({ bands, years, activeYear, run, setMsg }: { bands: AdminBand[]; 
           <p className="font-bold text-slate-900">Quick check</p>
           <p className="text-xs text-slate-500">Uses the same calculation as the website.</p>
           <label className="mt-3 block text-sm font-semibold text-slate-700" htmlFor="tm">Marks</label>
-          <input id="tm" type="number" min={0} max={500} step={1} value={testMarks} onChange={(e) => setTestMarks(e.target.value)} className="input mt-1" />
+          <input id="tm" type="number" min={0} max={MAX_MARKS} step={1} value={testMarks} onChange={(e) => setTestMarks(e.target.value)} className="input mt-1" />
           <p className="mt-3 text-sm text-slate-700">
             {test ? <>Predicted rank <strong>~{fmt(test.rank)}</strong><br /><span className="text-xs text-slate-500">range {fmt(test.minRank)} – {fmt(test.maxRank)}</span></> : "Add data for this year first."}
           </p>

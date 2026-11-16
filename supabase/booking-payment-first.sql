@@ -25,7 +25,7 @@ alter table public.bookings add column if not exists razorpay_order_id   text un
 alter table public.bookings add column if not exists razorpay_payment_id text unique;
 alter table public.bookings add column if not exists paid_at             timestamptz;
 alter table public.bookings add column if not exists class_year          text check (class_year is null or char_length(class_year) <= 40);
-alter table public.bookings add column if not exists expected_marks      numeric(5,2) check (expected_marks is null or expected_marks between 0 and 500);
+alter table public.bookings add column if not exists expected_marks      numeric(5,2) check (expected_marks is null or expected_marks between 0 and 400);
 alter table public.bookings add column if not exists hold_expires_at     timestamptz;
 alter table public.bookings add column if not exists invoice_number      text unique;
 

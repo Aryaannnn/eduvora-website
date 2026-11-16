@@ -15,13 +15,13 @@
 -- 1. TABLES
 -- ---------------------------------------------------------------------
 
--- Marks → rank bands. Marks are out of 500. Higher marks = better (smaller) rank.
--- Example row: 100–110 marks → rank 500 (at 110 marks) to 1,500 (at 100 marks)
+-- Marks → rank bands. Marks are out of 400. Higher marks = better (smaller) rank.
+-- Example row: 320–352 marks (out of 400) → rank 500 (at 352 marks) to 1,500 (at 320 marks)
 create table if not exists public.rank_data (
   id          uuid primary key default gen_random_uuid(),
   year        integer not null check (year between 2000 and 2100),
-  min_marks   numeric(5,2) not null check (min_marks between 0 and 500),
-  max_marks   numeric(5,2) not null check (max_marks between 0 and 500),
+  min_marks   numeric(5,2) not null check (min_marks between 0 and 400),
+  max_marks   numeric(5,2) not null check (max_marks between 0 and 400),
   min_rank    integer not null check (min_rank >= 1),   -- best rank in this band (at max_marks)
   max_rank    integer not null check (max_rank >= 1),   -- worst rank in this band (at min_marks)
   is_sample   boolean not null default false,
@@ -48,7 +48,7 @@ create table if not exists public.college_cutoffs (
 create table if not exists public.predictions (
   id                  uuid primary key default gen_random_uuid(),
   user_id             uuid not null references auth.users (id) on delete cascade,
-  marks               numeric(5,2) check (marks is null or marks between 0 and 500), -- empty if the student typed a rank
+  marks               numeric(5,2) check (marks is null or marks between 0 and 400), -- empty if the student typed a rank
   entered_rank        integer check (entered_rank is null or entered_rank >= 1),     -- filled if the student typed a rank
   predicted_min_rank  integer not null check (predicted_min_rank >= 1),
   predicted_max_rank  integer not null check (predicted_max_rank >= predicted_min_rank),
@@ -141,16 +141,16 @@ on conflict (id) do nothing;
 insert into public.rank_data (year, min_marks, max_marks, min_rank, max_rank, is_sample)
 select 2026, v.min_marks, v.max_marks, v.min_rank, v.max_rank, true
 from (values
-  ( 440,  500,     1,    500),
-  ( 400,  440,   500,   1500),
-  ( 360,  400,  1500,   4000),
-  ( 320,  360,  4000,   8000),
-  ( 280,  320,  8000,  15000),
-  ( 240,  280, 15000,  25000),
-  ( 200,  240, 25000,  40000),
-  ( 160,  200, 40000,  60000),
-  ( 120,  160, 60000,  85000),
-  (   0,  120, 85000, 120000)
+  ( 352,  400,     1,    500),
+  ( 320,  352,   500,   1500),
+  ( 288,  320,  1500,   4000),
+  ( 256,  288,  4000,   8000),
+  ( 224,  256,  8000,  15000),
+  ( 192,  224, 15000,  25000),
+  ( 160,  192, 25000,  40000),
+  ( 128,  160, 40000,  60000),
+  (  96,  128, 60000,  85000),
+  (   0,   96, 85000, 120000)
 ) as v (min_marks, max_marks, min_rank, max_rank)
 where not exists (select 1 from public.rank_data where is_sample);
 

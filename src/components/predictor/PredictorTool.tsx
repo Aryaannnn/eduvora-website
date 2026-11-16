@@ -69,7 +69,17 @@ export default function PredictorTool({
   initialHistory?: PastPrediction[];
 }) {
   const [inputType, setInputType] = useState<"marks" | "rank">("marks");
-  const [marks, setMarks] = useState(360);
+  const [marks, setMarks] = useState(300);
+  // What is typed in the marks box (kept as typed, so a wrong number can be shown with an error)
+  const [marksText, setMarksText] = useState("300");
+  const marksError =
+    marksText.trim() === ""
+      ? "Please enter your expected marks."
+      : !Number.isFinite(Number(marksText)) || Number(marksText) < 0
+        ? `Please enter marks between 0 and ${MAX_MARKS}.`
+        : Number(marksText) > MAX_MARKS
+          ? `Full marks are ${MAX_MARKS}. Please enter marks between 0 and ${MAX_MARKS}.`
+          : "";
   const [rankInput, setRankInput] = useState("");
   const [campus, setCampus] = useState("");
   const [branch, setBranch] = useState("");
@@ -88,7 +98,7 @@ export default function PredictorTool({
   const guest = access === "guest";
   const branches = campus ? options.branchesByCampus[campus] ?? [] : [...new Set(Object.values(options.branchesByCampus).flat())].sort();
   const key = JSON.stringify({ inputType, marks, rank: Number(rankInput), campus, branch, feeCategory, full: full && mode === "dashboard" });
-  const rankOk = inputType === "marks" || Number(rankInput) >= 1;
+  const rankOk = inputType === "marks" ? !marksError : Number(rankInput) >= 1;
 
   // Ask the server for the result (a short pause first, so sliding stays smooth)
   useEffect(() => {
@@ -198,7 +208,7 @@ export default function PredictorTool({
                     max={MAX_MARKS}
                     step={1}
                     value={marks}
-                    onChange={(e) => setMarks(Number(e.target.value))}
+                    onChange={(e) => { setMarks(Number(e.target.value)); setMarksText(e.target.value); }}
                     className="h-3 flex-1 cursor-pointer appearance-none rounded-full bg-gradient-to-r from-rose-200 via-amber-200 to-emerald-300 accent-brand-600"
                     aria-label="Expected marks slider"
                   />
@@ -209,12 +219,20 @@ export default function PredictorTool({
                     min={0}
                     max={MAX_MARKS}
                     step={1}
-                    value={marks}
-                    onChange={(e) => setMarks(Math.min(MAX_MARKS, Math.max(0, Number(e.target.value) || 0)))}
-                    className="input !w-24 text-center !text-xl font-extrabold"
+                    value={marksText}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setMarksText(v);
+                      const n = Number(v);
+                      if (v.trim() !== "" && Number.isFinite(n) && n >= 0 && n <= MAX_MARKS) setMarks(n); // only valid marks are used
+                    }}
+                    aria-invalid={!!marksError}
+                    aria-describedby={marksError ? "pred-marks-error" : undefined}
+                    className={`input !w-24 text-center !text-xl font-extrabold ${marksError ? "!ring-2 !ring-red-400" : ""}`}
                   />
                 </div>
                 <div className="mt-2 flex justify-between text-xs text-slate-400"><span>0</span><span>{MAX_MARKS / 2}</span><span>{MAX_MARKS}</span></div>
+                {marksError && <p id="pred-marks-error" role="alert" className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 ring-1 ring-red-200">{marksError}</p>}
               </div>
             ) : (
               <div className="mt-6 animate-fade-up">

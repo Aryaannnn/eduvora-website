@@ -216,7 +216,7 @@ function eventBody(b: CalBooking) {
     "",
     `Student: ${b.name}`,
     b.class_year ? `Class / year: ${b.class_year}` : "",
-    b.expected_marks !== null && b.expected_marks !== undefined ? `Expected VITEEE marks: ${+b.expected_marks} / 500` : "",
+    b.expected_marks !== null && b.expected_marks !== undefined ? `Expected VITEEE marks: ${+b.expected_marks} / 400` : "",
     b.message ? `Message: ${b.message}` : "",
     "",
     `Booking ID: ${ref}`,

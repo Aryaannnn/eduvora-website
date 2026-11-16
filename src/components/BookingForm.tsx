@@ -148,7 +148,7 @@ export default function BookingForm({ initialBoard }: { initialBoard: SlotBoard 
     if (!/^(\+?91[ -]?|0)?[6-9]\d{4}[ -]?\d{5}$/.test(form.phone.trim())) return { field: "phone", text: "Please enter the 10-digit mobile number we should call you on (e.g. 98765 43210)." };
     if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) return { field: "email", text: "Please check the email address (or leave it empty)." };
     const m = form.expectedMarks.trim();
-    if (m && (Number.isNaN(Number(m)) || Number(m) < 0 || Number(m) > 500)) return { field: "expectedMarks", text: "Expected marks must be between 0 and 500 (or leave it empty)." };
+    if (m && (Number.isNaN(Number(m)) || Number(m) < 0 || Number(m) > 400)) return { field: "expectedMarks", text: "Expected marks must be between 0 and 400 (or leave it empty)." };
     return null;
   }
 
@@ -307,8 +307,8 @@ export default function BookingForm({ initialBoard }: { initialBoard: SlotBoard 
                 {CLASS_YEARS.map((c) => <option key={c}>{c}</option>)}
               </select>
             </Field>
-            <Field label="Expected VITEEE marks (out of 500)" htmlFor="expectedMarks">
-              <input id="expectedMarks" name="expectedMarks" type="number" inputMode="decimal" min={0} max={500} step={1} value={form.expectedMarks} onChange={update} className="input" placeholder="e.g. 340" />
+            <Field label="Expected VITEEE marks (out of 400)" htmlFor="expectedMarks">
+              <input id="expectedMarks" name="expectedMarks" type="number" inputMode="decimal" min={0} max={400} step={1} value={form.expectedMarks} onChange={update} className="input" placeholder="e.g. 280" />
             </Field>
             <Field label="Message" htmlFor="message">
               <textarea id="message" name="message" rows={1} maxLength={1000} value={form.message} onChange={update} className="input" placeholder="e.g. Want CSE at Vellore, rank ~15,000" />

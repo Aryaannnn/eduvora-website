@@ -290,7 +290,7 @@ ${(await getCommunityLink()) ? `<p>${button("Join our WhatsApp community", url(c
           ["Call on", formatPhoneIN(b.phone)],
           ["Email", b.email || "—"],
           ["Class / year", b.class_year || "—"],
-          ["Expected marks", b.expected_marks !== null ? `${+b.expected_marks} / 500` : "—"],
+          ["Expected marks", b.expected_marks !== null ? `${+b.expected_marks} / 400` : "—"],
           ["Slot", slotLine(b)],
           ["Amount", b.payment_status === "paid" ? formatPrice(b.amount ?? 0) : "Free"],
           ["Booking ID", bookingRef(b.id)],

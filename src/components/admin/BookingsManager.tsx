@@ -144,7 +144,7 @@ export default function BookingsManager({
                       <p className="flex flex-wrap gap-2 text-xs">
                         {b.class_year && <span className="rounded-full bg-slate-100 px-2.5 py-0.5 font-semibold text-slate-700">{b.class_year}</span>}
                         {b.expected_marks !== null && b.expected_marks !== undefined && (
-                          <span className="rounded-full bg-brand-50 px-2.5 py-0.5 font-semibold text-brand-700">Expected marks: {+b.expected_marks}/500</span>
+                          <span className="rounded-full bg-brand-50 px-2.5 py-0.5 font-semibold text-brand-700">Expected marks: {+b.expected_marks}/400</span>
                         )}
                       </p>
                     )}
