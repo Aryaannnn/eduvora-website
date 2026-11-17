@@ -121,7 +121,7 @@ async function CoursesContent({ searchParams }: { searchParams: PageProps<"/dash
                     {siteConfig.inWebsiteReader ? (
                       <FileList files={filesOf.get(c.products!.id)} itemTitle={c.products!.title} suggestion={suggestionFor(c)} />
                     ) : (
-                      <SubjectFiles files={filesOf.get(c.products!.id)} title={c.products!.title} open={false} />
+                      <SubjectFiles files={filesOf.get(c.products!.id)} title={c.products!.title} empty="Course PDFs will appear here — View or Download each one." />
                     )}
                     {withQB.has(c.products!.id) && (
                       <Link href="/dashboard/question-bank" className="btn-accent mt-3 !px-4 !py-2 text-sm">Included: Question Bank (PCM) →</Link>

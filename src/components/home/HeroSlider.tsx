@@ -59,7 +59,7 @@ const slides: Slide[] = [
     color: "from-accent-400 to-accent-600",
     points: [],
   },
-  {
+  ...(siteConfig.showStudyMaterial ? [{
     eyebrow: "Campus-wise guides",
     title: "Purchase Study Material",
     text: "Admission kits for VIT Vellore, Chennai, AP and Bhopal with rank trends, fees and choice-filling checklists.",
@@ -67,7 +67,7 @@ const slides: Slide[] = [
     icon: BookIcon,
     color: "from-sky-500 to-cyan-600",
     points: ["Download PDF (watermarked with your name)", "Branch-wise rank trends", "Instant access"],
-  },
+  }] : []),
   {
     eyebrow: "Score higher, faster",
     title: "VITEEE Crash Courses",

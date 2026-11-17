@@ -5,6 +5,7 @@
 //    "paid" purchase, so it shows in My Courses & Material and the admin
 //    sees it in Admin → Students ("Free items").
 // =====================================================================
+import { siteConfig } from "@/config/site";
 import { applyPriceLabels } from "./price-labels";
 import { productsWithoutSamples, withoutSamples } from "./sample";
 import { cacheLife, cacheTag } from "next/cache";
@@ -90,7 +91,7 @@ export function suggestFor(category: ProductCategory, paid: Pick<Product, "title
     counselling_package: [],
     question_bank: ["question_bank", "crash_course", "mock_test"],
   };
-  for (const cat of order[category]) {
+  for (const cat of order[category].filter((c) => c !== "study_material" || siteConfig.showStudyMaterial)) {
     const p = paid.filter((x) => x.category === cat && x.price > 0).sort((a, b) => a.price - b.price)[0];
     if (p) return { title: p.title, price: p.price, href: cat === "crash_course" ? `/courses/${p.slug}` : CATEGORY_PAGE[cat], kind: "product" };
   }

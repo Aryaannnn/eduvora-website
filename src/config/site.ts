@@ -159,6 +159,9 @@ export const siteConfig = {
   //    and are not indexed. All code and data are kept.
   showFeeCalculator: false,
   showBlog: false,
+  // Study Material (campus admission kits): menu, footer, home page section and slide,
+  // sitemap. Students who already bought a kit still have it in My Courses.
+  showStudyMaterial: false,
 
   // Shown on the home page and the booking page when no counselling slot is open
   noSlotsMessage: "New slots open soon. Please check back shortly.",

@@ -34,6 +34,8 @@ alter table public.products drop constraint if exists products_subject_check;
 alter table public.products add constraint products_subject_check
   check (subject is null or subject in ('physics', 'chemistry', 'mathematics', 'pcm'));
 alter table public.products add column if not exists includes_question_bank boolean not null default false;
+-- the website may read these two (products has column-level read rights: content_links stays private)
+grant select (subject, includes_question_bank) on public.products to anon, authenticated;
 
 -- ---------- 2. subject + chapter on each PDF ----------
 alter table public.product_files add column if not exists subject text;

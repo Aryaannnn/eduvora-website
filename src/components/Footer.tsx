@@ -13,7 +13,7 @@ const explore = [
   ...(siteConfig.showBlog ? [{ href: "/blog", label: "Blog" }] : []),
   { href: "/courses", label: "Crash Courses" },
   { href: "/predictor", label: "Rank & College Predictor" },
-  { href: "/study-material", label: "Study Material" },
+  ...(siteConfig.showStudyMaterial ? [{ href: "/study-material", label: "Study Material" }] : []),
   { href: "/mock-tests", label: "Mock & MCQ Tests" },
   { href: "/previous-year-papers", label: "Previous Year Papers" },
   { href: "/question-bank", label: "Question Bank" },

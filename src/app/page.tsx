@@ -115,8 +115,8 @@ export default async function Home() {
       {reviews.length > 0 && <ReviewsSection reviews={reviews} mobileShort />}
       <VideoTestimonials videos={videos.slice(0, 6)} className={reviews.length > 0 ? "!pt-0" : ""} mobileShort />
 
-      {/* 9. Study material */}
-      <section className="section bg-slate-50">
+      {/* 9. Study material (siteConfig.showStudyMaterial) */}
+      {siteConfig.showStudyMaterial && <section className="section bg-slate-50">
         <div className="container-page">
           <SectionHeader eyebrow="Study material" title="Campus-wise admission kits" subtitle="Everything you need to choose the right VIT campus — rank trends, fees, branches and checklists." href="/study-material" linkText="All study material" />
           {materials.length ? (
@@ -128,7 +128,7 @@ export default async function Home() {
             </>
           ) : <div className="mt-10"><EmptyState what="study material" /></div>}
         </div>
-      </section>
+      </section>}
 
       {/* 10. Crash courses */}
       <section className="section">

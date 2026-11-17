@@ -18,13 +18,18 @@ export default function ProductsPage() {
 
 async function Content() {
   const s = await requireAdmin("/admin/products");
-  const { data, error } = await s.supabase
-    .from("products")
-    .select("*") // (+ subject / includes_question_bank after supabase/courses-question-bank.sql)
-    .neq("category", "counselling_package") // packages are managed in Admin → Packages
-    .order("category")
-    .order("sort_order")
-    .order("created_at");
+  // (content_links is private — never "*"; subject / includes_question_bank need supabase/courses-question-bank.sql)
+  const cols = "id,title,slug,description,category,college,price,original_price,is_free,is_active,thumbnail_url,file_path,details,sort_order,created_at";
+  const load = (c: string) =>
+    s.supabase
+      .from("products")
+      .select(c)
+      .neq("category", "counselling_package") // packages are managed in Admin → Packages
+      .order("category")
+      .order("sort_order")
+      .order("created_at");
+  let { data, error } = await load(`${cols},subject,includes_question_bank`);
+  if (error) ({ data, error } = await load(cols));
   if (error) return <p className="card p-6 text-red-600">Could not load products: {error.message}</p>;
 
   // Files per product + download counts + total storage used
@@ -42,7 +47,7 @@ async function Content() {
     per.set(f.product_id, { count: x.count + 1, downloads: x.downloads + Number(f.download_count) });
     filesBytes += Number(f.size_bytes);
   }
-  const products = ((data ?? []) as AdminProduct[]).map((p) =>
+  const products = ((data ?? []) as unknown as AdminProduct[]).map((p) =>
     files.error ? p : { ...p, files_count: per.get(p.id)?.count ?? 0, downloads: per.get(p.id)?.downloads ?? 0 },
   );
   return (

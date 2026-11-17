@@ -1,3 +1,5 @@
+import ComingSoon, { comingSoonMeta } from "@/components/ComingSoon";
+import { siteConfig } from "@/config/site";
 import type { Metadata } from "next";
 import JsonLd from "@/components/seo/JsonLd";
 import { pageMeta, breadcrumbLd } from "@/lib/seo";
@@ -11,7 +13,7 @@ import SectionHeading from "@/components/SectionHeading";
 import EmptyState from "@/components/EmptyState";
 import { getProducts } from "@/lib/data";
 
-export const metadata: Metadata = pageMeta({ title: "VIT Admission Kits & VITEEE Study Material", description: "Campus-wise VIT admission kits for VIT Vellore, Chennai, AP and Bhopal: rank trends, fees, branches and checklists for VIT counselling.", path: "/study-material" });
+export const metadata: Metadata = !siteConfig.showStudyMaterial ? comingSoonMeta("Study Material") : pageMeta({ title: "VIT Admission Kits & VITEEE Study Material", description: "Campus-wise VIT admission kits for VIT Vellore, Chennai, AP and Bhopal: rank trends, fees, branches and checklists for VIT counselling.", path: "/study-material" });
 
 const perks = [
   { icon: ZapIcon, title: "Instant access", text: "Download PDF (watermarked with your name) right after payment." },
@@ -26,6 +28,7 @@ const materialFaqs = [
 ];
 
 export default async function StudyMaterialPage() {
+  if (!siteConfig.showStudyMaterial) return <ComingSoon title="Study Material" text="Our campus-wise admission kits are coming soon. Meanwhile, see our crash courses and Question Bank, or ask us in a counselling call." />;
   const materials = await getProducts("study_material");
   return (
     <>

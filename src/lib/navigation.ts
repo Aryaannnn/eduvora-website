@@ -33,7 +33,7 @@ const resources: NavLink[] = [
   ...(siteConfig.showFeeCalculator ? [{ href: "/fee-calculator", label: "Fee Calculator", hint: "Estimate fees & compare campuses" }] : []),
   { href: "/parents", label: "For Parents", hint: "How counselling works for families" },
   ...(siteConfig.showBlog ? [{ href: "/blog", label: "Blog", hint: "Preparation & counselling guides" }] : []),
-  { href: "/study-material", label: "Study Material", hint: "Admission kits & notes" },
+  ...(siteConfig.showStudyMaterial ? [{ href: "/study-material", label: "Study Material", hint: "Admission kits & notes" }] : []),
   { href: "/mock-tests", label: "Mock Tests", hint: "Full mocks & MCQ practice" },
   { href: "/previous-year-papers", label: "PYQ Papers", hint: "Previous year VITEEE papers" },
   { href: "/question-bank", label: "Question Bank", hint: "Physics, Chemistry & Maths PDFs" },
