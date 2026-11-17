@@ -31,7 +31,7 @@ export default function ReadPage(props: PageProps<"/dashboard/read/[fileId]">) {
 async function Content({ params }: { params: Promise<{ fileId: string }> }) {
   const { fileId } = await params;
   // In-website reader switched off (src/config/site.ts → inWebsiteReader) → the watermarked PDF
-  if (!siteConfig.inWebsiteReader) redirect(`/api/files/${fileId}?mode=open`);
+  if (!siteConfig.inWebsiteReader) redirect(`/api/files/${fileId}/open`);
   const s = await requireUser(`/dashboard/read/${fileId}`);
   const db = getAdminSupabase();
   if (!db) return <Message title="Reading is not available right now" text="Please try again in a little while." />;

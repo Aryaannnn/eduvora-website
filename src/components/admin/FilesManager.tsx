@@ -223,7 +223,7 @@ export default function FilesManager({ productId, category = "" }: { productId: 
 
   // Preview = exactly what a student gets: a watermarked copy (with the admin's own details). Never the original.
   function preview(f: ProductFile) {
-    window.open(`/api/files/${f.id}?mode=open`, "_blank", "noopener");
+    window.open(`/api/files/${f.id}/open`, "_blank", "noopener");
   }
 
   async function saveOrder(next: ProductFile[]) {

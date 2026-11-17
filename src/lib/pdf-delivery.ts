@@ -7,12 +7,16 @@
 //   3. their personal watermarked copy: from the 7-day cache in the private
 //      'watermarked' bucket, or made now with pdf-lib (src/lib/watermark.ts)
 //   4. logged (Admin → Products → Downloads) with the ID printed on the copy
-//   5. a 5-minute signed link to THAT copy (inline to open, attachment to
-//      download) — copying the link only works for 5 minutes
-//  The original file and its storage address are never sent. If the
+//   5. the copy's BYTES are streamed from this server (inline to open,
+//      attachment to download), "private, no-store". No storage link (signed
+//      or public) ever reaches the browser, so a copied link is just
+//      /api/files/<id>/open — which checks login + access again, and only ever
+//      sends the logged-in account its OWN copy.
+//  The original file and any storage address are never sent. If the
 //  watermark can't be made → "Please try again" (never the original).
 // =====================================================================
 import "server-only";
+import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 import { siteConfig } from "@/config/site";
@@ -21,7 +25,6 @@ import { unlockFreeProduct } from "./free-resources";
 import { canRead, type ReaderFile } from "./reader";
 import { cleanupWatermarked, deviceId, shortCopyId, watermarkPdf, WM_VERSION } from "./watermark";
 
-export const LINK_SECONDS = 5 * 60;
 const CACHE_DAYS = 7;
 const BUCKET = "watermarked";
 const DEFAULT_DAILY_LIMIT = 20;
@@ -75,7 +78,7 @@ export async function deliverPdf(request: NextRequest, db: SupabaseClient, s: Se
   if ("error" in access) {
     if (access.error === "zip") return page("Not available", "This file isn't available to students. Please contact us.", 404);
     if (access.error === "not-found") return page("File not found", "It may have been removed or replaced. Please check My Courses &amp; Material.", 404);
-    return page("This file is locked", "You need to buy this item first. If you already paid, please contact us with your Payment ID.", 403);
+    return page("You don't have access to this file", "This file belongs to a course or item your account hasn't bought. If you paid for it, log in with that account — or contact us with your Payment ID.", 403);
   }
   const file = access.file;
   // Free item opened from a link → also add it to My Courses
@@ -120,6 +123,7 @@ export async function deliverPdf(request: NextRequest, db: SupabaseClient, s: Se
   // ---- the student's copy: cached (7 days) or made now ----
   let storagePath = "";
   let copyId = "";
+  let madeNow: Uint8Array | null = null;
   try {
     // (if supabase/courses-question-bank.sql hasn't been run yet there is no wm_version → no cache, every copy made fresh)
     const { data: cached } = await db.from("pdf_copies").select("file_path,copy_id,storage_path,created_at,wm_version").eq("user_id", s.user.id).eq("file_id", file.id).maybeSingle();
@@ -141,7 +145,9 @@ export async function deliverPdf(request: NextRequest, db: SupabaseClient, s: Se
         when: new Date(),
         title: file.display_name,
       });
-      storagePath = `copies/${s.user.id}/${file.id}.pdf`;
+      // (server-only path; no user id in it)
+      storagePath = `copies/${createHash("sha256").update(`${s.user.id}:${file.id}`).digest("hex").slice(0, 40)}.pdf`;
+      madeNow = marked;
       const { error: upErr } = await db.storage.from(BUCKET).upload(storagePath, marked, { contentType: "application/pdf", upsert: true, cacheControl: "0" });
       if (upErr) throw new Error(upErr.message);
       await db.from("pdf_copies").upsert({ user_id: s.user.id, file_id: file.id, file_path: file.file_path, copy_id: copyId, storage_path: storagePath, created_at: new Date().toISOString(), wm_version: WM_VERSION });
@@ -149,20 +155,53 @@ export async function deliverPdf(request: NextRequest, db: SupabaseClient, s: Se
   } catch (e) {
     console.warn("[pdf] watermark failed:", (e as Error).message);
     await log({ copyId: null, watermarked: false, status: "failed", error: (e as Error).message.slice(0, 300) });
-    return page("Please try again", "We couldn't prepare your personal copy of this file just now. Please try again in a moment. If it keeps happening, contact us.", 503, `/api/files/${fileId}?mode=${mode}`);
+    return page("Please try again", "We couldn't prepare your personal copy of this file just now. Please try again in a moment. If it keeps happening, contact us.", 503, `/api/files/${fileId}/${mode}`);
   }
 
-  // ---- a 5-minute link to THAT copy ----
-  const { data: signed, error: sErr } = await db.storage.from(BUCKET).createSignedUrl(storagePath, LINK_SECONDS, mode === "download" ? { download: fileName } : undefined);
-  if (sErr || !signed) {
-    await log({ copyId, watermarked: true, status: "failed", error: sErr?.message ?? "no link" });
-    return page("Please try again", "We couldn't open your copy just now. Please try again in a moment.", 503, `/api/files/${fileId}?mode=${mode}`);
+  // ---- the copy's bytes, streamed from this server (never a storage link) ----
+  let body: ReadableStream<Uint8Array>;
+  try {
+    body = madeNow ? bytesStream(madeNow) : await storedCopyStream(db, storagePath);
+  } catch (e) {
+    await log({ copyId, watermarked: true, status: "failed", error: (e as Error).message.slice(0, 300) });
+    return page("Please try again", "We couldn't open your copy just now. Please try again in a moment.", 503, `/api/files/${fileId}/${mode}`);
   }
-  if (!isAdmin) await log({ copyId, watermarked: true, status: "ok" });
-  const res = NextResponse.redirect(signed.signedUrl, 302);
-  res.headers.set("Cache-Control", "private, no-store");
-  res.headers.set("X-Robots-Tag", "noindex");
-  return res;
+  await log({ copyId, watermarked: true, status: "ok" }); // every open / download, with the account (admins too)
+  return new NextResponse(body, {
+    status: 200,
+    headers: {
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `${mode === "download" ? "attachment" : "inline"}; filename="${fileName.replace(/[^\x20-\x7e]/g, "_").replace(/"/g, "'")}"; filename*=UTF-8''${encodeURIComponent(fileName)}`,
+      "Cache-Control": "private, no-store, max-age=0",
+      Pragma: "no-cache",
+      Vary: "Cookie",
+      "X-Content-Type-Options": "nosniff",
+      "X-Robots-Tag": "noindex, nofollow",
+      "Referrer-Policy": "no-referrer",
+    },
+  });
+}
+
+/** In-memory bytes → a stream (streamed responses aren't limited to 4.5 MB on Vercel) */
+function bytesStream(bytes: Uint8Array): ReadableStream<Uint8Array> {
+  const CHUNK = 256 * 1024;
+  let at = 0;
+  return new ReadableStream({
+    pull(controller) {
+      if (at >= bytes.byteLength) return controller.close();
+      controller.enqueue(bytes.subarray(at, at + CHUNK));
+      at += CHUNK;
+    },
+  });
+}
+
+/** A cached copy, piped from the private bucket by the server (a 60-second link used ONLY here, never sent on). */
+async function storedCopyStream(db: SupabaseClient, path: string): Promise<ReadableStream<Uint8Array>> {
+  const { data, error } = await db.storage.from(BUCKET).createSignedUrl(path, 60);
+  if (error || !data) throw new Error(error?.message ?? "copy not found");
+  const res = await fetch(data.signedUrl, { cache: "no-store" });
+  if (!res.ok || !res.body) throw new Error(`storage ${res.status}`);
+  return res.body;
 }
 
 /** Remove watermarked copies older than 7 days (+ the old temporary folders). */

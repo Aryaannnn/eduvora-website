@@ -7,10 +7,10 @@ export default function PdfButtons({ fileId, name, size = "md" }: { fileId: stri
   const pad = size === "sm" ? "!px-3 !py-2 text-xs" : "!px-4 !py-2 text-sm";
   return (
     <div className="flex flex-wrap gap-2">
-      <a href={`/api/files/${fileId}?mode=open`} target="_blank" rel="noopener noreferrer" className={`btn-primary ${pad}`} aria-label={`Open ${name} (PDF) in a new tab`}>
+      <a href={`/api/files/${fileId}/open`} target="_blank" rel="noopener noreferrer" className={`btn-primary ${pad}`} aria-label={`Open ${name} (PDF) in a new tab`}>
         <ExternalIcon className="h-4 w-4" /> Open PDF
       </a>
-      <a href={`/api/files/${fileId}?mode=download`} className={`btn-light ${pad}`} aria-label={`Download ${name} (PDF)`}>
+      <a href={`/api/files/${fileId}/download`} className={`btn-light ${pad}`} aria-label={`Download ${name} (PDF)`}>
         <DownloadIcon className="h-4 w-4" /> Download
       </a>
     </div>

@@ -4,6 +4,7 @@
 // not expired) + access in the database (paid / free / admin), then returns a
 // small single-page PDF with the student's watermark burned in, and logs the
 // view (Admin → Products → Reading log).
+import { siteConfig } from "@/config/site";
 import { after, NextResponse, type NextRequest } from "next/server";
 import { getSession } from "@/lib/dashboard";
 import { canRead, checkToken, loadOriginal, renderPage } from "@/lib/reader";
@@ -15,6 +16,8 @@ const DEVICE_COOKIE = "eduvora_rd";
 const fail = (status: number, error: string) => NextResponse.json({ error }, { status, headers: { "Cache-Control": "private, no-store" } });
 
 export async function GET(request: NextRequest, ctx: RouteContext<"/api/reader/[fileId]/[page]">) {
+  // The in-website reader is switched off (siteConfig.inWebsiteReader) → no page pictures / links at all
+  if (!siteConfig.inWebsiteReader) return new Response("Not found", { status: 404, headers: { "Cache-Control": "private, no-store" } });
   const { fileId, page } = await ctx.params;
   const n = Number(page);
   if (!Number.isInteger(n) || n < 1 || n > 5000) return fail(400, "Bad page number.");

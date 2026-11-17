@@ -4,6 +4,7 @@
 // the short-lived reading token and the student's access, and logs the pages.
 // The original PDF is never sent. The student's watermark is drawn on top in
 // the browser.
+import { siteConfig } from "@/config/site";
 import { after, NextResponse, type NextRequest } from "next/server";
 import { getSession } from "@/lib/dashboard";
 import { PAGES_BUCKET, pagePath } from "@/lib/pdf-pages";
@@ -15,6 +16,8 @@ const DEVICE_COOKIE = "eduvora_rd";
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: { "Cache-Control": "private, no-store" } });
 
 export async function POST(request: NextRequest, ctx: RouteContext<"/api/reader/[fileId]/pages">) {
+  // The in-website reader is switched off (siteConfig.inWebsiteReader) → no page pictures / links at all
+  if (!siteConfig.inWebsiteReader) return new Response("Not found", { status: 404, headers: { "Cache-Control": "private, no-store" } });
   const { fileId } = await ctx.params;
   const body = (await request.json().catch(() => ({}))) as { t?: string; pages?: unknown };
   const session = await getSession();
