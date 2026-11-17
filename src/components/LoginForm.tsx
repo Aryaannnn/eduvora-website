@@ -1,5 +1,6 @@
 "use client";
 
+import { normalizeINPhone, PHONE_INVALID } from "@/lib/phone";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -38,6 +39,7 @@ export default function LoginForm({ initialMode = "signin" }: { initialMode?: Mo
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [phone, setPhone] = useState("");
+  const [signupMobile, setSignupMobile] = useState(""); // email sign-up: required mobile number
   const [agree, setAgree] = useState(false);
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState<"" | "submit" | "verify" | "google">("");
@@ -69,11 +71,12 @@ export default function LoginForm({ initialMode = "signin" }: { initialMode?: Mo
   function signupChecks(): string {
     if (mode !== "signup") return "";
     if (name.trim().length < 2) return "Please enter your full name.";
+    if (method === "email" && !normalizeINPhone(signupMobile)) return PHONE_INVALID;
     if (!agree) return "Please tick “I agree to the Privacy Policy and Terms & Conditions” to continue.";
     return "";
   }
 
-  const profile = () => ({ fullName: name.trim(), role: role === "Parent" ? ("parent" as const) : ("student" as const) });
+  const profile = () => ({ fullName: name.trim(), role: role === "Parent" ? ("parent" as const) : ("student" as const), phone: normalizeINPhone(signupMobile) ?? undefined });
 
   // ---------- Email + password ----------
   async function handleEmail(e: React.FormEvent) {
@@ -291,6 +294,24 @@ export default function LoginForm({ initialMode = "signin" }: { initialMode?: Mo
                     </button>
                   </div>
                 </Field>
+                {mode === "signup" && (
+                  <Field label="Mobile number *" htmlFor="auth-mobile">
+                    <div className="flex">
+                      <span className="inline-flex items-center rounded-l-[0.8rem] border border-r-0 border-slate-300 bg-slate-50 px-3 font-semibold text-slate-600">+91</span>
+                      <input
+                        id="auth-mobile"
+                        type="tel"
+                        inputMode="numeric"
+                        autoComplete="tel-national"
+                        required
+                        value={signupMobile}
+                        onChange={(e) => setSignupMobile(e.target.value.replace(/[^\d+\s-]/g, "").slice(0, 16))}
+                        className="input !rounded-l-none"
+                        placeholder="10-digit mobile number"
+                      />
+                    </div>
+                  </Field>
+                )}
                 {mode === "signin" && (
                   <div className="-mt-2 text-right">
                     <Link href="/forgot-password" className="inline-block py-1 text-sm font-semibold text-brand-600 underline-offset-2 hover:text-accent-700 hover:underline">

@@ -15,7 +15,7 @@ import {
   type CutoffInput,
 } from "@/app/admin/predictor-actions";
 import { csvToObjects } from "@/lib/csv";
-import { csvDateTimeIST, formatDateTime, todayInIndia } from "@/lib/format";
+import { csvDateTimeIST, formatDateTime, formatPhoneIN, todayInIndia } from "@/lib/format";
 import { predictFromMarks } from "@/lib/predictor";
 import { DownloadIcon, EditIcon, PhoneIcon, PlusIcon, SearchIcon, TrashIcon, UploadIcon, WhatsAppIcon } from "../Icons";
 import { AdminHeader, Label, Modal, Notice, downloadCsv } from "./ui";
@@ -166,7 +166,7 @@ function Leads({ predictions }: { predictions: AdminPrediction[] }) {
                   <tr key={p.id}>
                     <td className="px-4 py-3">
                       <p className="font-semibold text-slate-900">{p.name || "—"}</p>
-                      <p className="text-xs text-slate-500">{p.email}{p.phone && ` · +${p.phone}`}</p>
+                      <p className="text-xs text-slate-500">{p.email}{p.phone && ` · ${formatPhoneIN(p.phone)}`}</p>
                     </td>
                     <td className="px-4 py-3 text-slate-700">{p.marks !== null ? `${+p.marks} marks` : `Rank ${fmt(p.entered_rank ?? p.predicted_min_rank)}`}</td>
                     <td className="whitespace-nowrap px-4 py-3 font-semibold tabular-nums text-slate-900">

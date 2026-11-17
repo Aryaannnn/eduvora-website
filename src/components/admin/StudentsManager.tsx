@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { adjustSessionCredits, adminDeleteAccount, setPredictorAccess, setUserRole } from "@/app/admin/actions";
-import { csvDateTimeIST, formatDateTime } from "@/lib/format";
+import { csvDateTimeIST, formatDateTime, formatPhoneIN } from "@/lib/format";
 import { LockIcon, SearchIcon, ShieldIcon, TargetIcon } from "../Icons";
 import { AdminHeader, Notice, downloadCsv } from "./ui";
 
@@ -227,7 +227,7 @@ export default function StudentsManager({ students, currentUserId, setupMissing 
                 </td>
                 <td className="px-4 py-3 text-slate-600">
                   <p className="break-all">{s.email || "—"}</p>
-                  <p className="text-xs">{s.phone ? `+${s.phone}` : ""}</p>
+                  <p className="text-xs">{s.phone ? formatPhoneIN(s.phone) : ""}</p>
                 </td>
                 <td className="whitespace-nowrap px-4 py-3 text-slate-600">{formatDateTime(s.created_at)}</td>
                 <td className="px-4 py-3 text-slate-600">

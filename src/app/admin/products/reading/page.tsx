@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { formatPhoneIN } from "@/lib/format";
 import { Suspense } from "react";
 import ReadingLog, { type ReadingRow } from "@/components/admin/ReadingLog";
 import { DashSkeleton } from "@/components/dashboard/ui";
@@ -82,7 +83,7 @@ async function Content() {
       key: `${g.user}|${g.file}`,
       student: p?.full_name || "Student",
       email: p?.email || "",
-      phone: p?.phone ? `+${p.phone}` : "",
+      phone: p?.phone ? formatPhoneIN(p.phone) : "",
       file: g.file,
       product: g.product,
       pagesRead: g.pages.size,

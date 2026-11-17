@@ -6,7 +6,6 @@ import Footer from "@/components/Footer";
 import FloatingButtons from "@/components/FloatingButtons";
 import { getOpenContact } from "@/lib/contact";
 import NavigationEffects from "@/components/NavigationEffects";
-import CompleteProfilePrompt from "@/components/auth/CompleteProfilePrompt";
 import SiteAnalytics from "@/components/analytics/SiteAnalytics";
 import ConsentPrompt from "@/components/privacy/ConsentPrompt";
 import CookieNotice from "@/components/privacy/CookieNotice";
@@ -14,7 +13,6 @@ import GuidePopupLoader from "@/components/guide/GuidePopupLoader";
 import MaintenanceBanner from "@/components/MaintenanceBanner";
 import JsonLd from "@/components/seo/JsonLd";
 import { organizationLd } from "@/lib/seo";
-import { communityHref, getCommunityLink } from "@/lib/community";
 import { Suspense } from "react";
 import PrivatePageGuard from "@/components/auth/PrivatePageGuard";
 import { PRE_LAUNCH } from "@/config/launch";
@@ -68,9 +66,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <FloatingContact />
         <NavigationEffects />
         <PrivatePageGuard />
-        <Suspense fallback={null}>
-          <ProfilePrompt />
-        </Suspense>
         {/* Privacy: one-time consent for accounts without it + small cookie notice (shown once) */}
         <ConsentPrompt />
         <CookieNotice />
@@ -85,12 +80,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </body>
     </html>
   );
-}
-
-// "Complete your profile" popup (shown right after sign-up) + community link if set (only when WhatsApp is on)
-async function ProfilePrompt() {
-  const link = await getCommunityLink();
-  return <CompleteProfilePrompt communityHref={link ? communityHref("signup") : null} />;
 }
 
 /** Floating Call / WhatsApp buttons. Contact mode Open → the number for everyone; Private → none in the page. */

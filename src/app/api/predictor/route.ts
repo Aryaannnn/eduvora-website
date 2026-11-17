@@ -7,6 +7,7 @@
 //                                No colleges, no counts, no cutoffs.
 //   • paid counselling / admin → the full result (colleges, chances, fee categories)
 // With save:true the prediction is stored, so the admin sees it as a lead.
+import { phoneRequired } from "@/lib/phone-guard";
 import { NextResponse, type NextRequest } from "next/server";
 import { getSession } from "@/lib/dashboard";
 import { getPredictorAccess, loadPredictorDataOnServer, parsePredictInput, runPrediction } from "@/lib/predictor-server";
@@ -21,6 +22,9 @@ export async function POST(request: NextRequest) {
   if (!access.loggedIn) {
     return NextResponse.json({ error: "Please log in or sign up to see your rank.", login: true }, { status: 401, headers });
   }
+  const me = await getSession();
+  const noPhone = me && phoneRequired(me, headers); // students must add a mobile number first
+  if (noPhone) return noPhone;
 
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
   const parsed = parsePredictInput(body);

@@ -51,7 +51,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export async function signUpWithEmail(
   email: string,
   password: string,
-  profile: { fullName: string; role: "student" | "parent" },
+  profile: { fullName: string; role: "student" | "parent"; phone?: string },
   next: string,
 ): Promise<AuthResult & { needsConfirmation?: boolean }> {
   if (!EMAIL_RE.test(email)) return { ok: false, message: "Please enter a valid email address." };
@@ -63,7 +63,8 @@ export async function signUpWithEmail(
     password,
     options: {
       // saved to the profile by the database trigger — incl. the Privacy Policy / Terms consent (date is set by the database)
-      data: { full_name: profile.fullName, role: profile.role, privacy_consent: "true", consent_version: siteConfig.policiesUpdated },
+      // phone: +91XXXXXXXXXX — saved to the profile by the database (supabase/phone-required.sql)
+      data: { full_name: profile.fullName, role: profile.role, ...(profile.phone ? { phone: profile.phone } : {}), privacy_consent: "true", consent_version: siteConfig.policiesUpdated },
       emailRedirectTo: `${appOrigin()}/auth/callback?next=${encodeURIComponent(next)}`,
     },
   });

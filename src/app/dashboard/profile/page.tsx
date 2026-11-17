@@ -5,6 +5,7 @@ import ProfileForm from "@/components/dashboard/ProfileForm";
 import { DashSkeleton, PageHeader, Panel } from "@/components/dashboard/ui";
 import { initials } from "@/lib/format";
 import { displayName, requireUser } from "@/lib/dashboard";
+import { isStaffRole, localDigits } from "@/lib/phone";
 
 export const metadata: Metadata = { title: "My Profile" };
 
@@ -19,9 +20,10 @@ export default function ProfilePage() {
 async function ProfileContent() {
   const s = await requireUser("/dashboard/profile");
   const name = displayName(s);
-  const phone = (s.profile?.phone ?? "").replace(/^\+?91(?=\d{10}$)/, "");
-  // consent date (column from supabase/privacy.sql — missing before it is run)
-  const { data: c } = await s.supabase.from("profiles").select("consent_at").eq("id", s.user.id).maybeSingle();
+  const phone = localDigits(s.profile?.phone);
+  // consent date (supabase/privacy.sql) + class / year (supabase/phone-required.sql) — missing before they are run
+  let { data: c } = await s.supabase.from("profiles").select("consent_at,class_year").eq("id", s.user.id).maybeSingle();
+  if (!c) ({ data: c } = await s.supabase.from("profiles").select("consent_at").eq("id", s.user.id).maybeSingle());
 
   return (
     <>
@@ -34,7 +36,7 @@ async function ProfileContent() {
           <span className="mt-3 rounded-full bg-brand-50 px-3 py-1 text-xs font-bold capitalize text-brand-700">{s.profile?.role ?? "student"}</span>
         </Panel>
         <Panel title="Edit details">
-          <ProfileForm userId={s.user.id} email={s.user.email ?? ""} fullName={s.profile?.full_name ?? ""} phone={phone} />
+          <ProfileForm email={s.user.email ?? ""} fullName={s.profile?.full_name ?? ""} phone={phone} classYear={((c as { class_year?: string | null } | null)?.class_year) ?? ""} phoneRequired={!isStaffRole(s.profile?.role)} />
         </Panel>
       </div>
       <div className="mt-6"><MyDataPanel isAdmin={s.profile?.role === "admin" || s.profile?.role === "counsellor"} consentAt={(c?.consent_at as string | null | undefined) ?? null} /></div>

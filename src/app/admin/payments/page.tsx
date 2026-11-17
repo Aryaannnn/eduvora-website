@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { formatPhoneIN } from "@/lib/format";
 import { Suspense } from "react";
 import PaymentsManager, { type AdminPayment } from "@/components/admin/PaymentsManager";
 import { DashSkeleton } from "@/components/dashboard/ui";
@@ -59,7 +60,7 @@ async function Content() {
     <PaymentsManager
       payments={payments}
       attempts={attempts}
-      users={(users.data ?? []).map((u) => ({ id: u.id as string, label: `${u.full_name || "No name"} — ${u.email || (u.phone ? `+${u.phone}` : "")}` }))}
+      users={(users.data ?? []).map((u) => ({ id: u.id as string, label: `${u.full_name || "No name"} — ${u.email || (u.phone ? formatPhoneIN(u.phone) : "")}` }))}
       products={(products.data ?? []) as { id: string; title: string; price: number }[]}
     />
   );

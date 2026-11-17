@@ -2,15 +2,17 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { getBrowserSupabase } from "@/lib/supabase/client";
+import { CLASS_YEARS, normalizeINPhone, PHONE_INVALID } from "@/lib/phone";
+import { saveMyProfile } from "@/lib/profile-actions";
 import { Field } from "../ContactForm";
 import { CheckIcon } from "../Icons";
 
-// Edit name + phone. Email can't be changed here.
-export default function ProfileForm({ userId, email, fullName, phone }: { userId: string; email: string; fullName: string; phone: string }) {
+// Edit name, mobile number (required for students) and class / year. Email can't be changed here.
+export default function ProfileForm({ email, fullName, phone, classYear, phoneRequired = true }: { email: string; fullName: string; phone: string; classYear: string; phoneRequired?: boolean }) {
   const router = useRouter();
   const [name, setName] = useState(fullName);
   const [mobile, setMobile] = useState(phone);
+  const [year, setYear] = useState(classYear);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
@@ -20,17 +22,11 @@ export default function ProfileForm({ userId, email, fullName, phone }: { userId
     setError("");
     setSaved(false);
     if (name.trim().length < 2) return setError("Please enter your full name.");
-    if (mobile && !/^[6-9]\d{9}$/.test(mobile)) return setError("Please enter a valid 10-digit mobile number (or leave it empty).");
-    const supabase = getBrowserSupabase();
-    if (!supabase) return setError("Supabase is not connected.");
-
+    if ((phoneRequired || mobile) && !normalizeINPhone(mobile)) return setError(PHONE_INVALID);
     setSaving(true);
-    const { error } = await supabase
-      .from("profiles")
-      .update({ full_name: name.trim(), phone: mobile ? `91${mobile}` : null })
-      .eq("id", userId);
+    const r = await saveMyProfile({ fullName: name, phone: mobile, classYear: year });
     setSaving(false);
-    if (error) return setError(error.message);
+    if (!r.ok) return setError(r.error);
     setSaved(true);
     router.refresh();
   }
@@ -40,21 +36,26 @@ export default function ProfileForm({ userId, email, fullName, phone }: { userId
       <Field label="Full name" htmlFor="p-name">
         <input id="p-name" value={name} onChange={(e) => { setName(e.target.value); setSaved(false); }} className="input" autoComplete="name" />
       </Field>
-      <Field label="Mobile number" htmlFor="p-phone">
+      <Field label={phoneRequired ? "Mobile number *" : "Mobile number"} htmlFor="p-phone">
         <div className="flex">
           <span className="inline-flex items-center rounded-l-[0.8rem] border border-r-0 border-slate-300 bg-slate-50 px-3 font-semibold text-slate-600">+91</span>
           <input
             id="p-phone"
             type="tel"
             inputMode="numeric"
-            maxLength={10}
             value={mobile}
-            onChange={(e) => { setMobile(e.target.value.replace(/\D/g, "").slice(0, 10)); setSaved(false); }}
+            onChange={(e) => { setMobile(e.target.value.replace(/[^\d+\s-]/g, "").slice(0, 16)); setSaved(false); }}
             className="input !rounded-l-none"
             placeholder="10-digit mobile number"
             autoComplete="tel-national"
           />
         </div>
+      </Field>
+      <Field label="Class / year" htmlFor="p-year">
+        <select id="p-year" value={year} onChange={(e) => { setYear(e.target.value); setSaved(false); }} className="input">
+          <option value="">Choose…</option>
+          {CLASS_YEARS.map((c) => <option key={c}>{c}</option>)}
+        </select>
       </Field>
       <Field label="Email" htmlFor="p-email">
         <input id="p-email" value={email} readOnly disabled className="input cursor-not-allowed !bg-slate-100 !text-slate-500" />

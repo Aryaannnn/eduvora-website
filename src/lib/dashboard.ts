@@ -3,6 +3,7 @@
 //  Every query filters by the logged-in student's id, and Supabase's
 //  security rules (RLS) double-check it — students only ever get their own data.
 // =====================================================================
+import { needsPhone } from "./phone";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { cache } from "react";
@@ -31,6 +32,8 @@ export const getSession = cache(async (): Promise<Session | null> => {
 export async function requireUser(path: string): Promise<Session> {
   const session = await getSession();
   if (!session) redirect(`/login?next=${encodeURIComponent(path)}`);
+  // Students / parents must add a mobile number first (admins and counsellors don't)
+  if (needsPhone(session.profile ?? { role: "student", phone: null })) redirect(`/complete-profile?next=${encodeURIComponent(path)}`);
   return session;
 }
 

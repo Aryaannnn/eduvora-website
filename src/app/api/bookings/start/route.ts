@@ -3,6 +3,7 @@
 // The PRICE comes from the slot in our database, never from the browser.
 // With { useCredit: true } it books with one package session credit instead
 // (no payment; the credit is checked inside Supabase).
+import { phoneRequired } from "@/lib/phone-guard";
 import { after, NextResponse, type NextRequest } from "next/server";
 import { bookWithCredit, releaseStaleHolds, parseBookingInput, SLOT_TAKEN_MESSAGE, startBooking, HOLD_MINUTES } from "@/lib/bookings-server";
 import { getSession } from "@/lib/dashboard";
@@ -19,6 +20,8 @@ export async function POST(request: NextRequest) {
 
   const session = await getSession();
   if (!session) return json({ error: "Please log in to book.", login: true }, 401);
+  const noPhone = phoneRequired(session); // students must add a mobile number first
+  if (noPhone) return noPhone;
   welcomeIfNew(session.user.id);
   const db = getAdminSupabase();
   if (!db) return json({ error: "Booking is not available right now." }, 503);

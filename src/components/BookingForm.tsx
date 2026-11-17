@@ -95,7 +95,7 @@ export default function BookingForm({ initialBoard }: { initialBoard: SlotBoard 
       setForm((f) => ({
         ...f,
         name: f.name || p?.full_name || "",
-        phone: f.phone || (p?.phone ? String(p.phone).replace(/^91/, "") : ""),
+        phone: f.phone || (p?.phone ? String(p.phone).replace(/^\+?91(?=\d{10}$)/, "") : ""),
         email: f.email || p?.email || data.user?.email || "",
       }));
     });
@@ -184,6 +184,11 @@ export default function BookingForm({ initialBoard }: { initialBoard: SlotBoard 
     if (res.status === 401) {
       setPhase("idle");
       return goToLogin(); // login ran out → log in again, same slot
+    }
+    if (d.needPhone) {
+      // students must add a mobile number first, then come back to this page
+      window.location.assign(`/complete-profile?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+      return;
     }
     if (res.status === 409 || d.slotTaken) {
       // Checked on the server: someone else got this slot first (or it starts too soon)

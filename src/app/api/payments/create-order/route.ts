@@ -5,6 +5,7 @@
 // 4. Paid item → works out the price ON THE SERVER (coupon, referral ₹ off,
 //    reward credit — src/lib/pricing.ts), creates the Razorpay order for
 //    that amount + saves a 'created' purchase with the discount details
+import { phoneRequired } from "@/lib/phone-guard";
 import { countEnrolled, seatLimitOf } from "@/lib/seats";
 import { after, NextResponse, type NextRequest } from "next/server";
 import { getSession } from "@/lib/dashboard";
@@ -24,6 +25,8 @@ export async function POST(request: NextRequest) {
 
   const session = await getSession();
   if (!session) return json({ error: "Please log in to buy.", login: true }, 401);
+  const noPhone = phoneRequired(session); // students must add a mobile number first (also for free items)
+  if (noPhone) return noPhone;
   welcomeIfNew(session.user.id);
 
   const admin = getAdminSupabase();

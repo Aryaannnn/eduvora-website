@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { csvDateTimeIST, formatDateTime } from "@/lib/format";
+import { csvDateTimeIST, formatDateTime, formatPhoneIN } from "@/lib/format";
 import { SearchIcon } from "../Icons";
 import { downloadCsv } from "./ui";
 
@@ -73,7 +73,7 @@ export default function ReferralsTable({ rows }: { rows: AdminReferral[] }) {
                 <td className="px-4 py-3">
                   <p className="font-semibold text-slate-900">{r.referred.name}</p>
                   <p className="text-xs text-slate-500">{r.referred.email}</p>
-                  {r.referred.phone && <p className="text-xs text-slate-500">+{r.referred.phone}</p>}
+                  {r.referred.phone && <p className="text-xs text-slate-500">{formatPhoneIN(r.referred.phone)}</p>}
                 </td>
                 <td className="px-4 py-3">
                   <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${STATUS[r.status].style}`}>{STATUS[r.status].label}</span>

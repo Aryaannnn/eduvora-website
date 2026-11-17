@@ -101,6 +101,11 @@ export default function BuyButton({
       const res = await postJson("/api/payments/create-order", { productId, coupon });
       const data = res.data as Record<string, unknown> & { redirect?: string; error?: string };
 
+      if (data.needPhone) {
+        // students must add a mobile number first → then straight back here to buy
+        window.location.assign(`/complete-profile?next=${encodeURIComponent(`${window.location.pathname}?buy=${productId}`)}`);
+        return;
+      }
       if (res.status === 401) {
         const back = `${window.location.pathname}?buy=${productId}`;
         router.push(`/login?next=${encodeURIComponent(back)}`);

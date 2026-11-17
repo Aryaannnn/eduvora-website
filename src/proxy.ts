@@ -3,6 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { maintenanceAction, maintenanceHtml } from "@/lib/maintenance";
 import { SUPABASE_ANON_KEY, SUPABASE_URL, isSupabaseConfigured } from "@/lib/supabase/env";
+import { needsPhone, PHONE_FREE_PATHS, PHONE_OK_COOKIE } from "@/lib/phone";
 
 // Maintenance mode (Admin → Settings): remembered for 15 seconds per server,
 // so turning it on/off takes effect within ~15 seconds.
@@ -139,6 +140,24 @@ export async function proxy(request: NextRequest) {
         // (error = secure-reader.sql not run yet → no limit)
         response.cookies.set(DEVICE_CHECK, `${sid}.${Date.now()}`, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 60 * 60 * 24 });
       }
+    }
+
+    // ---------- Mobile number required (students and parents; not admins / counsellors) ----------
+    // Before any page: no valid number → "Complete your profile" (then back to this page).
+    // Checked once per account; afterwards a cookie skips the lookup. APIs check again on their own.
+    const free = path.startsWith("/api/") || PHONE_FREE_PATHS.some((p) => path === p || path.startsWith(`${p}/`));
+    if (!free && request.cookies.get(PHONE_OK_COOKIE)?.value !== data.user.id) {
+      const { data: p, error } = await supabase.from("profiles").select("role,phone").eq("id", data.user.id).maybeSingle();
+      if (!error && p && needsPhone(p)) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/complete-profile";
+        url.search = `?next=${encodeURIComponent(path + request.nextUrl.search)}`;
+        const out = NextResponse.redirect(url);
+        response.cookies.getAll().forEach((ck) => out.cookies.set(ck));
+        out.headers.set("Cache-Control", "private, no-store");
+        return out;
+      }
+      if (!error && p) response.cookies.set(PHONE_OK_COOKIE, data.user.id, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 60 * 60 * 24 * 30 });
     }
 
     // Any activity keeps an admin's timer fresh (started on their first admin page)
