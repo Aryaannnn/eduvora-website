@@ -26,6 +26,7 @@ export type ProductDetails = {
   delivery?: { live?: string; recording?: string; pdf?: string }; // "How classes are delivered"
   after_payment?: string[]; // "What you get after payment"
   seat_limit?: number; // empty = no limit (nothing shown)
+  popular?: boolean; // crash courses: the "Most Popular" card (one at a time)
 };
 
 export type TestSummary = {

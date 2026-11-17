@@ -107,12 +107,26 @@ export async function saveProduct(input: ProductInput): Promise<ActionResult<{ i
   const qbSql = (e: { message: string } | null) =>
     e && /question_bank|includes_question_bank|subject|products_category_check/.test(e.message) ? fail("Run supabase/courses-question-bank.sql in Supabase first.") : null;
 
+  // "Most Popular" is one course at a time → take it off the others
+  const clearPopular = async (keepId: string) => {
+    if (input.category !== "crash_course" || details?.popular !== true) return;
+    const { data: others } = await s.supabase.from("products").select("id,details").eq("category", "crash_course").neq("id", keepId);
+    for (const o of (others ?? []) as { id: string; details: Record<string, unknown> | null }[]) {
+      if (o.details?.popular !== true) continue;
+      const rest = { ...o.details };
+      delete rest.popular;
+      await s.supabase.from("products").update({ details: rest }).eq("id", o.id);
+    }
+  };
+
   if (input.id) {
     const { error } = await s.supabase.from("products").update(row).eq("id", input.id);
+    if (!error) await clearPopular(input.id);
     updateTag("products");
     return qbSql(error) ?? dbResult(error, "Product saved.");
   }
   const { data: created, error } = await s.supabase.from("products").insert(row).select("id").single();
+  if (!error && created) await clearPopular(created.id as string);
   updateTag("products");
   if (error) return qbSql(error) ?? fail(friendlyDbError(error.message));
   return { ok: true, data: { id: created.id as string }, message: "Product added — now you can add its files below." };

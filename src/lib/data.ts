@@ -6,6 +6,7 @@
 //  about 30 seconds — the website never crashes because of it.
 // =====================================================================
 import { applyPriceLabels } from "./price-labels";
+import { inCourseOrder, isMainCourse } from "./courses";
 import { cacheLife, cacheTag } from "next/cache";
 import { getPublicSupabase } from "./supabase/public";
 import { hiddenSample, productsWithoutSamples } from "./sample";
@@ -42,6 +43,11 @@ export async function getProducts(category: ProductCategory): Promise<Product[]>
   if (error) return (retrySoon("getProducts", error.message), []);
   ok();
   return applyPriceLabels(productsWithoutSamples((data ?? []) as unknown as Product[])); // SAMPLE items hidden once Live
+}
+
+/** The four crash courses (60 / 45 / 30 / 10 days) that are switched on, in that order. */
+export async function getCourses(): Promise<Product[]> {
+  return inCourseOrder((await getProducts("crash_course")).filter((c) => isMainCourse(c.slug)));
 }
 
 /** Question Bank products (visible ones) with their subject — [] until supabase/courses-question-bank.sql is run. */

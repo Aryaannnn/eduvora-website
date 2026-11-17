@@ -50,6 +50,14 @@ export default function CourseContentEditor({ json, onChange }: { json: string; 
   return (
     <div className="space-y-4">
       <p className="text-xs text-slate-500">Empty boxes are simply not shown on the course page. Lists: one item per line.</p>
+      <div>
+        <Label htmlFor="cc-short">Short description (course cards and the top of the course page)</Label>
+        <input id="cc-short" defaultValue={String(d.short ?? "")} onBlur={(e) => put({ short: e.target.value.trim() })} maxLength={160} className="input" placeholder="e.g. Complete PCM revision in 60 days with chapter-wise PDF notes" />
+      </div>
+      <label className="flex items-center gap-2 rounded-xl bg-accent-400/10 p-3 text-sm font-semibold text-slate-800 ring-1 ring-accent-400/40">
+        <input type="checkbox" checked={d.popular === true} onChange={(e) => put({ popular: e.target.checked ? true : undefined })} />
+        Highlight as &ldquo;Most Popular&rdquo; (only one course at a time — choosing this one removes it from the others when you Save)
+      </label>
       <div className="grid gap-4 sm:grid-cols-3">
         <div>
           <Label htmlFor="cc-start">Start date</Label>

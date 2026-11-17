@@ -29,6 +29,7 @@ import { formatDateTime } from "@/lib/format";
 import { checkFile, formatBytes, PDF_SUBJECTS, subjectLabel, type ProductFile } from "@/lib/product-files";
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/supabase/env";
 import { CheckIcon, DownloadIcon, EditIcon, TrashIcon, UploadIcon } from "../Icons";
+import { SUBJECT_KEYS, SUBJECT_UI } from "../courses/SubjectIcon";
 
 type Upload = { key: string; name: string; size: number; progress: number; status: "uploading" | "done" | "error"; error?: string };
 
@@ -69,7 +70,7 @@ const Badge = ({ kind }: { kind: "pdf" | "zip" }) => (
 export default function FilesManager({ productId, category = "" }: { productId: string; category?: string }) {
   const bySubject = category === "crash_course"; // PDFs filed under Physics / Chemistry / Mathematics
   const withChapter = category === "crash_course" || category === "question_bank";
-  const [newSubject, setNewSubject] = useState("physics");
+  const uploadSubject = useRef(""); // which subject area's "Choose files" was clicked
   const [selected, setSelected] = useState<string[]>([]);
   const [destinations, setDestinations] = useState<FileDestination[] | null>(null);
   const [bulkTo, setBulkTo] = useState("");
@@ -77,7 +78,7 @@ export default function FilesManager({ productId, category = "" }: { productId: 
   const [uploads, setUploads] = useState<Upload[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
   const [notice, setNotice] = useState("");
-  const [dragOver, setDragOver] = useState(false);
+  const [dragOver, setDragOver] = useState<string | null>(null); // which drop area
   const [dragId, setDragId] = useState<string | null>(null);
   const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null);
   const [busyId, setBusyId] = useState("");
@@ -130,14 +131,14 @@ export default function FilesManager({ productId, category = "" }: { productId: 
     }
   }
 
-  async function uploadOne(file: File, replaceId?: string) {
-    const key = `${file.name}-${file.size}-${Date.now()}-${Math.random()}`;
+  async function uploadOne(file: File, replaceId?: string, subject = "") {
+    const key = `${file.name}-${file.size}-${crypto.randomUUID()}`;
     setUploads((u) => [...u, { key, name: file.name, size: file.size, progress: 0, status: "uploading" }]);
     try {
       const start = await startFileUpload(productId, file.name, file.size, file.type);
       if (!start.ok) throw new Error(start.error);
       await putWithProgress(start.data!.path, start.data!.token, file, start.data!.contentType, (p) => patchUpload(key, { progress: p }));
-      const done = await finishFileUpload({ productId, path: start.data!.path, fileName: file.name, size: file.size, replaceId, subject: bySubject ? newSubject : undefined });
+      const done = await finishFileUpload({ productId, path: start.data!.path, fileName: file.name, size: file.size, replaceId, subject: bySubject && subject ? subject : undefined });
       if (!done.ok) throw new Error(done.error);
       const saved = done.data!.file;
       setFiles((fs) => (replaceId ? (fs ?? []).map((f) => (f.id === replaceId ? saved : f)) : [...(fs ?? []), saved]));
@@ -149,7 +150,7 @@ export default function FilesManager({ productId, category = "" }: { productId: 
     }
   }
 
-  function addFiles(list: FileList | File[]) {
+  function addFiles(list: FileList | File[], subject = "") {
     const problems: string[] = [];
     const ok: File[] = [];
     for (const f of Array.from(list)) {
@@ -159,7 +160,7 @@ export default function FilesManager({ productId, category = "" }: { productId: 
     }
     setErrors(problems);
     setNotice("");
-    ok.forEach((f) => void uploadOne(f));
+    ok.forEach((f) => void uploadOne(f, undefined, subject));
   }
 
   async function replace(file: File) {
@@ -215,6 +216,11 @@ export default function FilesManager({ productId, category = "" }: { productId: 
   }
   const toggle = (id: string) => setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
 
+  function choose(subject: string) {
+    uploadSubject.current = subject;
+    chooser.current?.click();
+  }
+
   // Preview = exactly what a student gets: a watermarked copy (with the admin's own details). Never the original.
   function preview(f: ProductFile) {
     window.open(`/api/files/${f.id}?mode=open`, "_blank", "noopener");
@@ -226,13 +232,119 @@ export default function FilesManager({ productId, category = "" }: { productId: 
     setNotice(r.ok ? "Order saved." : "");
     if (!r.ok) setErrors([r.error]);
   }
-  const move = (from: number, to: number) => {
-    if (!files || to < 0 || to >= files.length || from === to) return;
+  /** ↑ ↓ / drag inside ONE list (a subject, or all files): the other files keep their places */
+  const move = (list: ProductFile[], from: number, to: number) => {
+    if (!files || to < 0 || to >= list.length || from === to) return;
+    const sub = [...list];
+    const [item] = sub.splice(from, 1);
+    sub.splice(to, 0, item);
+    const ids = new Set(list.map((f) => f.id));
+    const slots = files.map((f, i) => (ids.has(f.id) ? i : -1)).filter((i) => i >= 0);
     const next = [...files];
-    const [item] = next.splice(from, 1);
-    next.splice(to, 0, item);
+    slots.forEach((slot, k) => (next[slot] = sub[k]));
     void saveOrder(next);
   };
+
+  function row(f: ProductFile, i: number, items: ProductFile[]) {
+    return (
+            <li
+              key={f.id}
+              draggable
+              onDragStart={() => setDragId(f.id)}
+              onDragEnd={() => setDragId(null)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                if (dragId) move(items, items.findIndex((x) => x.id === dragId), i);
+                setDragId(null);
+              }}
+              className={`flex flex-wrap items-center gap-3 rounded-xl bg-white p-3 ring-1 transition ${dragId === f.id ? "opacity-50 ring-brand-400" : "ring-slate-200"}`}
+            >
+              <input type="checkbox" checked={selected.includes(f.id)} onChange={() => toggle(f.id)} aria-label={`Tick ${f.display_name}`} />
+              <span className="cursor-grab select-none text-lg leading-none text-slate-300" title="Drag to reorder" aria-hidden>⋮⋮</span>
+              <Badge kind={f.file_type} />
+              <div className="min-w-0 flex-1">
+                {f.file_type === "zip" && <p className="text-[11px] font-bold uppercase tracking-wide text-amber-700">Hidden from students — upload a PDF instead</p>}
+                {renaming?.id === f.id ? (
+                  <form onSubmit={(e) => { e.preventDefault(); void saveRename(); }} className="flex gap-2">
+                    <input autoFocus value={renaming.name} onChange={(e) => setRenaming({ id: f.id, name: e.target.value })} maxLength={120} className="input !py-1.5 text-sm" aria-label="File display name" />
+                    <button type="submit" className="btn-primary !px-3 !py-1.5 text-xs">Save</button>
+                    <button type="button" onClick={() => setRenaming(null)} className="btn-light !px-3 !py-1.5 text-xs">Cancel</button>
+                  </form>
+                ) : (
+                  <p className="truncate font-semibold text-slate-900">{f.display_name}</p>
+                )}
+                {(bySubject || withChapter) && (
+                  <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                    {bySubject && (
+                      <select
+                        value={f.subject ?? ""}
+                        onChange={(e) => void saveInfo(f, { subject: e.target.value || null })}
+                        className={`input !w-auto !py-1 text-xs ${f.subject ? "" : "!ring-amber-400"}`}
+                        aria-label={`Subject of ${f.display_name}`}
+                      >
+                        <option value="">Subject…</option>
+                        {PDF_SUBJECTS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+                      </select>
+                    )}
+                    {withChapter && (
+                      <input
+                        key={`${f.id}-${f.chapter ?? ""}`}
+                        defaultValue={f.chapter ?? ""}
+                        maxLength={60}
+                        placeholder="Chapter / Day (optional)"
+                        onBlur={(e) => e.target.value.trim() !== (f.chapter ?? "") && void saveInfo(f, { chapter: e.target.value.trim() || null })}
+                        className="input !w-48 !py-1 text-xs"
+                        aria-label={`Chapter or day of ${f.display_name}`}
+                      />
+                    )}
+                    
+                  </div>
+                )}
+                <p className="text-xs text-slate-500">
+                  {bySubject && f.subject ? `${subjectLabel(f.subject)} · ` : ""}{f.file_type.toUpperCase()} · {formatBytes(Number(f.size_bytes))} · added {formatDateTime(f.created_at)}{f.download_count ? <> · <DownloadIcon className="inline h-3 w-3" /> {f.download_count} old download{f.download_count === 1 ? "" : "s"}</> : null}
+                </p>
+                {f.file_type === "pdf" && siteConfig.inWebsiteReader && <PagesStatus f={f} progress={preparing[f.id]} />}
+                {f.file_type === "pdf" && !siteConfig.inWebsiteReader && <p className="mt-1 text-xs font-semibold text-emerald-700">✓ Students get Open PDF + Download (their own watermarked copy)</p>}
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                <button type="button" onClick={() => move(items, i, i - 1)} disabled={i === 0} className="btn-light !px-2 !py-1 text-xs disabled:opacity-30" aria-label="Move up">↑</button>
+                <button type="button" onClick={() => move(items, i, i + 1)} disabled={i === items.length - 1} className="btn-light !px-2 !py-1 text-xs disabled:opacity-30" aria-label="Move down">↓</button>
+                {f.file_type === "pdf" && <button type="button" onClick={() => preview(f)} className="btn-light !px-2.5 !py-1 text-xs">Preview</button>}
+                {f.file_type === "pdf" && siteConfig.inWebsiteReader && (
+                  <button type="button" disabled={!!preparing[f.id]} onClick={() => void preparePages(f.id)} className="btn-light !px-2.5 !py-1 text-xs disabled:opacity-50" title="Turn the pages into pictures for the reader again">
+                    {preparing[f.id] ? "Preparing…" : "Re-process"}
+                  </button>
+                )}
+                <button type="button" onClick={() => setRenaming({ id: f.id, name: f.display_name })} className="btn-light !px-2.5 !py-1 text-xs"><EditIcon className="h-3.5 w-3.5" /> Rename</button>
+                <button type="button" onClick={() => { replaceTarget.current = f.id; replacer.current?.click(); }} className="btn-light !px-2.5 !py-1 text-xs"><UploadIcon className="h-3.5 w-3.5" /> Replace</button>
+                <button type="button" disabled={busyId === f.id} onClick={() => void remove(f)} className="btn-light !px-2.5 !py-1 text-xs !text-red-600 disabled:opacity-50"><TrashIcon className="h-3.5 w-3.5" /> Delete</button>
+                <DestinationSelect value="" onChange={(v) => void moveTo([f.id], v)} destinations={destinations} label={`Move ${f.display_name} to`} compact />
+              </div>
+            </li>
+    );
+  }
+
+  /** A drag-and-drop area (one per subject for crash courses) */
+  const zone = (key: string, subject: string, compact: boolean) => (
+    <DropZone
+      compact={compact}
+      label={subject ? SUBJECT_UI[subject as keyof typeof SUBJECT_UI].label : ""}
+      active={dragOver === key}
+      disabled={!!dragId}
+      onOver={(on) => setDragOver(on ? key : null)}
+      onFiles={(list) => addFiles(list, subject)}
+      onChoose={() => choose(subject)}
+    />
+  );
+
+  /** The list of files (with ↑ ↓ inside this list) */
+  const list = (items: ProductFile[], label: string) =>
+    items.length === 0 ? null : (
+      <ul className="space-y-2" aria-label={label}>
+        {items.map((f, i) => row(f, i, items))}
+      </ul>
+    );
 
   return (
     <div className="space-y-3">
@@ -241,42 +353,11 @@ export default function FilesManager({ productId, category = "" }: { productId: 
           ⚠️ This item has ZIP file(s). Students don&apos;t get ZIP files — please upload the material as PDF instead (then delete the ZIP).
         </p>
       )}
-      {/* Drop zone */}
-      <div
-        onDragOver={(e) => {
-          if (dragId) return;
-          e.preventDefault();
-          setDragOver(true);
-        }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={(e) => {
-          if (dragId) return;
-          e.preventDefault();
-          setDragOver(false);
-          if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
-        }}
-        className={`rounded-2xl border-2 border-dashed p-5 text-center transition ${dragOver ? "border-brand-500 bg-brand-50" : "border-slate-300 bg-slate-50/60"}`}
-      >
-        <UploadIcon className="mx-auto h-7 w-7 text-brand-600" />
-        <p className="mt-2 text-sm font-semibold text-slate-700">Drag &amp; drop PDF files here</p>
-        <p className="text-xs text-slate-500">or</p>
-        {bySubject && (
-          <label className="mt-2 flex items-center justify-center gap-2 text-sm font-semibold text-slate-700">
-            Subject for new PDFs:
-            <select value={newSubject} onChange={(e) => setNewSubject(e.target.value)} className="input !w-auto !py-1.5 text-sm" aria-label="Subject for new PDFs">
-              {PDF_SUBJECTS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
-            </select>
-          </label>
-        )}
-        <button type="button" onClick={() => chooser.current?.click()} className="btn-primary mt-2 !px-4 !py-2 text-sm">Choose files</button>
-        {bySubject && <p className="mt-1 text-xs text-slate-500">You can change the subject of each PDF after uploading.</p>}
-        <p className="mt-3 text-xs text-slate-500">
-          PDF (.pdf) · <strong>max {siteConfig.uploads.maxFileMB} MB per file</strong> · you can select several at once · private, buyers only
-        </p>
-        <p className="mt-2 text-xs text-slate-500">{siteConfig.inWebsiteReader ? "Students read PDFs online only (watermarked, no download)." : "Students get each PDF as their own copy, watermarked with their name, phone and email (Open PDF / Download)."} <strong>ZIP files are hidden from students — please upload PDFs instead.</strong></p>
-        <input ref={chooser} type="file" multiple accept=".pdf,.zip,application/pdf,application/zip" className="sr-only" onChange={(e) => { if (e.target.files) addFiles(e.target.files); e.target.value = ""; }} />
-        <input ref={replacer} type="file" accept=".pdf,.zip,application/pdf,application/zip" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; if (f) void replace(f); e.target.value = ""; }} />
-      </div>
+      {/* Drop zone (crash courses: one per subject, further down) */}
+      {!bySubject && zone("all", "", false)}
+      <p className="text-xs text-slate-500">{siteConfig.inWebsiteReader ? "Students read PDFs online only (watermarked, no download)." : "Students get each PDF as their own copy, watermarked with their name, phone and email (Open PDF / Download)."} <strong>ZIP files are hidden from students — please upload PDFs instead.</strong></p>
+      <input ref={chooser} type="file" multiple accept=".pdf,.zip,application/pdf,application/zip" className="sr-only" onChange={(e) => { if (e.target.files) addFiles(e.target.files, uploadSubject.current); e.target.value = ""; }} />
+      <input ref={replacer} type="file" accept=".pdf,.zip,application/pdf,application/zip" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; if (f) void replace(f); e.target.value = ""; }} />
       <p className="mt-3 rounded-xl bg-amber-50 p-3 text-xs text-amber-900 ring-1 ring-amber-200">
         🔒 <strong>Use PDF for important material.</strong> Every PDF a student downloads is watermarked with their name, email and a Download ID.
         ZIP files can&apos;t be watermarked, so anyone could share them freely. Also avoid password-protected PDFs — they can&apos;t be watermarked and students would see &ldquo;Please try again&rdquo;.
@@ -330,90 +411,65 @@ export default function FilesManager({ productId, category = "" }: { productId: 
       {/* Uploaded files */}
       {files === null ? (
         <p className="text-sm text-slate-500">Loading files…</p>
+      ) : bySubject ? (
+        <div className="space-y-4">
+          {SUBJECT_KEYS.map((key) => {
+            const ui = SUBJECT_UI[key];
+            const items = files.filter((f) => f.subject === key);
+            return (
+              <section key={key} className="rounded-2xl bg-white p-3 ring-1 ring-slate-200 sm:p-4" aria-label={`${ui.label} PDFs`}>
+                <h4 className="mb-3 flex items-center gap-2 font-extrabold text-slate-900">
+                  <span className={`grid h-8 w-8 place-items-center rounded-lg text-white ${ui.box}`}><ui.Icon className="h-4 w-4" /></span>
+                  {ui.label}
+                  <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-bold text-slate-600">{items.length} PDF{items.length === 1 ? "" : "s"}</span>
+                </h4>
+                {zone(key, key, true)}
+                <div className="mt-3">{list(items, `${ui.label} PDFs`) ?? <p className="text-center text-xs text-slate-500">No {ui.label} PDFs yet.</p>}</div>
+              </section>
+            );
+          })}
+          {files.some((f) => !SUBJECT_KEYS.includes(f.subject as never)) && (
+            <section className="rounded-2xl bg-amber-50 p-3 ring-1 ring-amber-200 sm:p-4" aria-label="PDFs without a subject">
+              <h4 className="mb-1 font-extrabold text-amber-900">Not sorted yet ({files.filter((f) => !SUBJECT_KEYS.includes(f.subject as never)).length})</h4>
+              <p className="mb-3 text-xs text-amber-900">Choose Physics, Chemistry or Mathematics for each — students see these under &ldquo;Other&rdquo; until then.</p>
+              {list(files.filter((f) => !SUBJECT_KEYS.includes(f.subject as never)), "PDFs without a subject")}
+            </section>
+          )}
+        </div>
       ) : files.length === 0 ? (
         <p className="rounded-xl bg-slate-50 p-3 text-center text-sm text-slate-500 ring-1 ring-slate-200">No files yet.</p>
       ) : (
-        <ul className="space-y-2" aria-label="Files (drag to reorder)">
-          {files.map((f, i) => (
-            <li
-              key={f.id}
-              draggable
-              onDragStart={() => setDragId(f.id)}
-              onDragEnd={() => setDragId(null)}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={(e) => {
-                e.preventDefault();
-                if (dragId) move(files.findIndex((x) => x.id === dragId), i);
-                setDragId(null);
-              }}
-              className={`flex flex-wrap items-center gap-3 rounded-xl bg-white p-3 ring-1 transition ${dragId === f.id ? "opacity-50 ring-brand-400" : "ring-slate-200"}`}
-            >
-              <input type="checkbox" checked={selected.includes(f.id)} onChange={() => toggle(f.id)} aria-label={`Tick ${f.display_name}`} />
-              <span className="cursor-grab select-none text-lg leading-none text-slate-300" title="Drag to reorder" aria-hidden>⋮⋮</span>
-              <Badge kind={f.file_type} />
-              <div className="min-w-0 flex-1">
-                {f.file_type === "zip" && <p className="text-[11px] font-bold uppercase tracking-wide text-amber-700">Hidden from students — upload a PDF instead</p>}
-                {renaming?.id === f.id ? (
-                  <form onSubmit={(e) => { e.preventDefault(); void saveRename(); }} className="flex gap-2">
-                    <input autoFocus value={renaming.name} onChange={(e) => setRenaming({ id: f.id, name: e.target.value })} maxLength={120} className="input !py-1.5 text-sm" aria-label="File display name" />
-                    <button type="submit" className="btn-primary !px-3 !py-1.5 text-xs">Save</button>
-                    <button type="button" onClick={() => setRenaming(null)} className="btn-light !px-3 !py-1.5 text-xs">Cancel</button>
-                  </form>
-                ) : (
-                  <p className="truncate font-semibold text-slate-900">{f.display_name}</p>
-                )}
-                {(bySubject || withChapter) && (
-                  <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                    {bySubject && (
-                      <select
-                        value={f.subject ?? ""}
-                        onChange={(e) => void saveInfo(f, { subject: e.target.value || null })}
-                        className={`input !w-auto !py-1 text-xs ${f.subject ? "" : "!ring-amber-400"}`}
-                        aria-label={`Subject of ${f.display_name}`}
-                      >
-                        <option value="">Subject…</option>
-                        {PDF_SUBJECTS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
-                      </select>
-                    )}
-                    {withChapter && (
-                      <input
-                        key={`${f.id}-${f.chapter ?? ""}`}
-                        defaultValue={f.chapter ?? ""}
-                        maxLength={60}
-                        placeholder="Chapter / Day (optional)"
-                        onBlur={(e) => e.target.value.trim() !== (f.chapter ?? "") && void saveInfo(f, { chapter: e.target.value.trim() || null })}
-                        className="input !w-48 !py-1 text-xs"
-                        aria-label={`Chapter or day of ${f.display_name}`}
-                      />
-                    )}
-                    {bySubject && !f.subject && <span className="text-[11px] font-semibold text-amber-700">Choose a subject (shown under &ldquo;Other&rdquo; until then)</span>}
-                  </div>
-                )}
-                <p className="text-xs text-slate-500">
-                  {bySubject && f.subject ? `${subjectLabel(f.subject)} · ` : ""}{f.file_type.toUpperCase()} · {formatBytes(Number(f.size_bytes))} · added {formatDateTime(f.created_at)}{f.download_count ? <> · <DownloadIcon className="inline h-3 w-3" /> {f.download_count} old download{f.download_count === 1 ? "" : "s"}</> : null}
-                </p>
-                {f.file_type === "pdf" && siteConfig.inWebsiteReader && <PagesStatus f={f} progress={preparing[f.id]} />}
-                {f.file_type === "pdf" && !siteConfig.inWebsiteReader && <p className="mt-1 text-xs font-semibold text-emerald-700">✓ Students get Open PDF + Download (their own watermarked copy)</p>}
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                <button type="button" onClick={() => move(i, i - 1)} disabled={i === 0} className="btn-light !px-2 !py-1 text-xs disabled:opacity-30" aria-label="Move up">↑</button>
-                <button type="button" onClick={() => move(i, i + 1)} disabled={i === files.length - 1} className="btn-light !px-2 !py-1 text-xs disabled:opacity-30" aria-label="Move down">↓</button>
-                {f.file_type === "pdf" && <button type="button" onClick={() => preview(f)} className="btn-light !px-2.5 !py-1 text-xs">Preview</button>}
-                {f.file_type === "pdf" && siteConfig.inWebsiteReader && (
-                  <button type="button" disabled={!!preparing[f.id]} onClick={() => void preparePages(f.id)} className="btn-light !px-2.5 !py-1 text-xs disabled:opacity-50" title="Turn the pages into pictures for the reader again">
-                    {preparing[f.id] ? "Preparing…" : "Re-process"}
-                  </button>
-                )}
-                <button type="button" onClick={() => setRenaming({ id: f.id, name: f.display_name })} className="btn-light !px-2.5 !py-1 text-xs"><EditIcon className="h-3.5 w-3.5" /> Rename</button>
-                <button type="button" onClick={() => { replaceTarget.current = f.id; replacer.current?.click(); }} className="btn-light !px-2.5 !py-1 text-xs"><UploadIcon className="h-3.5 w-3.5" /> Replace</button>
-                <button type="button" disabled={busyId === f.id} onClick={() => void remove(f)} className="btn-light !px-2.5 !py-1 text-xs !text-red-600 disabled:opacity-50"><TrashIcon className="h-3.5 w-3.5" /> Delete</button>
-                <DestinationSelect value="" onChange={(v) => void moveTo([f.id], v)} destinations={destinations} label={`Move ${f.display_name} to`} compact />
-              </div>
-            </li>
-          ))}
-        </ul>
+        list(files, "Files (drag to reorder)")
       )}
-      {files && files.length > 1 && <p className="text-xs text-slate-500">Tip: drag the ⋮⋮ handle (or use ↑ ↓) to change the order students see.</p>}
+      {files && files.length > 1 && <p className="text-xs text-slate-500">Tip: use ↑ ↓ (or drag the ⋮⋮ handle) to change the order students see{bySubject ? " in each subject" : ""}.</p>}
+    </div>
+  );
+}
+
+function DropZone({ compact, label, active, disabled, onOver, onFiles, onChoose }: { compact: boolean; label: string; active: boolean; disabled: boolean; onOver: (on: boolean) => void; onFiles: (f: FileList) => void; onChoose: () => void }) {
+  return (
+    <div
+      onDragOver={(e) => {
+        if (disabled) return;
+        e.preventDefault();
+        onOver(true);
+      }}
+      onDragLeave={() => onOver(false)}
+      onDrop={(e) => {
+        if (disabled) return;
+        e.preventDefault();
+        onOver(false);
+        if (e.dataTransfer.files.length) onFiles(e.dataTransfer.files);
+      }}
+      className={`rounded-2xl border-2 border-dashed text-center transition ${compact ? "p-3" : "p-5"} ${active ? "border-brand-500 bg-brand-50" : "border-slate-300 bg-slate-50/60"}`}
+    >
+      {!compact && <UploadIcon className="mx-auto h-7 w-7 text-brand-600" />}
+      <p className={`text-sm font-semibold text-slate-700 ${compact ? "" : "mt-2"}`}>
+        {compact ? <UploadIcon className="mr-1 inline h-4 w-4 text-brand-600" /> : null}
+        Drag &amp; drop {label ? `${label} ` : ""}PDFs here, or{" "}
+        <button type="button" onClick={onChoose} className="font-bold text-brand-700 underline">choose files</button>
+      </p>
+      <p className="mt-1 text-xs text-slate-500">PDF · max {siteConfig.uploads.maxFileMB} MB each · select many at once</p>
     </div>
   );
 }

@@ -5,20 +5,23 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import Accordion from "@/components/Accordion";
 import BackButton from "@/components/BackButton";
-import CourseCard from "@/components/cards/CourseCard";
 import { CalendarIcon, CheckIcon, ClockIcon, FileIcon, HomeIcon, LockIcon, MailIcon, MonitorIcon, PhoneIcon, UsersIcon, VideoIcon, WhatsAppIcon } from "@/components/Icons";
 import Reveal from "@/components/Reveal";
 import BuyButton from "@/components/BuyButton";
 import RefundNote from "@/components/RefundNote";
 import { phoneLink, whatsappLink } from "@/config/site";
 import { getOpenContact } from "@/lib/contact";
-import { getProductBySlug, getProducts } from "@/lib/data";
+import { getCourses, getProductBySlug } from "@/lib/data";
 import { discountPercent, formatDate, formatPrice } from "@/lib/format";
 import { getSeatsLeft, seatLimitOf } from "@/lib/seats";
 import JsonLd from "@/components/seo/JsonLd";
 import { breadcrumbLd, courseLd, pageMeta } from "@/lib/seo";
 import EnrolledBadge from "@/components/EnrolledBadge";
 import { getFileSummary } from "@/lib/file-summary";
+import CourseGrid from "@/components/courses/CourseGrid";
+import { SUBJECT_KEYS, SUBJECT_UI } from "@/components/courses/SubjectIcon";
+import { durationBadge } from "@/lib/courses";
+import { siteConfig } from "@/config/site";
 
 export async function generateMetadata(props: PageProps<"/courses/[slug]">): Promise<Metadata> {
   const { slug } = await props.params;
@@ -32,7 +35,7 @@ export async function generateMetadata(props: PageProps<"/courses/[slug]">): Pro
 // Every current course page is built ahead of time (fast, no layout jump while it loads).
 // New courses work straight away too: the first visitor gets them built on demand.
 export async function generateStaticParams() {
-  const courses = await getProducts("crash_course");
+  const courses = await getCourses();
   return courses.length ? courses.map((c) => ({ slug: c.slug })) : [{ slug: "viteee-crash-course" }];
 }
 
@@ -81,8 +84,19 @@ async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
   const d = course.details;
   const off = discountPercent(course.price, course.original_price);
   // files: "45 PDFs · Physics, Chemistry, Mathematics" — a summary only (no file names, no links)
-  const [allCourses, seatsLeft, files] = await Promise.all([getProducts("crash_course"), getSeatsLeft(course.id, seatLimitOf(d)), getFileSummary(course.id)]);
+  const [allCourses, seatsLeft, files] = await Promise.all([getCourses(), getSeatsLeft(course.id, seatLimitOf(d)), getFileSummary(course.id)]);
   const others = allCourses.filter((c) => c.id !== course.id).slice(0, 3);
+  const badge = durationBadge(course.slug, d.duration);
+  const hasOriginal = !!course.original_price && course.original_price > course.price;
+  // Admin FAQ, or a short neutral one
+  const faqs = has(d.faqs)
+    ? d.faqs!
+    : [
+        { q: "How do I get the PDFs?", a: "Right after your payment is confirmed, the course appears in Dashboard → My Courses & Material. Open or download each PDF there, subject by subject." },
+        { q: "Are the PDFs personal?", a: "Yes. Every PDF is watermarked with your name, email and phone number and is for your own study only — please don't share it." },
+        { q: "Can I study on my phone?", a: "Yes. Open a PDF in your browser, or download it to your phone or laptop." },
+        { q: "What if I can't access the course?", a: `Contact us with your Payment ID and we'll fix it. ${siteConfig.refunds.digitalNote}` },
+      ];
   const full = seatsLeft === 0;
   const free = course.is_free || course.price <= 0;
   const priceText = free ? "Free" : formatPrice(course.price);
@@ -130,11 +144,22 @@ async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
             <Link href="/courses" className="font-medium text-slate-300 hover:text-white">Courses</Link>
           </nav>
           <div className="mt-4 flex flex-wrap items-center gap-2">
-            {d.badge && <span className="inline-block rounded-full bg-accent-400 px-3 py-1 text-xs font-bold text-slate-900">{d.badge}</span>}
+            {badge && <span className="inline-block rounded-full bg-accent-400 px-3 py-1 text-xs font-extrabold text-brand-950">{badge}</span>}
+            {d.popular && <span className="inline-block rounded-full bg-white px-3 py-1 text-xs font-extrabold uppercase tracking-wide text-brand-800">★ Most Popular</span>}
+            {d.badge && <span className="inline-block rounded-full bg-white/15 px-3 py-1 text-xs font-bold text-white ring-1 ring-white/25">{d.badge}</span>}
             <EnrolledBadge productId={course.id} />
           </div>
           <h1 className="mt-3 max-w-3xl text-3xl font-extrabold tracking-tight sm:text-5xl">{course.title}</h1>
           {d.short && <p className="mt-4 max-w-2xl text-slate-300 sm:text-lg">{d.short}</p>}
+          <div className="mt-6 hidden flex-wrap items-center gap-4 md:flex">
+            <span className="text-3xl font-extrabold">{priceText}</span>
+            {hasOriginal && <span className="text-slate-400 line-through">{formatPrice(course.original_price!)}</span>}
+            {!full && (
+              <div className="w-56">
+                <BuyButton productId={course.id} label={enrollLabel} className="btn-accent w-full !py-3" trust={false} free={course.is_free} />
+              </div>
+            )}
+          </div>
           {/* Start date + duration, big and clear */}
           {(d.start_date || d.duration || seatsLeft !== null) && (
             <ul className="mt-6 flex flex-wrap gap-3">
@@ -167,21 +192,21 @@ async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
           <div className="card p-6 shadow-xl shadow-slate-200/70 lg:sticky lg:top-24">
             <div className="flex flex-wrap items-baseline gap-2">
               <span className="text-4xl font-extrabold text-slate-900">{priceText}</span>
-              {course.original_price && <span className="text-slate-500 line-through">{formatPrice(course.original_price)}</span>}
+              {hasOriginal && <span className="text-slate-500 line-through">{formatPrice(course.original_price!)}</span>}
               {off > 0 && <span className="rounded-md bg-green-100 px-2 py-0.5 text-xs font-bold text-green-700">{off}% off</span>}
             </div>
             <ul className="mt-5 space-y-3 border-y border-slate-100 py-5">
               {d.start_date && <Fact icon={CalendarIcon} label="Start date" value={showDate(d.start_date)} />}
               {d.duration && <Fact icon={ClockIcon} label="Duration" value={d.duration} />}
               {d.mode && <Fact icon={MonitorIcon} label="Mode" value={d.mode} />}
-              {files && <Fact icon={FileIcon} label="Includes" value={files.text} />}
+              {files && files.pdfs > 0 && <Fact icon={FileIcon} label="Includes" value={files.text} />}
               {seatsLeft !== null && <Fact icon={UsersIcon} label="Seats" value={full ? "Batch full" : `${seatsLeft} left`} strong={!full && seatsLeft <= 10} />}
             </ul>
             <div className="mt-5">
               {full ? fullBox : <BuyButton productId={course.id} label={enrollLabel} className="btn-primary w-full !py-3.5 text-base" trust={false} free={course.is_free} />}
             </div>
-            {/* The refund rule for live batches, in one short line, right under the button */}
-            {!free && <RefundNote kind="live" className="mt-2.5" />}
+            {/* The refund rule, in one short line, right under the button */}
+            {!free && <RefundNote kind="digital" className="mt-2.5" />}
             {/* "Rating: x/5 from N reviews" — only with 5+ approved reviews */}
             <RatingLine className="mt-2" />
             <a href={phoneLink} className="btn-light mt-4 w-full">
@@ -196,7 +221,25 @@ async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
         </aside>
 
         <div className="space-y-12 lg:order-1">
-          {course.description && (
+          <Section title="What's included">
+            <ul className="grid gap-3 sm:grid-cols-3">
+              {SUBJECT_KEYS.map((k) => {
+                const ui = SUBJECT_UI[k];
+                const n = files?.bySubject[k] ?? 0;
+                return (
+                  <li key={k} className="rounded-2xl bg-white p-4 ring-1 ring-slate-200">
+                    <span className={`grid h-11 w-11 place-items-center rounded-xl text-white ${ui.box}`}><ui.Icon className="h-6 w-6" /></span>
+                    <p className="mt-3 font-extrabold text-slate-900">{ui.label}</p>
+                    <p className="text-sm text-slate-600">{n ? `${n} PDF${n === 1 ? "" : "s"}` : "PDFs being added"}</p>
+                  </li>
+                );
+              })}
+            </ul>
+            {files && files.pdfs > 0 && (
+              <p className="mt-3 flex items-center gap-2 text-sm font-semibold text-slate-700"><FileIcon className="h-4 w-4 text-brand-600" /> {files.text}</p>
+            )}
+          </Section>
+          {course.description && course.description !== d.short && (
             <Section title="About this course">
               <p className="leading-relaxed text-slate-600">{course.description}</p>
             </Section>
@@ -271,11 +314,25 @@ async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
               <Ticks items={afterPayment} tone="green" />
             </Section>
           )}
-          {has(d.faqs) && (
-            <Section title="Questions about this course">
-              <Accordion items={d.faqs!} />
-            </Section>
-          )}
+          <Section title="How you get access">
+            <ol className="grid gap-3 sm:grid-cols-3">
+              {[
+                { t: "Enroll and pay", x: "Pay securely with Razorpay — UPI, cards or net banking." },
+                { t: "Open your dashboard", x: "The course appears in My Courses & Material right after payment." },
+                { t: "Study by subject", x: "Open or download each PDF — watermarked with your name." },
+              ].map((step, i) => (
+                <li key={step.t} className="rounded-2xl bg-brand-50 p-4">
+                  <span className="grid h-8 w-8 place-items-center rounded-full bg-brand-600 text-sm font-extrabold text-white">{i + 1}</span>
+                  <p className="mt-3 font-bold text-slate-900">{step.t}</p>
+                  <p className="mt-1 text-sm text-slate-600">{step.x}</p>
+                </li>
+              ))}
+            </ol>
+          </Section>
+          <Section title="Questions about this course">
+            <Accordion items={faqs} />
+            {!free && <RefundNote kind="digital" className="mt-4 !text-left" />}
+          </Section>
         </div>
       </div>
 
@@ -283,9 +340,7 @@ async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
         <section className="bg-slate-50 py-14 sm:py-20">
           <div className="container-page">
             <h2 className="text-2xl font-extrabold text-slate-900 sm:text-3xl">Other courses</h2>
-            <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {others.map((c) => <CourseCard key={c.id} course={c} />)}
-            </div>
+            <CourseGrid courses={others} className="mt-8" />
           </div>
         </section>
       )}

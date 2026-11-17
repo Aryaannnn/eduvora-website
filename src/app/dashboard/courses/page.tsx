@@ -12,6 +12,7 @@ import { formatBytes } from "@/lib/product-files";
 import { siteConfig } from "@/config/site";
 import PdfButtons from "@/components/files/PdfButtons";
 import SubjectFiles from "@/components/files/SubjectFiles";
+import SubjectTabs from "@/components/files/SubjectTabs";
 import { byProduct, loadStudentFiles } from "@/lib/student-files";
 
 export const metadata: Metadata = { title: "My Courses & Material" };
@@ -123,7 +124,7 @@ async function CoursesContent({ searchParams }: { searchParams: PageProps<"/dash
                     {siteConfig.inWebsiteReader ? (
                       <FileList files={filesOf.get(c.products!.id)} itemTitle={c.products!.title} suggestion={suggestionFor(c)} />
                     ) : (
-                      <SubjectFiles files={filesOf.get(c.products!.id)} title={c.products!.title} empty="Course PDFs will appear here — Open or Download each one." />
+                      <SubjectTabs files={filesOf.get(c.products!.id) ?? []} title={c.products!.title} />
                     )}
                     {withQB.has(c.products!.id) && (
                       <Link href="/dashboard/question-bank" className="btn-accent mt-3 !px-4 !py-2 text-sm">Included: Question Bank (PCM) →</Link>

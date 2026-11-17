@@ -3,10 +3,10 @@
 // refreshed whenever files change in Admin → Products).
 import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
-import { PDF_SUBJECTS } from "./product-files";
+import { PDF_SUBJECTS, type PdfSubject } from "./product-files";
 import { getAdminSupabase } from "./supabase/admin";
 
-export type FileSummary = { pdfs: number; subjects: string[]; text: string };
+export type FileSummary = { pdfs: number; subjects: string[]; bySubject: Record<PdfSubject, number>; text: string };
 
 export async function getFileSummary(productId: string): Promise<FileSummary | null> {
   "use cache";
@@ -17,9 +17,11 @@ export async function getFileSummary(productId: string): Promise<FileSummary | n
   const q = (cols: string) => db.from("product_files").select(cols).eq("product_id", productId).eq("file_type", "pdf");
   let { data, error } = await q("subject");
   if (error) ({ data, error } = await q("id")); // SQL not run yet → count only
-  if (error || !data?.length) return null;
-  const rows = data as unknown as { subject?: string | null }[];
-  const subjects = PDF_SUBJECTS.filter((s) => rows.some((r) => r.subject === s.id)).map((s) => s.label);
+  if (error) return null;
+  const rows = (data ?? []) as unknown as { subject?: string | null }[];
+  const bySubject = { physics: 0, chemistry: 0, mathematics: 0 } as Record<PdfSubject, number>;
+  for (const r of rows) if (r.subject && r.subject in bySubject) bySubject[r.subject as PdfSubject]++;
+  const subjects = PDF_SUBJECTS.filter((s) => bySubject[s.id] > 0).map((s) => s.label);
   const pdfs = rows.length;
-  return { pdfs, subjects, text: `${pdfs} PDF${pdfs === 1 ? "" : "s"}${subjects.length ? ` · ${subjects.join(", ")}` : ""}` };
+  return { pdfs, subjects, bySubject, text: pdfs ? `${pdfs} PDF${pdfs === 1 ? "" : "s"}${subjects.length ? ` · ${subjects.join(", ")}` : ""}` : "" };
 }

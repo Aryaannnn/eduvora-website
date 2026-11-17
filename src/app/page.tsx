@@ -4,7 +4,7 @@ import Link from "next/link";
 import JsonLd from "@/components/seo/JsonLd";
 import { faqLd, pageMeta } from "@/lib/seo";
 import Accordion from "@/components/Accordion";
-import CourseCard from "@/components/cards/CourseCard";
+import CourseGrid from "@/components/courses/CourseGrid";
 import MaterialCard from "@/components/cards/MaterialCard";
 import TestCard from "@/components/cards/TestCard";
 import EmptyState from "@/components/EmptyState";
@@ -25,7 +25,7 @@ import Reveal from "@/components/Reveal";
 import SectionHeading from "@/components/SectionHeading";
 import { faqs } from "@/data/misc";
 import HomePredictor from "@/components/predictor/HomePredictor";
-import { getApprovedReviews, getProducts, getVideoTestimonials } from "@/lib/data";
+import { getApprovedReviews, getCourses, getProducts, getVideoTestimonials } from "@/lib/data";
 import VideoTestimonials from "@/components/reviews/VideoTestimonials";
 import { getFreeResources } from "@/lib/free-resources";
 import { getNextDates } from "@/lib/important-dates";
@@ -43,7 +43,7 @@ export default async function Home() {
   // All of this comes from Supabase (cached for a few minutes)
   const [materials, courses, mockTests, papers, reviews, free, nextDates, videos] = await Promise.all([
     getProducts("study_material"),
-    getProducts("crash_course"),
+    getCourses(),
     getProducts("mock_test"),
     getProducts("previous_paper"),
     getApprovedReviews(),
@@ -133,15 +133,8 @@ export default async function Home() {
       {/* 10. Crash courses */}
       <section className="section">
         <div className="container-page">
-          <SectionHeader eyebrow="Crash courses" title="Revise smart. Score higher." subtitle="Short, focused programmes built only for VITEEE." href="/courses" linkText="All courses" />
-          {courses.length ? (
-            <>
-              <div className="mt-12 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-                {courses.slice(0, 4).map((c, i) => <Reveal key={c.id} delay={i * 80} className={hideOnPhone(i, "md")}><CourseCard course={c} /></Reveal>)}
-              </div>
-              <MobileViewAll total={courses.length} href="/courses" label="View all courses" bp="md" />
-            </>
-          ) : <div className="mt-10"><EmptyState what="courses" /></div>}
+          <SectionHeader eyebrow="Crash courses" title="VITEEE Crash Courses" subtitle="60, 45, 30 or 10 days — Physics, Chemistry and Mathematics in every course." href="/courses" linkText="All courses" />
+          <CourseGrid courses={courses} className="mt-8 sm:mt-12" />
         </div>
       </section>
 

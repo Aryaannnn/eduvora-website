@@ -5,7 +5,7 @@
 // While PRE_LAUNCH is on, pages still say "noindex", so nothing is shown in Google yet.
 import type { MetadataRoute } from "next";
 import { getPublishedPosts } from "@/lib/blog";
-import { getProducts, getSuccessStories } from "@/lib/data";
+import { getCourses, getProducts, getSuccessStories } from "@/lib/data";
 import { SITE_URL } from "@/lib/site-url";
 import { siteConfig } from "@/config/site";
 
@@ -17,7 +17,7 @@ const STATIC = [
 ];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [posts, courses, stories] = await Promise.all([siteConfig.showBlog ? getPublishedPosts() : Promise.resolve([]), getProducts("crash_course"), getSuccessStories()]);
+  const [posts, courses, stories] = await Promise.all([siteConfig.showBlog ? getPublishedPosts() : Promise.resolve([]), getCourses(), getSuccessStories()]);
   return [
     ...(stories.length ? [{ url: `${SITE_URL}/success-stories`, changeFrequency: "weekly" as const, priority: 0.6 }] : []),
     ...STATIC.map((p) => ({ url: `${SITE_URL}${p}`, changeFrequency: (p === "" || p === "/blog" || p === "/important-dates" ? "daily" : "weekly") as "daily" | "weekly", priority: p === "" ? 1 : p === "/blog" ? 0.8 : 0.6 })),
