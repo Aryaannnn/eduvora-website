@@ -9,7 +9,6 @@ import { getContactAccess } from "@/lib/contact";
 import { requireUser } from "@/lib/dashboard";
 import { formatDateTime, formatPrice } from "@/lib/format";
 import { creditsLine, getCredits } from "@/lib/packages";
-import ProductPdfs from "@/components/files/ProductPdfs";
 
 export const metadata: Metadata = { title: "Payment Successful", robots: { index: false } };
 
@@ -133,7 +132,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/payment-suc
           {isPackage ? (
             <Link href="/book-a-slot" className="btn-accent flex-1 !py-3.5 text-base">Book Your First Session</Link>
           ) : (
-            <Link href="/dashboard/courses" className="btn-primary flex-1 !py-3.5 text-base">Go to Dashboard</Link>
+            <Link href={order?.product_id ? `/dashboard/courses?open=${order.product_id}#item-${order.product_id}` : "/dashboard/courses"} className="btn-primary flex-1 !py-3.5 text-base">Go to My Courses</Link>
           )}
           {!free && order?.invoice_number && (
             <a href={`/api/invoices/${order.id}`} download className="btn-light flex-1 !py-3.5">Download invoice (PDF)</a>
@@ -141,8 +140,14 @@ async function Content({ searchParams }: { searchParams: PageProps<"/payment-suc
         </div>
       </div>
 
-      {/* The PDFs of what they just bought: Open PDF / Download (personal watermarked copies) */}
-      {order?.status === "paid" && order.product_id && <ProductPdfs productId={order.product_id} />}
+      {/* No PDF buttons here — the material is opened / downloaded only in My Courses */}
+      {order?.status === "paid" && order.product_id && !isPackage && (
+        <div className="mt-6 rounded-3xl bg-emerald-50 p-6 text-center ring-1 ring-emerald-200">
+          <p className="text-lg font-extrabold text-emerald-900">Your course is ready in My Courses</p>
+          <p className="mt-1 text-sm text-emerald-800">Open or download every PDF there — your personal copy, watermarked with your name.</p>
+          <Link href={`/dashboard/courses?open=${order.product_id}#item-${order.product_id}`} className="btn-primary mt-4">Go to My Courses</Link>
+        </div>
+      )}
 
       {/* The number (Call + WhatsApp): Open mode = everyone, Private mode = paid students */}
       {access.unlocked && !free && <DirectContact paidOnly />}

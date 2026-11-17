@@ -1,8 +1,10 @@
-// GET /api/guide/<request id> — opens the free guide (link from the popup and the email).
-// The link works for 30 days. Material is READ ONLINE ONLY: the guide opens in the
-// secure reader (/dashboard/read/<file>) after a quick free login / sign-up.
+// GET /api/guide/<request id> — the free guide (link from the popup and the email).
+// The link works for 30 days. After a quick free login / sign-up the guide is
+// unlocked into Dashboard → My Courses & Material, which opens with it — the only
+// place to open or download PDFs (watermarked with the student's name).
 import { NextResponse, type NextRequest } from "next/server";
-import { siteConfig } from "@/config/site";
+import { getSession } from "@/lib/dashboard";
+import { unlockFreeProduct } from "@/lib/free-resources";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 
 const DAYS = 30;
@@ -16,11 +18,12 @@ export async function GET(request: NextRequest, ctx: RouteContext<"/api/guide/[i
   const { data: r } = await db.from("guide_requests").select("id,product_id,created_at,downloads").eq("id", id).maybeSingle();
   if (!r?.product_id) return back("invalid");
   if (Date.now() - new Date(r.created_at as string).getTime() > DAYS * 86_400_000) return back("expired");
-  const { data: f } = await db.from("product_files").select("id").eq("product_id", r.product_id).eq("file_type", "pdf").order("sort_order").order("created_at").limit(1).maybeSingle();
-  if (!f) return back("unavailable");
+  const session = await getSession();
+  if (!session) return NextResponse.redirect(new URL(`/login?next=${encodeURIComponent(`/api/guide/${id}`)}`, request.url), 302);
+  const productId = r.product_id as string;
+  if (!(await unlockFreeProduct(db, session.user.id, productId))) return back("unavailable");
   await db.from("guide_requests").update({ downloads: Number(r.downloads ?? 0) + 1 }).eq("id", r.id);
-  // login first if needed; then the personal watermarked PDF (or the in-website reader if switched on)
-  const res = NextResponse.redirect(new URL(siteConfig.inWebsiteReader ? `/dashboard/read/${f.id}` : `/api/files/${f.id}?mode=open`, request.url), 302);
+  const res = NextResponse.redirect(new URL(`/dashboard/courses?unlocked=${productId}#item-${productId}`, request.url), 302);
   res.headers.set("Cache-Control", "private, no-store");
   res.headers.set("X-Robots-Tag", "noindex");
   return res;

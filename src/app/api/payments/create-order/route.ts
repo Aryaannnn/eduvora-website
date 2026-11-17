@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     .limit(1)
     .maybeSingle();
   if (owned) {
-    const redirect = product.category === "counselling_package" ? "/book-a-slot" : product.is_free ? `/dashboard/courses?unlocked=${product.id}#item-${product.id}` : "/dashboard/courses";
+    const redirect = product.category === "counselling_package" ? "/book-a-slot" : product.is_free ? `/dashboard/courses?unlocked=${product.id}#item-${product.id}` : `/dashboard/courses?open=${product.id}#item-${product.id}`;
     return json({ owned: true, redirect });
   }
 

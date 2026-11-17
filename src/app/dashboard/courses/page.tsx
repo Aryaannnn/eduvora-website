@@ -31,6 +31,8 @@ async function CoursesContent({ searchParams }: { searchParams: PageProps<"/dash
   const s = await requireUser("/dashboard/courses");
   const sp = await searchParams;
   const unlockedId = typeof sp.unlocked === "string" ? sp.unlocked : "";
+  // ?open=<product id> (Course page / payment success → "Go to My Courses"): that item highlighted
+  const focusId = unlockedId || (typeof sp.open === "string" ? sp.open : "");
   // ONLY purchases with status 'paid' are shown here
   const paid = paidOnly(await getMyPurchases(s));
   const byCat = (c: string) => paid.filter((p) => p.products!.category === c);
@@ -98,7 +100,7 @@ async function CoursesContent({ searchParams }: { searchParams: PageProps<"/dash
             <Panel title="Crash courses">
               <ul className="space-y-4">
                 {courses.map((c, i) => (
-                  <li key={c.id} id={`item-${c.products!.id}`} className={`scroll-mt-24 rounded-2xl bg-slate-50 p-4 ring-1 ${c.products!.id === unlockedId ? "ring-2 ring-emerald-400" : "ring-slate-200"}`}>
+                  <li key={c.id} id={`item-${c.products!.id}`} className={`scroll-mt-24 rounded-2xl bg-slate-50 p-4 ring-1 ${c.products!.id === focusId ? "ring-2 ring-emerald-400" : "ring-slate-200"}`}>
                     <div className="flex items-start gap-3">
                       <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-600 text-white"><RocketIcon className="h-5 w-5" /></span>
                       <div className="min-w-0 flex-1">
@@ -121,7 +123,7 @@ async function CoursesContent({ searchParams }: { searchParams: PageProps<"/dash
                     {siteConfig.inWebsiteReader ? (
                       <FileList files={filesOf.get(c.products!.id)} itemTitle={c.products!.title} suggestion={suggestionFor(c)} />
                     ) : (
-                      <SubjectFiles files={filesOf.get(c.products!.id)} title={c.products!.title} empty="Course PDFs will appear here — View or Download each one." />
+                      <SubjectFiles files={filesOf.get(c.products!.id)} title={c.products!.title} empty="Course PDFs will appear here — Open or Download each one." />
                     )}
                     {withQB.has(c.products!.id) && (
                       <Link href="/dashboard/question-bank" className="btn-accent mt-3 !px-4 !py-2 text-sm">Included: Question Bank (PCM) →</Link>
@@ -137,7 +139,7 @@ async function CoursesContent({ searchParams }: { searchParams: PageProps<"/dash
             <Panel title="Study material & previous year papers">
               <ul className="divide-y divide-slate-100">
                 {files.map((f) => (
-                  <li key={f.id} id={`item-${f.products!.id}`} className={`scroll-mt-24 py-4 first:pt-0 last:pb-0 ${f.products!.id === unlockedId ? "-mx-2 rounded-2xl px-2 ring-2 ring-emerald-400" : ""}`}>
+                  <li key={f.id} id={`item-${f.products!.id}`} className={`scroll-mt-24 py-4 first:pt-0 last:pb-0 ${f.products!.id === focusId ? "-mx-2 rounded-2xl px-2 ring-2 ring-emerald-400" : ""}`}>
                     <div className="flex items-start gap-3">
                       <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-500 text-white">
                         {f.products!.category === "study_material" ? <BookIcon className="h-5 w-5" /> : <FileIcon className="h-5 w-5" />}
@@ -156,9 +158,20 @@ async function CoursesContent({ searchParams }: { searchParams: PageProps<"/dash
 
           {hasQB && (
             <Panel title="Question Bank" action={<Link href="/dashboard/question-bank" className="text-sm font-semibold text-brand-700 hover:underline">Open Question Bank →</Link>}>
+              {questionBank.length > 0 && (
+                <ul className="mb-3 space-y-4">
+                  {questionBank.map((q) => (
+                    <li key={q.id} id={`item-${q.products!.id}`} className={`scroll-mt-24 rounded-2xl bg-slate-50 p-4 ring-1 ${q.products!.id === focusId ? "ring-2 ring-emerald-400" : "ring-slate-200"}`}>
+                      <p className="font-bold text-slate-900">{q.products!.title} {isFreeRow(q) && <FreeBadge className="ml-1 align-middle" />}</p>
+                      <p className="text-xs text-slate-500">{gotOn(q)}</p>
+                      <SubjectFiles files={filesOf.get(q.products!.id)} title={q.products!.title} empty="This opens Physics, Chemistry and Mathematics — see the full Question Bank." />
+                    </li>
+                  ))}
+                </ul>
+              )}
               <p className="text-sm text-slate-600">
-                {questionBank.length > 0 ? `Your Question Bank: ${questionBank.map((q) => q.products!.title).join(", ")}.` : "Included with your crash course."}{" "}
-                Physics, Chemistry and Mathematics PDFs by subject — <Link href="/dashboard/question-bank" className="font-semibold text-brand-700 underline">open it here</Link>.
+                {questionBank.length === 0 && "Included with your crash course. "}
+                All your Physics, Chemistry and Mathematics questions by subject — <Link href="/dashboard/question-bank" className="font-semibold text-brand-700 underline">open the Question Bank</Link>.
               </p>
             </Panel>
           )}
@@ -167,7 +180,7 @@ async function CoursesContent({ searchParams }: { searchParams: PageProps<"/dash
             <Panel title="Test packs" action={<Link href="/dashboard/tests" className="text-sm font-semibold text-brand-700 hover:underline">All my tests →</Link>}>
               <ul className="space-y-3">
                 {tests.map((t) => (
-                  <li key={t.id} id={`item-${t.products!.id}`} className={`scroll-mt-24 rounded-2xl bg-slate-50 p-4 ring-1 ${t.products!.id === unlockedId ? "ring-2 ring-emerald-400" : "ring-slate-200"}`}>
+                  <li key={t.id} id={`item-${t.products!.id}`} className={`scroll-mt-24 rounded-2xl bg-slate-50 p-4 ring-1 ${t.products!.id === focusId ? "ring-2 ring-emerald-400" : "ring-slate-200"}`}>
                     <p className="flex flex-wrap items-center gap-2 font-bold text-slate-900"><ClipboardIcon className="h-5 w-5 text-emerald-600" /> {t.products!.title} {isFreeRow(t) && <FreeBadge />}</p>
                     <FileList files={filesOf.get(t.products!.id)} itemTitle={t.products!.title} suggestion={suggestionFor(t)} />
                     <TestButtons row={t} empty="Tests will be added to this pack soon." />

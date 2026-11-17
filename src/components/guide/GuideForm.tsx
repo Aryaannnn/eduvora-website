@@ -97,7 +97,7 @@ export default function GuideForm({ title, onClose }: { title: string; onClose: 
             <h2 id="guide-title" className="mt-4 text-xl font-extrabold text-slate-900">Your guide is ready!</h2>
             <p className="mt-1.5 text-sm text-slate-600">{done.emailed ? "We've also emailed you the link." : "Open it now — the link works for 30 days. A quick free login keeps it in your dashboard."}</p>
             <a href={done.url} onClick={() => setDownloaded(true)} className="btn-accent mt-5 w-full !py-3.5 text-base">
-              <BookIcon className="h-4 w-4" /> Open {title} (PDF)
+              <BookIcon className="h-4 w-4" /> Open {title} in My Courses
             </a>
             <div className={`mt-5 rounded-2xl p-4 text-left ring-1 transition ${downloaded ? "bg-brand-50 ring-brand-200" : "bg-slate-50 ring-slate-200"}`}>
               <p className="font-bold text-slate-900">Want help with your own rank, campus or branch?</p>

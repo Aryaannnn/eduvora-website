@@ -102,7 +102,7 @@ export const builders: Record<string, (db: SupabaseClient, id: string) => Promis
   async payment_success(db, id) {
     const { inv, attachments } = await invoiceAttachment(db, id);
     if (!inv || inv.kind !== "purchase" || !inv.email) return null;
-    const { data: pr } = await db.from("purchases").select("products(category)").eq("id", id).maybeSingle();
+    const { data: pr } = await db.from("purchases").select("product_id,products(category)").eq("id", id).maybeSingle();
     if ((pr?.products as unknown as { category?: string } | null)?.category === "counselling_package") return packageEmail(db, id, inv, attachments);
     return {
       to: inv.email,
@@ -114,7 +114,7 @@ export const builders: Record<string, (db: SupabaseClient, id: string) => Promis
         body: `<p>Hi ${esc(inv.name.split(" ")[0])},</p>
 <p>Thank you! Your payment was received and <strong>${esc(inv.item)}</strong> is now unlocked in your dashboard.</p>
 ${details([["Item", inv.item], ["Amount paid", formatPrice(inv.amount)], ["Invoice number", inv.invoiceNumber], ["Payment method", inv.method], ["Date", formatDateTime(inv.date)]])}
-<p>${button("Go to Dashboard", url("/dashboard/courses"))}</p>
+<p>${button("Go to My Courses", url(pr?.product_id ? `/dashboard/courses?open=${pr.product_id}#item-${pr.product_id}` : "/dashboard/courses"))}</p>
 <p style="font-size:13px;color:#64748b">Your invoice (PDF) is attached to this email. You can also download it any time from <a href="${url("/dashboard/payments")}">Payment History</a>.</p>`,
       }),
     };
@@ -214,11 +214,11 @@ ${callBlock(b)}
       to: r.email as string,
       subject: `Your free ${title} 📘`,
       html: layout({
-        preheader: `Here is your free ${title}. Open or download it any time in the next 30 days.`,
+        preheader: `Here is your free ${title}. Open it in My Courses (free login) any time in the next 30 days.`,
         title: "Your free guide is ready 📘",
         body: `<p>Hi ${esc(first)},</p>
 <p>Thank you for your interest in EDUVORA! Here is your free <strong>${esc(title)}</strong>:</p>
-<p>${button("Get the guide (PDF)", url(`/api/guide/${r.id}`))}</p>
+<p>${button("Open it in My Courses", url(`/api/guide/${r.id}`))}</p>
 <p style="font-size:13px;color:#64748b">The link works for 30 days.</p>
 ${note(`<strong>Want help with your own rank, campus or branch?</strong><br>Send us a free enquiry and our team will call you back — no payment needed.<br><br>${button("Book a free enquiry call", url("/contact#enquiry"), "navy")}`, "gold")}
 <p style="font-size:12px;color:#94a3b8">You're getting this email because you asked for the free guide on our website. You won't get marketing emails unless you sign up.</p>`,

@@ -17,7 +17,8 @@ import { discountPercent, formatDate, formatPrice } from "@/lib/format";
 import { getSeatsLeft, seatLimitOf } from "@/lib/seats";
 import JsonLd from "@/components/seo/JsonLd";
 import { breadcrumbLd, courseLd, pageMeta } from "@/lib/seo";
-import ProductPdfs from "@/components/files/ProductPdfs";
+import EnrolledBadge from "@/components/EnrolledBadge";
+import { getFileSummary } from "@/lib/file-summary";
 
 export async function generateMetadata(props: PageProps<"/courses/[slug]">): Promise<Metadata> {
   const { slug } = await props.params;
@@ -79,7 +80,8 @@ async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
 
   const d = course.details;
   const off = discountPercent(course.price, course.original_price);
-  const [allCourses, seatsLeft] = await Promise.all([getProducts("crash_course"), getSeatsLeft(course.id, seatLimitOf(d))]);
+  // files: "45 PDFs · Physics, Chemistry, Mathematics" — a summary only (no file names, no links)
+  const [allCourses, seatsLeft, files] = await Promise.all([getProducts("crash_course"), getSeatsLeft(course.id, seatLimitOf(d)), getFileSummary(course.id)]);
   const others = allCourses.filter((c) => c.id !== course.id).slice(0, 3);
   const full = seatsLeft === 0;
   const free = course.is_free || course.price <= 0;
@@ -127,8 +129,11 @@ async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
             <span className="text-slate-400" aria-hidden>›</span>
             <Link href="/courses" className="font-medium text-slate-300 hover:text-white">Courses</Link>
           </nav>
-          {d.badge && <span className="mt-4 inline-block rounded-full bg-accent-400 px-3 py-1 text-xs font-bold text-slate-900">{d.badge}</span>}
-          <h1 className="mt-4 max-w-3xl text-3xl font-extrabold tracking-tight sm:text-5xl">{course.title}</h1>
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            {d.badge && <span className="inline-block rounded-full bg-accent-400 px-3 py-1 text-xs font-bold text-slate-900">{d.badge}</span>}
+            <EnrolledBadge productId={course.id} />
+          </div>
+          <h1 className="mt-3 max-w-3xl text-3xl font-extrabold tracking-tight sm:text-5xl">{course.title}</h1>
           {d.short && <p className="mt-4 max-w-2xl text-slate-300 sm:text-lg">{d.short}</p>}
           {/* Start date + duration, big and clear */}
           {(d.start_date || d.duration || seatsLeft !== null) && (
@@ -156,9 +161,7 @@ async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
         </div>
       </section>
 
-      {/* Students who have access: this course's PDFs (Open PDF / Download, personal watermarked copies) */}
-      <ProductPdfs productId={course.id} className="container-page mt-8 !max-w-5xl" />
-
+      {/* No PDFs on this page — students open / download them only in Dashboard → My Courses & Material */}
       <div className="container-page grid gap-10 py-10 sm:py-14 lg:grid-cols-[1fr_23rem]">
         <aside className="lg:order-2" id="enroll">
           <div className="card p-6 shadow-xl shadow-slate-200/70 lg:sticky lg:top-24">
@@ -171,6 +174,7 @@ async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
               {d.start_date && <Fact icon={CalendarIcon} label="Start date" value={showDate(d.start_date)} />}
               {d.duration && <Fact icon={ClockIcon} label="Duration" value={d.duration} />}
               {d.mode && <Fact icon={MonitorIcon} label="Mode" value={d.mode} />}
+              {files && <Fact icon={FileIcon} label="Includes" value={files.text} />}
               {seatsLeft !== null && <Fact icon={UsersIcon} label="Seats" value={full ? "Batch full" : `${seatsLeft} left`} strong={!full && seatsLeft <= 10} />}
             </ul>
             <div className="mt-5">

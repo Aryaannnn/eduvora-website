@@ -107,6 +107,7 @@ export async function updateFileInfo(id: string, info: { subject?: string | null
   if (info.chapter !== undefined) patch.chapter = (info.chapter ?? "").trim().slice(0, 60) || null;
   const { error } = await db.from("product_files").update(patch).eq("id", id);
   if (error) return fail(/subject|chapter/.test(error.message) ? "Run supabase/courses-question-bank.sql in Supabase first." : error.message);
+  updateTag("products"); // "45 PDFs · Physics, …" on the course page
   return { ok: true, message: "Saved." };
 }
 

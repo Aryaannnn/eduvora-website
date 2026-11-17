@@ -104,8 +104,6 @@ function QBCard({ p }: { p: Product }) {
               className={free ? "btn-accent w-full" : "btn-primary w-full"}
               trust={!free}
               free={free}
-              ownedHref="/dashboard/question-bank"
-              ownedLabel="Open Question Bank"
             />
           </div>
         </div>
