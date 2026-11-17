@@ -133,7 +133,7 @@ export default async function Home() {
       {/* 10. Crash courses */}
       <section className="section">
         <div className="container-page">
-          <SectionHeader eyebrow="Crash courses" title="VITEEE Crash Courses" subtitle="60, 45, 30 or 10 days — Physics, Chemistry and Mathematics in every course." href="/courses" linkText="All courses" />
+          <SectionHeader eyebrow="Crash courses" title="VITEEE Crash Courses" subtitle="60, 45, 30 or 10 days, plus the Formula Book — Physics, Chemistry and Mathematics in each." href="/courses" linkText="All courses" />
           <CourseGrid courses={courses} className="mt-8 sm:mt-12" />
         </div>
       </section>

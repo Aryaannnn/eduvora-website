@@ -26,7 +26,7 @@ export default async function CoursesPage() {
   return (
     <>
       <JsonLd data={breadcrumbLd([{ name: "Crash Courses", path: "/courses" }])} />
-      <PageHero eyebrow="Courses" title="VITEEE Crash Courses" subtitle="Pick the plan that fits the time you have left. Every course covers Physics, Chemistry and Mathematics." />
+      <PageHero eyebrow="Courses" title="VITEEE Crash Courses" subtitle="Pick the plan that fits the time you have left, or the Formula Book. Each covers Physics, Chemistry and Mathematics." />
       <section className="container-page py-10 sm:py-16">
         <div className="mb-6 flex flex-wrap items-center justify-center gap-2 text-xs font-semibold sm:mb-8 sm:text-sm">
           {SUBJECT_KEYS.map((k) => {

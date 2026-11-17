@@ -98,7 +98,7 @@ async function CoursesContent({ searchParams }: { searchParams: PageProps<"/dash
       ) : (
         <div className="space-y-6">
           {courses.length > 0 && (
-            <Panel title="Crash courses">
+            <Panel title="Crash courses & Formula Book">
               <ul className="space-y-4">
                 {courses.map((c, i) => (
                   <li key={c.id} id={`item-${c.products!.id}`} className={`scroll-mt-24 rounded-2xl bg-slate-50 p-4 ring-1 ${c.products!.id === focusId ? "ring-2 ring-emerald-400" : "ring-slate-200"}`}>

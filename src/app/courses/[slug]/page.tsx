@@ -20,7 +20,7 @@ import EnrolledBadge from "@/components/EnrolledBadge";
 import { getFileSummary } from "@/lib/file-summary";
 import CourseGrid from "@/components/courses/CourseGrid";
 import { SUBJECT_KEYS, SUBJECT_UI } from "@/components/courses/SubjectIcon";
-import { durationBadge } from "@/lib/courses";
+import { durationBadge, isFormulaBook } from "@/lib/courses";
 import { siteConfig } from "@/config/site";
 
 export async function generateMetadata(props: PageProps<"/courses/[slug]">): Promise<Metadata> {
@@ -87,20 +87,22 @@ async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
   const [allCourses, seatsLeft, files] = await Promise.all([getCourses(), getSeatsLeft(course.id, seatLimitOf(d)), getFileSummary(course.id)]);
   const others = allCourses.filter((c) => c.id !== course.id).slice(0, 3);
   const badge = durationBadge(course.slug, d.duration);
+  const book = isFormulaBook(course.slug); // the Formula Book: "Buy Now", "book" wording
+  const item = book ? "Formula Book" : "course";
   const hasOriginal = !!course.original_price && course.original_price > course.price;
   // Admin FAQ, or a short neutral one
   const faqs = has(d.faqs)
     ? d.faqs!
     : [
-        { q: "How do I get the PDFs?", a: "Right after your payment is confirmed, the course appears in Dashboard → My Courses & Material. Open or download each PDF there, subject by subject." },
+        { q: "How do I get the PDFs?", a: `Right after your payment is confirmed, the ${item} appears in Dashboard → My Courses & Material. Open or download each PDF there, subject by subject.` },
         { q: "Are the PDFs personal?", a: "Yes. Every PDF is watermarked with your name, email and phone number and is for your own study only — please don't share it." },
         { q: "Can I study on my phone?", a: "Yes. Open a PDF in your browser, or download it to your phone or laptop." },
-        { q: "What if I can't access the course?", a: `Contact us with your Payment ID and we'll fix it. ${siteConfig.refunds.digitalNote}` },
+        { q: `What if I can't access the ${item}?`, a: `Contact us with your Payment ID and we'll fix it. ${siteConfig.refunds.digitalNote}` },
       ];
   const full = seatsLeft === 0;
   const free = course.is_free || course.price <= 0;
   const priceText = free ? "Free" : formatPrice(course.price);
-  const enrollLabel = free ? "Enroll Free" : "Enroll Now";
+  const enrollLabel = free ? (book ? "Get it Free" : "Enroll Free") : book ? "Buy Now" : "Enroll Now";
   const delivery = [
     d.delivery?.live && { icon: VideoIcon, title: "Live classes", text: d.delivery.live },
     d.delivery?.recording && { icon: MonitorIcon, title: "Recordings", text: d.delivery.recording },
@@ -240,7 +242,7 @@ async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
             )}
           </Section>
           {course.description && course.description !== d.short && (
-            <Section title="About this course">
+            <Section title={book ? "About this book" : "About this course"}>
               <p className="leading-relaxed text-slate-600">{course.description}</p>
             </Section>
           )}
@@ -317,8 +319,8 @@ async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
           <Section title="How you get access">
             <ol className="grid gap-3 sm:grid-cols-3">
               {[
-                { t: "Enroll and pay", x: "Pay securely with Razorpay — UPI, cards or net banking." },
-                { t: "Open your dashboard", x: "The course appears in My Courses & Material right after payment." },
+                { t: book ? "Buy and pay" : "Enroll and pay", x: "Pay securely with Razorpay — UPI, cards or net banking." },
+                { t: "Open your dashboard", x: `The ${item} appears in My Courses & Material right after payment.` },
                 { t: "Study by subject", x: "Open or download each PDF — watermarked with your name." },
               ].map((step, i) => (
                 <li key={step.t} className="rounded-2xl bg-brand-50 p-4">
@@ -329,7 +331,7 @@ async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
               ))}
             </ol>
           </Section>
-          <Section title="Questions about this course">
+          <Section title={book ? "Questions about the Formula Book" : "Questions about this course"}>
             <Accordion items={faqs} />
             {!free && <RefundNote kind="digital" className="mt-4 !text-left" />}
           </Section>
@@ -362,7 +364,7 @@ async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
             {full ? (
               <a href="#enroll" className="btn-light h-12 w-full !rounded-xl !py-0">Batch full — see options</a>
             ) : (
-              <BuyButton productId={course.id} label={free ? "Enroll Free" : `Enroll Now – ${priceText}`} className="btn-primary h-12 w-full !rounded-xl !py-0 text-[15px]" trust={false} free={course.is_free} />
+              <BuyButton productId={course.id} label={free ? enrollLabel : `${enrollLabel} – ${priceText}`} className="btn-primary h-12 w-full !rounded-xl !py-0 text-[15px]" trust={false} free={course.is_free} />
             )}
           </div>
         </div>

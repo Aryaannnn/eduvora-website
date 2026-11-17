@@ -71,7 +71,8 @@ revoke all on public.hidden_by_four_courses from anon, authenticated;
 with hidden as (
   update public.products set is_active = false
    where is_active
-     and slug not in ('viteee-60-day-crash-course', 'viteee-45-day-crash-course', 'viteee-30-day-crash-course', 'viteee-10-day-crash-course')
+     and slug not in ('viteee-60-day-crash-course', 'viteee-45-day-crash-course', 'viteee-30-day-crash-course', 'viteee-10-day-crash-course',
+                      'viteee-formula-book')   -- the Formula Book (supabase/formula-book.sql) stays
      and (category = 'crash_course' or (category <> 'question_bank' and title ilike '%crash course%'))
   returning id, title, category
 )

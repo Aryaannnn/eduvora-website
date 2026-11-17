@@ -1,4 +1,4 @@
-// The four crash courses shown on the website, in this order (web names / slugs).
+// The four crash courses + the Formula Book shown on the website, in this order (web names / slugs).
 // ✏️ Their price, text, start date and "Visible" switch: Admin → Products.
 //    Every other crash course is hidden (supabase/four-courses.sql) — buyers keep access.
 export const COURSE_SLUGS = [
@@ -6,7 +6,11 @@ export const COURSE_SLUGS = [
   "viteee-45-day-crash-course",
   "viteee-30-day-crash-course",
   "viteee-10-day-crash-course",
+  "viteee-formula-book", // works exactly like a course (Physics / Chemistry / Mathematics PDFs)
 ] as const;
+
+export const FORMULA_BOOK_SLUG = "viteee-formula-book";
+export const isFormulaBook = (slug: string) => slug === FORMULA_BOOK_SLUG;
 
 export const isMainCourse = (slug: string) => (COURSE_SLUGS as readonly string[]).includes(slug);
 
@@ -21,6 +25,7 @@ export function inCourseOrder<T extends { slug: string }>(list: T[]): T[] {
 
 /** "viteee-60-day-crash-course" / "60 days" → "60 Days" (the badge on cards and the course page) */
 export function durationBadge(slug: string, duration?: string) {
+  if (isFormulaBook(slug)) return "Formula Book";
   const n = slug.match(/(\d+)-day/)?.[1] ?? duration?.match(/(\d+)/)?.[1];
   return n ? `${n} Days` : duration || "";
 }
