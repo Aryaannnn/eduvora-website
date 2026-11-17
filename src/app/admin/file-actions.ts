@@ -8,7 +8,7 @@
 import { randomBytes } from "node:crypto";
 import { updateTag } from "next/cache";
 import { adminOrError, isError, type ActionResult } from "@/lib/admin";
-import { checkFile, kindOf, MIME, niceName, slugName, type ProductFile } from "@/lib/product-files";
+import { checkFile, isPdfSubject, kindOf, MIME, niceName, slugName, subjectLabel, type PdfSubject, type ProductFile } from "@/lib/product-files";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import { removePages } from "@/lib/pdf-pages";
 import { clearCopiesOfFile } from "@/lib/pdf-delivery";
@@ -47,10 +47,11 @@ export async function startFileUpload(productId: string, fileName: string, size:
 }
 
 /** Step 2: the file is in storage → save it in the list (or swap it in for "Replace"). */
-export async function finishFileUpload(input: { productId: string; path: string; fileName: string; size: number; replaceId?: string }): Promise<ActionResult<{ file: ProductFile }>> {
+export async function finishFileUpload(input: { productId: string; path: string; fileName: string; size: number; replaceId?: string; subject?: string }): Promise<ActionResult<{ file: ProductFile }>> {
   const db = await adminDb();
   if ("ok" in db) return db;
   const { productId, path, fileName, size, replaceId } = input;
+  const subject = isPdfSubject(input.subject) ? input.subject : null;
   if (!isId(productId) || !path.startsWith(`${productId}/`)) return fail("Invalid upload.");
   const kind = kindOf(path);
   if (!kind) return fail("Only PDF and ZIP files are allowed.");
@@ -82,15 +83,103 @@ export async function finishFileUpload(input: { productId: string; path: string;
   const { data: last } = await db.from("product_files").select("sort_order").eq("product_id", productId).order("sort_order", { ascending: false }).limit(1);
   const { data: row, error } = await db
     .from("product_files")
-    .insert({ product_id: productId, display_name: niceName(fileName), file_path: path, file_type: kind, size_bytes: realSize, sort_order: (last?.[0]?.sort_order ?? -1) + 1 })
+    .insert({ product_id: productId, display_name: niceName(fileName), file_path: path, file_type: kind, size_bytes: realSize, sort_order: (last?.[0]?.sort_order ?? -1) + 1, ...(subject ? { subject } : {}) })
     .select("*")
     .single();
   if (error) {
     await db.storage.from(BUCKET).remove([path]);
-    return fail(/product_files/.test(error.message) ? "Run supabase/product-files.sql in Supabase first." : error.message);
+    return fail(/subject/.test(error.message) ? "Run supabase/courses-question-bank.sql in Supabase first." : /product_files/.test(error.message) ? "Run supabase/product-files.sql in Supabase first." : error.message);
   }
   await syncProductFilePath(db, productId);
   return { ok: true, data: { file: row as ProductFile } };
+}
+
+/** Subject (Physics / Chemistry / Mathematics) and chapter / day label of one PDF. */
+export async function updateFileInfo(id: string, info: { subject?: string | null; chapter?: string | null }): Promise<ActionResult> {
+  const db = await adminDb();
+  if ("ok" in db) return db;
+  if (!isId(id)) return fail("File not found.");
+  const patch: Record<string, string | null> = {};
+  if (info.subject !== undefined) {
+    if (info.subject && !isPdfSubject(info.subject)) return fail("Please choose Physics, Chemistry or Mathematics.");
+    patch.subject = info.subject || null;
+  }
+  if (info.chapter !== undefined) patch.chapter = (info.chapter ?? "").trim().slice(0, 60) || null;
+  const { error } = await db.from("product_files").update(patch).eq("id", id);
+  if (error) return fail(/subject|chapter/.test(error.message) ? "Run supabase/courses-question-bank.sql in Supabase first." : error.message);
+  return { ok: true, message: "Saved." };
+}
+
+export type FileDestination = { value: string; label: string; group: string };
+const MOVE_GROUPS: Record<string, string> = {
+  crash_course: "Crash courses",
+  question_bank: "Question Bank",
+  study_material: "Study material",
+  previous_paper: "Previous year papers",
+};
+
+/** Every place a PDF can be moved to: each crash course x subject, each Question Bank subject, study material, previous year papers. */
+export async function listFileDestinations(): Promise<ActionResult<{ destinations: FileDestination[] }>> {
+  const db = await adminDb();
+  if ("ok" in db) return db;
+  const { data, error } = await db.from("products").select("*").in("category", Object.keys(MOVE_GROUPS)).order("sort_order").order("created_at");
+  if (error) return fail(error.message);
+  const out: FileDestination[] = [];
+  for (const cat of Object.keys(MOVE_GROUPS)) {
+    for (const p of (data ?? []).filter((x) => x.category === cat)) {
+      const hidden = p.is_active ? "" : " (hidden)";
+      if (cat === "crash_course") {
+        for (const s of ["physics", "chemistry", "mathematics"] as PdfSubject[]) out.push({ value: `${p.id}:${s}`, label: `${p.title} → ${subjectLabel(s)}${hidden}`, group: MOVE_GROUPS[cat] });
+      } else if (cat === "question_bank") {
+        if (p.subject === "pcm") continue; // the bundle opens the three subject banks — PDFs live in those
+        out.push({ value: `${p.id}:${isPdfSubject(p.subject) ? p.subject : ""}`, label: `${p.title}${hidden}`, group: MOVE_GROUPS[cat] });
+      } else out.push({ value: `${p.id}:`, label: `${p.title}${p.college ? ` · ${p.college}` : ""}${hidden}`, group: MOVE_GROUPS[cat] });
+    }
+  }
+  return { ok: true, data: { destinations: out } };
+}
+
+/** Move one or more PDFs to another product (and subject). Takes effect at once; logged in the Activity Log. */
+export async function moveProductFiles(ids: string[], destination: string): Promise<ActionResult<{ moved: number }>> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const db = getAdminSupabase();
+  if (!db) return fail("SUPABASE_SERVICE_ROLE_KEY is missing in .env.local.");
+  const [toProduct = "", rawSubject] = destination.split(":");
+  const list = [...new Set(ids)].filter(isId).slice(0, 200);
+  if (!list.length) return fail("Please tick at least one PDF.");
+  if (!isId(toProduct)) return fail("Please choose where to move the PDFs.");
+  const { data: dest } = await db.from("products").select("*").eq("id", toProduct).maybeSingle();
+  if (!dest || !(dest.category in MOVE_GROUPS)) return fail("That destination doesn't exist any more.");
+  const subject: PdfSubject | null =
+    dest.category === "crash_course" ? (isPdfSubject(rawSubject) ? rawSubject : null) : dest.category === "question_bank" && isPdfSubject(dest.subject) ? dest.subject : null;
+  if (dest.category === "crash_course" && !subject) return fail("Please choose a subject for the crash course.");
+
+  const { data: files, error: fErr } = await db.from("product_files").select("id,product_id,display_name").in("id", list);
+  if (fErr) return fail(fErr.message);
+  if (!files?.length) return fail("Those PDFs were not found.");
+  const { data: last } = await db.from("product_files").select("sort_order").eq("product_id", toProduct).order("sort_order", { ascending: false }).limit(1);
+  let order = (last?.[0]?.sort_order ?? -1) + 1;
+  const fromProducts = new Set<string>();
+  for (const f of files) {
+    const patch: Record<string, unknown> = { product_id: toProduct, subject };
+    if (f.product_id !== toProduct) patch.sort_order = order++; // goes to the end of the list there
+    const { error } = await db.from("product_files").update(patch).eq("id", f.id);
+    if (error) return fail(/subject/.test(error.message) ? "Run supabase/courses-question-bank.sql in Supabase first." : error.message);
+    fromProducts.add(f.product_id as string);
+  }
+  for (const p of new Set([...fromProducts, toProduct])) await syncProductFilePath(db, p);
+
+  const { data: fromRows } = await db.from("products").select("title").in("id", [...fromProducts]);
+  const where = `${dest.title}${dest.category === "crash_course" && subject ? ` → ${subjectLabel(subject)}` : ""}`;
+  await s.supabase
+    .rpc("log_admin_event", {
+      p_action: "files.move",
+      p_summary: `Moved ${files.length} PDF${files.length === 1 ? "" : "s"} from ${(fromRows ?? []).map((r) => r.title).join(", ") || "?"} to ${where}`,
+      p_details: { files: files.map((f) => f.display_name).slice(0, 50), file_ids: files.map((f) => f.id), from: [...fromProducts], to: toProduct, subject },
+    })
+    .then(() => null, () => null);
+  return { ok: true, data: { moved: files.length }, message: `Moved ${files.length} PDF${files.length === 1 ? "" : "s"} to ${where}.` };
 }
 
 export async function renameProductFile(id: string, displayName: string): Promise<ActionResult> {
@@ -125,16 +214,6 @@ export async function reorderProductFiles(productId: string, orderedIds: string[
   }
   await syncProductFilePath(db, productId);
   return { ok: true, message: "Order saved." };
-}
-
-/** Admin preview: a 60-second link to open the PDF in the browser. */
-export async function previewProductFile(id: string): Promise<ActionResult<{ url: string }>> {
-  const db = await adminDb();
-  if ("ok" in db) return db;
-  const { data: f } = await db.from("product_files").select("file_path").eq("id", id).maybeSingle();
-  if (!f) return fail("File not found.");
-  const { data, error } = await db.storage.from(BUCKET).createSignedUrl(f.file_path, 60);
-  return error || !data ? fail("Could not open the file.") : { ok: true, data: { url: data.signedUrl } };
 }
 
 export async function listProductFiles(productId: string): Promise<ActionResult<{ files: ProductFile[] }>> {

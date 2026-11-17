@@ -63,6 +63,7 @@ const CATEGORY_LABEL: Record<string, string> = {
   previous_paper: "Previous year papers (digital)",
   mock_test: "Mock test pack (online)",
   counselling_package: "Counselling package",
+  question_bank: "Question bank (digital)",
 };
 
 // ---------------------------------------------------------------------

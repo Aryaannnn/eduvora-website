@@ -17,6 +17,7 @@ export type AdminProduct = {
   price: number; original_price: number | null; is_free: boolean; is_active: boolean; thumbnail_url: string | null;
   file_path: string | null; details: Record<string, unknown>; sort_order: number; created_at: string;
   files_count?: number; downloads?: number;
+  subject?: string | null; includes_question_bank?: boolean;
 };
 
 export type StorageInfo = { usedBytes: number | null; filesBytes: number };
@@ -26,6 +27,13 @@ const CATEGORIES: { id: ProductInput["category"]; label: string }[] = [
   { id: "study_material", label: "Study material" },
   { id: "previous_paper", label: "Previous year paper" },
   { id: "mock_test", label: "Mock / MCQ test" },
+  { id: "question_bank", label: "Question Bank" },
+];
+const QB_SUBJECTS = [
+  { id: "physics", label: "Physics" },
+  { id: "chemistry", label: "Chemistry" },
+  { id: "mathematics", label: "Mathematics" },
+  { id: "pcm", label: "PCM bundle (opens all three)" },
 ];
 const catLabel = (c: string) => CATEGORIES.find((x) => x.id === c)?.label ?? c;
 const COLLEGES = ["VIT Vellore", "VIT Chennai", "VIT-AP", "VIT Bhopal"];
@@ -175,6 +183,8 @@ function ProductForm({ product, defaultCategory, onClose, onSaved, onChanged }: 
     thumbnail_url: product?.thumbnail_url ?? "",
     sort_order: String(product?.sort_order ?? 0),
     details: JSON.stringify(product?.details ?? {}, null, 2),
+    subject: product?.subject ?? "",
+    includes_question_bank: product?.includes_question_bank ?? false,
   });
   const [links, setLinks] = useState<{ title: string; url: string }[] | null>(product ? null : []);
   const [error, setError] = useState("");
@@ -197,7 +207,8 @@ function ProductForm({ product, defaultCategory, onClose, onSaved, onChanged }: 
     setError("");
     if (product && links === null) return setError("Please wait a second — links are still loading.");
     start(async () => {
-      const res = await saveProduct({ ...f, id: productId ?? undefined, content_links: links ?? [] });
+      const { includes_question_bank, ...rest } = f;
+      const res = await saveProduct({ ...rest, id: productId ?? undefined, content_links: links ?? [], ...(f.category === "crash_course" ? { includes_question_bank } : {}) });
       if (!res.ok) return setError(res.error);
       if (!productId && res.data?.id) {
         setCreatedId(res.data.id); // keep the form open so files can be added now
@@ -221,6 +232,16 @@ function ProductForm({ product, defaultCategory, onClose, onSaved, onChanged }: 
               {CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
             </select>
           </div>
+          {f.category === "question_bank" && (
+            <div>
+              <Label htmlFor="pf-subject">Subject *</Label>
+              <select id="pf-subject" value={f.subject} onChange={(e) => set("subject", e.target.value)} className="input" required>
+                <option value="">Choose…</option>
+                {QB_SUBJECTS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+              </select>
+              <p className="mt-1 text-xs text-slate-500">Price ₹0 = free. The PCM bundle has no PDFs of its own — it opens the Physics, Chemistry and Mathematics banks.</p>
+            </div>
+          )}
           <div>
             <Label htmlFor="pf-college">College {f.category === "study_material" ? "*" : "(optional)"}</Label>
             <input id="pf-college" list="pf-colleges" value={f.college} onChange={(e) => set("college", e.target.value)} className="input" placeholder="e.g. VIT Vellore" />
@@ -237,7 +258,13 @@ function ProductForm({ product, defaultCategory, onClose, onSaved, onChanged }: 
           <div className="flex flex-wrap gap-6 sm:col-span-2">
             <Toggle checked={f.is_free} onChange={(v) => set("is_free", v)} label="Free" />
             <Toggle checked={f.is_active} onChange={(v) => set("is_active", v)} label="Visible on website" />
+            {f.category === "crash_course" && (
+              <Toggle checked={f.includes_question_bank} onChange={(v) => set("includes_question_bank", v)} label="Include Question Bank access" />
+            )}
           </div>
+          {!f.is_active && productId && (
+            <p className="text-xs text-slate-500 sm:col-span-2">Hidden: not shown or sold on the website — students who already bought it keep their access.</p>
+          )}
           <div className="sm:col-span-2">
             <Label htmlFor="pf-desc">Description</Label>
             <textarea id="pf-desc" rows={3} value={f.description} onChange={(e) => set("description", e.target.value)} className="input" />
@@ -253,7 +280,7 @@ function ProductForm({ product, defaultCategory, onClose, onSaved, onChanged }: 
           <Label>Files — PDF or ZIP (private: only students who paid can download)</Label>
           {info && <p className="mb-2 rounded-xl bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800 ring-1 ring-emerald-200">✓ {info}</p>}
           {productId ? (
-            <FilesManager productId={productId} />
+            <FilesManager productId={productId} category={f.category} />
           ) : (
             <p className="rounded-xl bg-slate-50 p-3 text-sm text-slate-600 ring-1 ring-slate-200">
               Fill in the details above and click <strong>Save</strong> — then you can add files here.

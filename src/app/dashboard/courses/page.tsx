@@ -11,6 +11,8 @@ import { getFreeResources, suggestFor, type Suggestion } from "@/lib/free-resour
 import { formatBytes } from "@/lib/product-files";
 import { siteConfig } from "@/config/site";
 import PdfButtons from "@/components/files/PdfButtons";
+import SubjectFiles from "@/components/files/SubjectFiles";
+import { byProduct, loadStudentFiles } from "@/lib/student-files";
 
 export const metadata: Metadata = { title: "My Courses & Material" };
 
@@ -35,6 +37,7 @@ async function CoursesContent({ searchParams }: { searchParams: PageProps<"/dash
   const courses = byCat("crash_course");
   const files = [...byCat("study_material"), ...byCat("previous_paper")];
   const tests = byCat("mock_test");
+  const questionBank = byCat("question_bank");
 
   // Private class links come from a Supabase function that checks payment again
   const links = await Promise.all(courses.map((c) => getProductContent(s, c.products!.id)));
@@ -43,11 +46,13 @@ async function CoursesContent({ searchParams }: { searchParams: PageProps<"/dash
   // PAID (or free) products, in the admin's order. Delivered as watermarked PDFs;
   // ZIP files can't be read in the browser, so students don't see them.
   const ids = paid.map((p) => p.products!.id);
-  const { data: fileRows } = ids.length
-    ? await s.supabase.from("product_files").select("id,product_id,display_name,file_type,size_bytes,sort_order").in("product_id", ids).eq("file_type", "pdf").order("sort_order").order("created_at")
+  const filesOf = byProduct(await loadStudentFiles(s.supabase, ids));
+  // Crash courses that also open the Question Bank
+  const { data: qbCourses } = courses.length
+    ? await s.supabase.from("products").select("id,includes_question_bank").in("id", courses.map((c) => c.products!.id))
     : { data: [] };
-  const filesOf = new Map<string, StudentFile[]>();
-  for (const f of (fileRows ?? []) as StudentFile[]) filesOf.set(f.product_id, [...(filesOf.get(f.product_id) ?? []), f]);
+  const withQB = new Set(((qbCourses ?? []) as { id: string; includes_question_bank?: boolean }[]).filter((c) => c.includes_question_bank).map((c) => c.id));
+  const hasQB = questionBank.length > 0 || withQB.size > 0;
 
   // Free tests anyone logged in can take, and paid items to suggest next to free items
   const [free, ...catalogue] = await Promise.all([
@@ -113,7 +118,14 @@ async function CoursesContent({ searchParams }: { searchParams: PageProps<"/dash
                     ) : (
                       <p className="mt-3 text-sm text-slate-500">Your class links will appear here when the batch starts.</p>
                     )}
-                    <FileList files={filesOf.get(c.products!.id)} itemTitle={c.products!.title} suggestion={suggestionFor(c)} />
+                    {siteConfig.inWebsiteReader ? (
+                      <FileList files={filesOf.get(c.products!.id)} itemTitle={c.products!.title} suggestion={suggestionFor(c)} />
+                    ) : (
+                      <SubjectFiles files={filesOf.get(c.products!.id)} title={c.products!.title} open={false} />
+                    )}
+                    {withQB.has(c.products!.id) && (
+                      <Link href="/dashboard/question-bank" className="btn-accent mt-3 !px-4 !py-2 text-sm">Included: Question Bank (PCM) →</Link>
+                    )}
                     <TestButtons row={c} />
                   </li>
                 ))}
@@ -139,6 +151,15 @@ async function CoursesContent({ searchParams }: { searchParams: PageProps<"/dash
                   </li>
                 ))}
               </ul>
+            </Panel>
+          )}
+
+          {hasQB && (
+            <Panel title="Question Bank" action={<Link href="/dashboard/question-bank" className="text-sm font-semibold text-brand-700 hover:underline">Open Question Bank →</Link>}>
+              <p className="text-sm text-slate-600">
+                {questionBank.length > 0 ? `Your Question Bank: ${questionBank.map((q) => q.products!.title).join(", ")}.` : "Included with your crash course."}{" "}
+                Physics, Chemistry and Mathematics PDFs by subject — <Link href="/dashboard/question-bank" className="font-semibold text-brand-700 underline">open it here</Link>.
+              </p>
             </Panel>
           )}
 
@@ -173,7 +194,7 @@ function TestButtons({ row, empty }: { row: PurchaseRow; empty?: string }) {
   );
 }
 
-type StudentFile = { id: string; product_id: string; display_name: string; file_type: "pdf" | "zip"; size_bytes: number; sort_order: number };
+type StudentFile = { id: string; product_id: string; display_name: string; file_type: "pdf" | "zip"; size_bytes: number; sort_order: number; chapter?: string | null };
 
 // Each file: "Open PDF" (new tab) + "Download" — the student's personal copy,
 // watermarked on the server with their name, phone and email (/api/files/<id>).

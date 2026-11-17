@@ -13,7 +13,7 @@ import type { Product, ProductCategory, Review, SiteStat } from "./types";
 
 // content_links is private, so we always list the public columns by name
 export const PRODUCT_COLUMNS =
-  "id,title,slug,description,category,college,price,original_price,is_free,thumbnail_url,file_path,details";
+  "id,title,slug,description,category,college,price,original_price,is_free,thumbnail_url,details"; // (no file_path: the storage path of originals never goes to browsers)
 const TEST_COLUMNS = "tests(id,title,type,is_free,duration_minutes,total_marks)";
 
 // Cache lifetimes: normal results vs. "something went wrong, try again soon"
@@ -42,6 +42,24 @@ export async function getProducts(category: ProductCategory): Promise<Product[]>
   if (error) return (retrySoon("getProducts", error.message), []);
   ok();
   return applyPriceLabels(productsWithoutSamples((data ?? []) as unknown as Product[])); // SAMPLE items hidden once Live
+}
+
+/** Question Bank products (visible ones) with their subject — [] until supabase/courses-question-bank.sql is run. */
+export async function getQuestionBank(): Promise<Product[]> {
+  "use cache";
+  cacheTag("products", "settings");
+  const supabase = getPublicSupabase();
+  if (!supabase) return (ok(), []);
+  const { data, error } = await supabase
+    .from("products")
+    .select(`${PRODUCT_COLUMNS},subject`)
+    .eq("category", "question_bank")
+    .eq("is_active", true)
+    .order("sort_order")
+    .order("created_at");
+  if (error) return (retrySoon("getQuestionBank", error.message), []);
+  ok();
+  return applyPriceLabels(productsWithoutSamples((data ?? []) as unknown as Product[]));
 }
 
 export async function getProductBySlug(slug: string): Promise<Product | null> {

@@ -36,15 +36,20 @@ export async function canRead(db: SupabaseClient, user: ReaderUser, fileId: stri
   const file = { id: f.id, product_id: f.product_id, display_name: f.display_name, file_path: f.file_path, file_type: f.file_type } as ReaderFile;
   if (file.file_type !== "pdf") return { error: "zip" }; // ZIPs can't be read in the browser
   if (user.isAdmin) return { file };
-  if (!product?.is_active) return { error: "not-paid" };
-  if (product.is_free) return { file };
+  // The same rule the database uses (supabase/courses-question-bank.sql): paid (also
+  // after the product was hidden), free while visible, or Question Bank via the PCM
+  // bundle / a crash course that includes it.
+  const { data: allowed, error } = await db.rpc("can_access_product", { p_user: user.id, p_product: file.product_id });
+  if (!error) return allowed === true ? { file } : { error: "not-paid" };
+  // (SQL not run yet → the old rule, but buyers of hidden products keep access)
   const { count } = await db
     .from("purchases")
     .select("id", { count: "exact", head: true })
     .eq("user_id", user.id)
     .eq("product_id", file.product_id)
     .eq("status", "paid");
-  return (count ?? 0) > 0 ? { file } : { error: "not-paid" };
+  if ((count ?? 0) > 0) return { file };
+  return product?.is_active && product.is_free ? { file } : { error: "not-paid" };
 }
 
 // ---------------------------------------------------------------- tokens

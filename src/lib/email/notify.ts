@@ -385,6 +385,7 @@ const PRODUCT_PAGE: Record<string, (slug: string) => string> = {
   previous_paper: () => "/previous-year-papers",
   mock_test: () => "/mock-tests",
   counselling_package: () => "/book-a-slot#packages",
+  question_bank: () => "/question-bank",
 };
 
 /** One friendly reminder about an unfinished payment — only if they still haven't paid. */

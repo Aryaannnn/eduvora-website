@@ -4,6 +4,9 @@
 //  ADMIN → PRODUCT FILES (PDF / ZIP)
 //  Drag & drop or "Choose files" · progress bar per file · rename ·
 //  replace · delete · preview (PDF) · drag rows to change the order.
+//  Crash courses: a subject (Physics / Chemistry / Mathematics) and a
+//  chapter / day per PDF. Any PDF: "Move to" another product (tick several
+//  to move them together) — logged in the Activity Log.
 //  Files go straight from your browser to the PRIVATE Supabase bucket
 //  using a one-time upload link from the server (admin checked there).
 // =====================================================================
@@ -11,16 +14,19 @@ import { useEffect, useRef, useState } from "react";
 import {
   deleteProductFile,
   finishFileUpload,
+  listFileDestinations,
   listProductFiles,
-  previewProductFile,
+  moveProductFiles,
   renameProductFile,
   reorderProductFiles,
   startFileUpload,
+  updateFileInfo,
+  type FileDestination,
 } from "@/app/admin/file-actions";
 import { siteConfig } from "@/config/site";
 import { processPdfPages, type PagesProgress } from "@/lib/process-pages-client";
 import { formatDateTime } from "@/lib/format";
-import { checkFile, formatBytes, type ProductFile } from "@/lib/product-files";
+import { checkFile, formatBytes, PDF_SUBJECTS, subjectLabel, type ProductFile } from "@/lib/product-files";
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/supabase/env";
 import { CheckIcon, DownloadIcon, EditIcon, TrashIcon, UploadIcon } from "../Icons";
 
@@ -60,7 +66,13 @@ const Badge = ({ kind }: { kind: "pdf" | "zip" }) => (
   <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl text-[11px] font-extrabold text-white ${kind === "pdf" ? "bg-red-500" : "bg-amber-500"}`}>{kind.toUpperCase()}</span>
 );
 
-export default function FilesManager({ productId }: { productId: string }) {
+export default function FilesManager({ productId, category = "" }: { productId: string; category?: string }) {
+  const bySubject = category === "crash_course"; // PDFs filed under Physics / Chemistry / Mathematics
+  const withChapter = category === "crash_course" || category === "question_bank";
+  const [newSubject, setNewSubject] = useState("physics");
+  const [selected, setSelected] = useState<string[]>([]);
+  const [destinations, setDestinations] = useState<FileDestination[] | null>(null);
+  const [bulkTo, setBulkTo] = useState("");
   const [files, setFiles] = useState<ProductFile[] | null>(null);
   const [uploads, setUploads] = useState<Upload[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
@@ -83,6 +95,14 @@ export default function FilesManager({ productId }: { productId: string }) {
         setErrors([r.error]);
       }
     });
+    return () => {
+      alive = false;
+    };
+  }, [productId]);
+
+  useEffect(() => {
+    let alive = true;
+    listFileDestinations().then((r) => alive && setDestinations(r.ok ? r.data?.destinations ?? [] : []));
     return () => {
       alive = false;
     };
@@ -117,7 +137,7 @@ export default function FilesManager({ productId }: { productId: string }) {
       const start = await startFileUpload(productId, file.name, file.size, file.type);
       if (!start.ok) throw new Error(start.error);
       await putWithProgress(start.data!.path, start.data!.token, file, start.data!.contentType, (p) => patchUpload(key, { progress: p }));
-      const done = await finishFileUpload({ productId, path: start.data!.path, fileName: file.name, size: file.size, replaceId });
+      const done = await finishFileUpload({ productId, path: start.data!.path, fileName: file.name, size: file.size, replaceId, subject: bySubject ? newSubject : undefined });
       if (!done.ok) throw new Error(done.error);
       const saved = done.data!.file;
       setFiles((fs) => (replaceId ? (fs ?? []).map((f) => (f.id === replaceId ? saved : f)) : [...(fs ?? []), saved]));
@@ -168,14 +188,36 @@ export default function FilesManager({ productId }: { productId: string }) {
     setRenaming(null);
   }
 
-  async function preview(f: ProductFile) {
-    const win = window.open("", "_blank"); // open now (pop-up blockers), fill in when the link is ready
-    const r = await previewProductFile(f.id);
-    if (r.ok && r.data && win) win.location.href = r.data.url;
-    else {
-      win?.close();
-      setErrors([r.ok ? "Could not open the file." : r.error]);
-    }
+  async function saveInfo(f: ProductFile, info: { subject?: string | null; chapter?: string | null }) {
+    const r = await updateFileInfo(f.id, info);
+    if (!r.ok) return setErrors([r.error]);
+    patchFile(f.id, info as Partial<ProductFile>);
+    setNotice("Saved.");
+  }
+
+  /** Move PDFs to another product / subject (asks first). */
+  async function moveTo(ids: string[], dest: string) {
+    if (!ids.length || !dest) return;
+    const where = destinations?.find((d) => d.value === dest)?.label ?? "the chosen product";
+    const names = (files ?? []).filter((f) => ids.includes(f.id)).map((f) => `• ${f.display_name}`);
+    if (!confirm(`Move ${ids.length} PDF${ids.length === 1 ? "" : "s"} to "${where}"?\n\n${names.slice(0, 10).join("\n")}${names.length > 10 ? `\n…and ${names.length - 10} more` : ""}\n\nStudents of "${where}" get ${ids.length === 1 ? "it" : "them"} at once; students of this product won't see ${ids.length === 1 ? "it" : "them"} here any more.`)) return;
+    setBusyId("move");
+    const r = await moveProductFiles(ids, dest);
+    setBusyId("");
+    if (!r.ok) return setErrors([r.error]);
+    setErrors([]);
+    const [toProduct, sub] = dest.split(":");
+    if (toProduct === productId) setFiles((fs) => (fs ?? []).map((f) => (ids.includes(f.id) ? { ...f, subject: (sub || null) as ProductFile["subject"] } : f)));
+    else setFiles((fs) => (fs ?? []).filter((f) => !ids.includes(f.id)));
+    setSelected([]);
+    setBulkTo("");
+    setNotice(r.message ?? "Moved.");
+  }
+  const toggle = (id: string) => setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
+
+  // Preview = exactly what a student gets: a watermarked copy (with the admin's own details). Never the original.
+  function preview(f: ProductFile) {
+    window.open(`/api/files/${f.id}?mode=open`, "_blank", "noopener");
   }
 
   async function saveOrder(next: ProductFile[]) {
@@ -218,7 +260,16 @@ export default function FilesManager({ productId }: { productId: string }) {
         <UploadIcon className="mx-auto h-7 w-7 text-brand-600" />
         <p className="mt-2 text-sm font-semibold text-slate-700">Drag &amp; drop PDF files here</p>
         <p className="text-xs text-slate-500">or</p>
+        {bySubject && (
+          <label className="mt-2 flex items-center justify-center gap-2 text-sm font-semibold text-slate-700">
+            Subject for new PDFs:
+            <select value={newSubject} onChange={(e) => setNewSubject(e.target.value)} className="input !w-auto !py-1.5 text-sm" aria-label="Subject for new PDFs">
+              {PDF_SUBJECTS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+            </select>
+          </label>
+        )}
         <button type="button" onClick={() => chooser.current?.click()} className="btn-primary mt-2 !px-4 !py-2 text-sm">Choose files</button>
+        {bySubject && <p className="mt-1 text-xs text-slate-500">You can change the subject of each PDF after uploading.</p>}
         <p className="mt-3 text-xs text-slate-500">
           PDF (.pdf) · <strong>max {siteConfig.uploads.maxFileMB} MB per file</strong> · you can select several at once · private, buyers only
         </p>
@@ -258,6 +309,24 @@ export default function FilesManager({ productId }: { productId: string }) {
         </ul>
       )}
 
+      {/* Ticked PDFs → move them together */}
+      {files && files.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl bg-slate-50 p-2.5 text-sm ring-1 ring-slate-200">
+          <label className="flex items-center gap-2 font-semibold text-slate-700">
+            <input type="checkbox" checked={selected.length === files.length} onChange={(e) => setSelected(e.target.checked ? files.map((f) => f.id) : [])} aria-label="Tick all PDFs" />
+            {selected.length ? `${selected.length} ticked` : "Tick all"}
+          </label>
+          {selected.length > 0 && (
+            <>
+              <DestinationSelect value={bulkTo} onChange={setBulkTo} destinations={destinations} label="Move ticked PDFs to" />
+              <button type="button" disabled={!bulkTo || busyId === "move"} onClick={() => void moveTo(selected, bulkTo)} className="btn-primary !px-3 !py-1.5 text-xs disabled:opacity-50">
+                {busyId === "move" ? "Moving…" : `Move ${selected.length}`}
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
       {/* Uploaded files */}
       {files === null ? (
         <p className="text-sm text-slate-500">Loading files…</p>
@@ -279,6 +348,7 @@ export default function FilesManager({ productId }: { productId: string }) {
               }}
               className={`flex flex-wrap items-center gap-3 rounded-xl bg-white p-3 ring-1 transition ${dragId === f.id ? "opacity-50 ring-brand-400" : "ring-slate-200"}`}
             >
+              <input type="checkbox" checked={selected.includes(f.id)} onChange={() => toggle(f.id)} aria-label={`Tick ${f.display_name}`} />
               <span className="cursor-grab select-none text-lg leading-none text-slate-300" title="Drag to reorder" aria-hidden>⋮⋮</span>
               <Badge kind={f.file_type} />
               <div className="min-w-0 flex-1">
@@ -292,8 +362,35 @@ export default function FilesManager({ productId }: { productId: string }) {
                 ) : (
                   <p className="truncate font-semibold text-slate-900">{f.display_name}</p>
                 )}
+                {(bySubject || withChapter) && (
+                  <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                    {bySubject && (
+                      <select
+                        value={f.subject ?? ""}
+                        onChange={(e) => void saveInfo(f, { subject: e.target.value || null })}
+                        className={`input !w-auto !py-1 text-xs ${f.subject ? "" : "!ring-amber-400"}`}
+                        aria-label={`Subject of ${f.display_name}`}
+                      >
+                        <option value="">Subject…</option>
+                        {PDF_SUBJECTS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+                      </select>
+                    )}
+                    {withChapter && (
+                      <input
+                        key={`${f.id}-${f.chapter ?? ""}`}
+                        defaultValue={f.chapter ?? ""}
+                        maxLength={60}
+                        placeholder="Chapter / Day (optional)"
+                        onBlur={(e) => e.target.value.trim() !== (f.chapter ?? "") && void saveInfo(f, { chapter: e.target.value.trim() || null })}
+                        className="input !w-48 !py-1 text-xs"
+                        aria-label={`Chapter or day of ${f.display_name}`}
+                      />
+                    )}
+                    {bySubject && !f.subject && <span className="text-[11px] font-semibold text-amber-700">Choose a subject (shown under &ldquo;Other&rdquo; until then)</span>}
+                  </div>
+                )}
                 <p className="text-xs text-slate-500">
-                  {f.file_type.toUpperCase()} · {formatBytes(Number(f.size_bytes))} · added {formatDateTime(f.created_at)}{f.download_count ? <> · <DownloadIcon className="inline h-3 w-3" /> {f.download_count} old download{f.download_count === 1 ? "" : "s"}</> : null}
+                  {bySubject && f.subject ? `${subjectLabel(f.subject)} · ` : ""}{f.file_type.toUpperCase()} · {formatBytes(Number(f.size_bytes))} · added {formatDateTime(f.created_at)}{f.download_count ? <> · <DownloadIcon className="inline h-3 w-3" /> {f.download_count} old download{f.download_count === 1 ? "" : "s"}</> : null}
                 </p>
                 {f.file_type === "pdf" && siteConfig.inWebsiteReader && <PagesStatus f={f} progress={preparing[f.id]} />}
                 {f.file_type === "pdf" && !siteConfig.inWebsiteReader && <p className="mt-1 text-xs font-semibold text-emerald-700">✓ Students get Open PDF + Download (their own watermarked copy)</p>}
@@ -301,7 +398,7 @@ export default function FilesManager({ productId }: { productId: string }) {
               <div className="flex flex-wrap gap-1.5">
                 <button type="button" onClick={() => move(i, i - 1)} disabled={i === 0} className="btn-light !px-2 !py-1 text-xs disabled:opacity-30" aria-label="Move up">↑</button>
                 <button type="button" onClick={() => move(i, i + 1)} disabled={i === files.length - 1} className="btn-light !px-2 !py-1 text-xs disabled:opacity-30" aria-label="Move down">↓</button>
-                {f.file_type === "pdf" && <button type="button" onClick={() => void preview(f)} className="btn-light !px-2.5 !py-1 text-xs">Preview</button>}
+                {f.file_type === "pdf" && <button type="button" onClick={() => preview(f)} className="btn-light !px-2.5 !py-1 text-xs">Preview</button>}
                 {f.file_type === "pdf" && siteConfig.inWebsiteReader && (
                   <button type="button" disabled={!!preparing[f.id]} onClick={() => void preparePages(f.id)} className="btn-light !px-2.5 !py-1 text-xs disabled:opacity-50" title="Turn the pages into pictures for the reader again">
                     {preparing[f.id] ? "Preparing…" : "Re-process"}
@@ -310,6 +407,7 @@ export default function FilesManager({ productId }: { productId: string }) {
                 <button type="button" onClick={() => setRenaming({ id: f.id, name: f.display_name })} className="btn-light !px-2.5 !py-1 text-xs"><EditIcon className="h-3.5 w-3.5" /> Rename</button>
                 <button type="button" onClick={() => { replaceTarget.current = f.id; replacer.current?.click(); }} className="btn-light !px-2.5 !py-1 text-xs"><UploadIcon className="h-3.5 w-3.5" /> Replace</button>
                 <button type="button" disabled={busyId === f.id} onClick={() => void remove(f)} className="btn-light !px-2.5 !py-1 text-xs !text-red-600 disabled:opacity-50"><TrashIcon className="h-3.5 w-3.5" /> Delete</button>
+                <DestinationSelect value="" onChange={(v) => void moveTo([f.id], v)} destinations={destinations} label={`Move ${f.display_name} to`} compact />
               </div>
             </li>
           ))}
@@ -317,6 +415,21 @@ export default function FilesManager({ productId }: { productId: string }) {
       )}
       {files && files.length > 1 && <p className="text-xs text-slate-500">Tip: drag the ⋮⋮ handle (or use ↑ ↓) to change the order students see.</p>}
     </div>
+  );
+}
+
+/** "Move to…" — every crash course × subject, Question Bank subject, study material and previous year paper. */
+function DestinationSelect({ value, onChange, destinations, label, compact }: { value: string; onChange: (v: string) => void; destinations: FileDestination[] | null; label: string; compact?: boolean }) {
+  const groups = [...new Set((destinations ?? []).map((d) => d.group))];
+  return (
+    <select value={value} onChange={(e) => onChange(e.target.value)} disabled={!destinations} className={`input !w-auto !py-1 text-xs ${compact ? "max-w-[9rem]" : "max-w-xs"}`} aria-label={label}>
+      <option value="">{destinations ? "Move to…" : "Loading…"}</option>
+      {groups.map((g) => (
+        <optgroup key={g} label={g}>
+          {destinations!.filter((d) => d.group === g).map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
+        </optgroup>
+      ))}
+    </select>
   );
 }
 

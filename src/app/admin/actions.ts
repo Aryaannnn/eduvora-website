@@ -33,8 +33,12 @@ export type ProductInput = {
   title: string;
   slug?: string;
   description?: string;
-  category: "crash_course" | "study_material" | "previous_paper" | "mock_test";
+  category: "crash_course" | "study_material" | "previous_paper" | "mock_test" | "question_bank";
   college?: string;
+  /** Question Bank: physics / chemistry / mathematics / pcm (bundle) */
+  subject?: string;
+  /** Crash course: buyers also get the whole Question Bank */
+  includes_question_bank?: boolean;
   price: number | string;
   original_price?: number | string | null;
   is_free: boolean;
@@ -52,7 +56,8 @@ export async function saveProduct(input: ProductInput): Promise<ActionResult<{ i
 
   const title = input.title?.trim();
   if (!title) return fail("Please enter a title.");
-  if (!["crash_course", "study_material", "previous_paper", "mock_test"].includes(input.category)) return fail("Please choose a category.");
+  if (!["crash_course", "study_material", "previous_paper", "mock_test", "question_bank"].includes(input.category)) return fail("Please choose a category.");
+  if (input.category === "question_bank" && !["physics", "chemistry", "mathematics", "pcm"].includes(input.subject ?? "")) return fail("Please choose the Question Bank subject (Physics, Chemistry, Mathematics or PCM bundle).");
   const price = input.is_free ? 0 : int(input.price);
   if (price === null || Number.isNaN(price) || price < 0) return fail("Please enter a valid price in rupees.");
   const original = int(input.original_price);
@@ -86,7 +91,7 @@ export async function saveProduct(input: ProductInput): Promise<ActionResult<{ i
     college: input.college?.trim() || null,
     price,
     original_price: original,
-    is_free: input.is_free,
+    is_free: input.is_free || (input.category === "question_bank" && price === 0), // Question Bank at ₹0 = free
     is_active: input.is_active,
     thumbnail_url: thumb,
     // file_path is kept up to date by the Files section (file-actions.ts) — only set it if given
@@ -94,17 +99,22 @@ export async function saveProduct(input: ProductInput): Promise<ActionResult<{ i
     content_links: links.map((l, i) => ({ title: l.title?.trim() || `Link ${i + 1}`, url: l.url.trim() })),
     sort_order: int(input.sort_order) ?? 0,
     ...(details ? { details } : {}),
+    // (columns from supabase/courses-question-bank.sql — only sent when they matter, so other products save without it)
+    ...(input.category === "question_bank" ? { subject: input.subject } : {}),
+    ...(input.category === "crash_course" && input.includes_question_bank !== undefined ? { includes_question_bank: !!input.includes_question_bank } : {}),
   };
   if (!row.slug) return fail("Please enter a title with letters or numbers.");
+  const qbSql = (e: { message: string } | null) =>
+    e && /question_bank|includes_question_bank|subject|products_category_check/.test(e.message) ? fail("Run supabase/courses-question-bank.sql in Supabase first.") : null;
 
   if (input.id) {
     const { error } = await s.supabase.from("products").update(row).eq("id", input.id);
     updateTag("products");
-    return dbResult(error, "Product saved.");
+    return qbSql(error) ?? dbResult(error, "Product saved.");
   }
   const { data: created, error } = await s.supabase.from("products").insert(row).select("id").single();
   updateTag("products");
-  if (error) return fail(friendlyDbError(error.message));
+  if (error) return qbSql(error) ?? fail(friendlyDbError(error.message));
   return { ok: true, data: { id: created.id as string }, message: "Product added — now you can add its files below." };
 }
 

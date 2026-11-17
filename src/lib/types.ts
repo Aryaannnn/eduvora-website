@@ -1,6 +1,6 @@
 // Shapes of the data that comes from Supabase (matches supabase/setup.sql)
 
-export type ProductCategory = "crash_course" | "study_material" | "previous_paper" | "mock_test" | "counselling_package";
+export type ProductCategory = "crash_course" | "study_material" | "previous_paper" | "mock_test" | "counselling_package" | "question_bank";
 
 // Extra display info stored in products.details (all optional)
 export type ProductDetails = {
@@ -48,9 +48,11 @@ export type Product = {
   original_price: number | null;
   is_free: boolean;
   thumbnail_url: string | null;
-  file_path: string | null;
+  file_path?: string | null; // server-only (admin); never in public data
   details: ProductDetails;
   tests?: TestSummary[];
+  /** Question Bank products: which subject ("pcm" = the bundle of all three) */
+  subject?: "physics" | "chemistry" | "mathematics" | "pcm" | null;
 };
 
 export type Slot = {

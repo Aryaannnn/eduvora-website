@@ -16,6 +16,7 @@ const explore = [
   { href: "/study-material", label: "Study Material" },
   { href: "/mock-tests", label: "Mock & MCQ Tests" },
   { href: "/previous-year-papers", label: "Previous Year Papers" },
+  { href: "/question-bank", label: "Question Bank" },
   { href: "/book-a-slot", label: "Book a Slot" },
 ];
 const company = [

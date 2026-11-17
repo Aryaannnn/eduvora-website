@@ -71,6 +71,7 @@ export const CATEGORY_PAGE: Record<ProductCategory, string> = {
   previous_paper: "/previous-year-papers",
   mock_test: "/mock-tests",
   counselling_package: "/book-a-slot#packages",
+  question_bank: "/question-bank",
 };
 
 export type Suggestion = { title: string; price: number; href: string; kind: "product" | "counselling" };
@@ -87,6 +88,7 @@ export function suggestFor(category: ProductCategory, paid: Pick<Product, "title
     study_material: ["study_material", "crash_course", "mock_test"],
     crash_course: ["crash_course", "mock_test", "study_material"],
     counselling_package: [],
+    question_bank: ["question_bank", "crash_course", "mock_test"],
   };
   for (const cat of order[category]) {
     const p = paid.filter((x) => x.category === cat && x.price > 0).sort((a, b) => a.price - b.price)[0];

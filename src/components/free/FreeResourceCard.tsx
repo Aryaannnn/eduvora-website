@@ -11,6 +11,7 @@ const KIND: Record<ProductCategory | "test", { label: string; icon: typeof BookI
   mock_test: { label: "Mock Test", icon: ClipboardIcon, box: "bg-emerald-500" },
   crash_course: { label: "Course", icon: RocketIcon, box: "bg-brand-600" },
   counselling_package: { label: "Counselling", icon: RocketIcon, box: "bg-brand-600" },
+  question_bank: { label: "Question Bank", icon: ClipboardIcon, box: "bg-violet-600" },
   test: { label: "Practice Test", icon: TargetIcon, box: "bg-rose-500" },
 };
 

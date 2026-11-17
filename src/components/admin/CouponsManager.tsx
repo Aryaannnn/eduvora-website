@@ -16,7 +16,7 @@ export type AdminCoupon = {
 export type CouponUse = { id: string; code: string; student: string; email: string; item: string; paid: number | null; discount: number; status: "used" | "cancelled"; at: string };
 type Product = { id: string; title: string; category: string; price: number };
 
-const CAT: Record<string, string> = { crash_course: "Courses", study_material: "Study material", previous_paper: "Papers", mock_test: "Tests", counselling_package: "Packages" };
+const CAT: Record<string, string> = { crash_course: "Courses", study_material: "Study material", previous_paper: "Papers", mock_test: "Tests", counselling_package: "Packages", question_bank: "Question Bank" };
 const istDay = (iso: string | null) => (iso ? new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date(iso)) : "");
 const offText = (c: AdminCoupon) => (c.discount_type === "percent" ? `${c.discount_value}% off${c.max_discount ? ` (max ₹${c.max_discount})` : ""}` : `₹${c.discount_value} off`);
 

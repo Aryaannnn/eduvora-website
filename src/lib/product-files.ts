@@ -21,7 +21,21 @@ export type ProductFile = {
   pages_done?: number;
   pages_bytes?: number;
   pages_error?: string | null;
+  // Crash courses / Question Bank (supabase/courses-question-bank.sql)
+  subject?: PdfSubject | null;
+  chapter?: string | null;
 };
+
+/** Subjects a PDF can be filed under (crash courses and the Question Bank) */
+export type PdfSubject = "physics" | "chemistry" | "mathematics";
+export const PDF_SUBJECTS: { id: PdfSubject; label: string }[] = [
+  { id: "physics", label: "Physics" },
+  { id: "chemistry", label: "Chemistry" },
+  { id: "mathematics", label: "Mathematics" },
+];
+export const isPdfSubject = (s: unknown): s is PdfSubject => s === "physics" || s === "chemistry" || s === "mathematics";
+/** "physics" → "Physics", "pcm" → "PCM bundle", empty → "Other" */
+export const subjectLabel = (s?: string | null) => PDF_SUBJECTS.find((x) => x.id === s)?.label ?? (s === "pcm" ? "PCM bundle" : "Other");
 
 /** "Notes.PDF" → "pdf", "Set.zip" → "zip", anything else → null */
 export function kindOf(name: string, mime = ""): FileKind | null {

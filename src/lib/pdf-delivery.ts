@@ -19,7 +19,7 @@ import { siteConfig } from "@/config/site";
 import type { Session } from "./dashboard";
 import { unlockFreeProduct } from "./free-resources";
 import { canRead, type ReaderFile } from "./reader";
-import { cleanupWatermarked, deviceId, shortCopyId, watermarkPdf } from "./watermark";
+import { cleanupWatermarked, deviceId, shortCopyId, watermarkPdf, WM_VERSION } from "./watermark";
 
 export const LINK_SECONDS = 5 * 60;
 const CACHE_DAYS = 7;
@@ -121,8 +121,13 @@ export async function deliverPdf(request: NextRequest, db: SupabaseClient, s: Se
   let storagePath = "";
   let copyId = "";
   try {
-    const { data: cached } = await db.from("pdf_copies").select("file_path,copy_id,storage_path,created_at").eq("user_id", s.user.id).eq("file_id", file.id).maybeSingle();
-    const fresh = cached && cached.file_path === file.file_path && Date.now() - new Date(cached.created_at as string).getTime() < CACHE_DAYS * 86_400_000;
+    // (if supabase/courses-question-bank.sql hasn't been run yet there is no wm_version → no cache, every copy made fresh)
+    const { data: cached } = await db.from("pdf_copies").select("file_path,copy_id,storage_path,created_at,wm_version").eq("user_id", s.user.id).eq("file_id", file.id).maybeSingle();
+    const fresh =
+      cached &&
+      cached.file_path === file.file_path &&
+      Number(cached.wm_version) >= WM_VERSION &&
+      Date.now() - new Date(cached.created_at as string).getTime() < CACHE_DAYS * 86_400_000;
     if (fresh) {
       storagePath = cached.storage_path as string;
       copyId = cached.copy_id as string;
@@ -139,7 +144,7 @@ export async function deliverPdf(request: NextRequest, db: SupabaseClient, s: Se
       storagePath = `copies/${s.user.id}/${file.id}.pdf`;
       const { error: upErr } = await db.storage.from(BUCKET).upload(storagePath, marked, { contentType: "application/pdf", upsert: true, cacheControl: "0" });
       if (upErr) throw new Error(upErr.message);
-      await db.from("pdf_copies").upsert({ user_id: s.user.id, file_id: file.id, file_path: file.file_path, copy_id: copyId, storage_path: storagePath, created_at: new Date().toISOString() });
+      await db.from("pdf_copies").upsert({ user_id: s.user.id, file_id: file.id, file_path: file.file_path, copy_id: copyId, storage_path: storagePath, created_at: new Date().toISOString(), wm_version: WM_VERSION });
     }
   } catch (e) {
     console.warn("[pdf] watermark failed:", (e as Error).message);
