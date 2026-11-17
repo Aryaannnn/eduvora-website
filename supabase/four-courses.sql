@@ -72,7 +72,7 @@ with hidden as (
   update public.products set is_active = false
    where is_active
      and slug not in ('viteee-60-day-crash-course', 'viteee-45-day-crash-course', 'viteee-30-day-crash-course', 'viteee-10-day-crash-course',
-                      'viteee-formula-book')   -- the Formula Book (supabase/formula-book.sql) stays
+                      'viteee-formula-book', 'viteee-question-bank')   -- Formula Book + Question Bank stay
      and (category = 'crash_course' or (category <> 'question_bank' and title ilike '%crash course%'))
   returning id, title, category
 )

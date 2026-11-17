@@ -11,7 +11,7 @@ import { siteConfig } from "@/config/site";
 
 // Fee Calculator and Blog only when switched on (src/config/site.ts)
 const STATIC = [
-  "", "/courses", ...(siteConfig.showStudyMaterial ? ["/study-material"] : []), "/mock-tests", "/previous-year-papers", "/question-bank", "/free-resources", "/predictor", "/book-a-slot",
+  "", "/courses", ...(siteConfig.showStudyMaterial ? ["/study-material"] : []), "/mock-tests", "/previous-year-papers", "/free-resources", "/predictor", "/book-a-slot",
   "/important-dates", ...(siteConfig.showFeeCalculator ? ["/fee-calculator"] : []), ...(siteConfig.showBlog ? ["/blog"] : []),
   "/reviews", "/about", "/founder", "/parents", "/contact", "/privacy-policy", "/terms-and-conditions", "/refund-policy", "/shipping-policy",
 ];

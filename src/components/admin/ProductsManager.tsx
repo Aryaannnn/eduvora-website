@@ -27,7 +27,7 @@ const CATEGORIES: { id: ProductInput["category"]; label: string }[] = [
   { id: "study_material", label: "Study material" },
   { id: "previous_paper", label: "Previous year paper" },
   { id: "mock_test", label: "Mock / MCQ test" },
-  { id: "question_bank", label: "Question Bank" },
+  { id: "question_bank", label: "Question Bank (old, per subject)" },
 ];
 const QB_SUBJECTS = [
   { id: "physics", label: "Physics" },

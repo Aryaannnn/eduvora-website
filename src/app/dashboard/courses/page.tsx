@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { QUESTION_BANK_SLUG } from "@/lib/courses";
+import { getAdminSupabase } from "@/lib/supabase/admin";
 import Link from "next/link";
 import { Suspense } from "react";
 import { DashSkeleton, EmptyBox, PageHeader, Panel } from "@/components/dashboard/ui";
@@ -55,7 +57,19 @@ async function CoursesContent({ searchParams }: { searchParams: PageProps<"/dash
     ? await s.supabase.from("products").select("id,includes_question_bank").in("id", courses.map((c) => c.products!.id))
     : { data: [] };
   const withQB = new Set(((qbCourses ?? []) as { id: string; includes_question_bank?: boolean }[]).filter((c) => c.includes_question_bank).map((c) => c.id));
-  const hasQB = questionBank.length > 0 || withQB.size > 0;
+
+  // The VITEEE Question Bank (one product). Students who got it through an EARLIER
+  // purchase (old per-subject Question Bank / PCM bundle, or a crash course that
+  // includes it) see it here too — the database decides (can_access_product).
+  const adminDb = getAdminSupabase();
+  const { data: qbProduct } = adminDb ? await adminDb.from("products").select("id,title,slug").eq("slug", QUESTION_BANK_SLUG).maybeSingle() : { data: null };
+  const qbOwned = !!qbProduct && ids.includes(qbProduct.id as string);
+  const { data: qbAllowed } = qbProduct && !qbOwned ? await s.supabase.rpc("can_access_product", { p_user: s.user.id, p_product: qbProduct.id }) : { data: false };
+  const qbIncluded = qbProduct && !qbOwned && qbAllowed === true ? (qbProduct as { id: string; title: string; slug: string }) : null;
+  const qbFiles = qbIncluded ? await loadStudentFiles(s.supabase, [qbIncluded.id]) : [];
+  const qbHref = qbProduct ? `/dashboard/courses?open=${qbProduct.id}#item-${qbProduct.id}` : "";
+  // earlier per-subject Question Bank items: only while they still hold PDFs (supabase/question-bank.sql moves them)
+  const oldQB = questionBank.filter((q) => (filesOf.get(q.products!.id) ?? []).length > 0);
 
   // Free tests anyone logged in can take, and paid items to suggest next to free items
   const [free, ...catalogue] = await Promise.all([
@@ -97,8 +111,8 @@ async function CoursesContent({ searchParams }: { searchParams: PageProps<"/dash
         <EmptyBox text="You haven't bought or unlocked anything yet. Start with our free resources — they unlock instantly." href="/free-resources" cta="See free resources" />
       ) : (
         <div className="space-y-6">
-          {courses.length > 0 && (
-            <Panel title="Crash courses & Formula Book">
+          {(courses.length > 0 || qbIncluded) && (
+            <Panel title="My courses">
               <ul className="space-y-4">
                 {courses.map((c, i) => (
                   <li key={c.id} id={`item-${c.products!.id}`} className={`scroll-mt-24 rounded-2xl bg-slate-50 p-4 ring-1 ${c.products!.id === focusId ? "ring-2 ring-emerald-400" : "ring-slate-200"}`}>
@@ -126,12 +140,24 @@ async function CoursesContent({ searchParams }: { searchParams: PageProps<"/dash
                     ) : (
                       <SubjectTabs files={filesOf.get(c.products!.id) ?? []} title={c.products!.title} />
                     )}
-                    {withQB.has(c.products!.id) && (
-                      <Link href="/dashboard/question-bank" className="btn-accent mt-3 !px-4 !py-2 text-sm">Included: Question Bank (PCM) →</Link>
+                    {withQB.has(c.products!.id) && qbHref && c.products!.id !== qbProduct?.id && (
+                      <Link href={qbHref} className="btn-accent mt-3 !px-4 !py-2 text-sm">Included: VITEEE Question Bank →</Link>
                     )}
                     <TestButtons row={c} />
                   </li>
                 ))}
+                {qbIncluded && (
+                  <li id={`item-${qbIncluded.id}`} className={`scroll-mt-24 rounded-2xl bg-slate-50 p-4 ring-1 ${qbIncluded.id === focusId ? "ring-2 ring-emerald-400" : "ring-slate-200"}`}>
+                    <div className="flex items-start gap-3">
+                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-600 text-white"><ClipboardIcon className="h-5 w-5" /></span>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-slate-900">{qbIncluded.title}</p>
+                        <p className="text-xs text-slate-500">Included with your earlier purchase</p>
+                      </div>
+                    </div>
+                    <SubjectTabs files={qbFiles} title={qbIncluded.title} />
+                  </li>
+                )}
               </ul>
             </Panel>
           )}
@@ -157,23 +183,17 @@ async function CoursesContent({ searchParams }: { searchParams: PageProps<"/dash
             </Panel>
           )}
 
-          {hasQB && (
-            <Panel title="Question Bank" action={<Link href="/dashboard/question-bank" className="text-sm font-semibold text-brand-700 hover:underline">Open Question Bank →</Link>}>
-              {questionBank.length > 0 && (
-                <ul className="mb-3 space-y-4">
-                  {questionBank.map((q) => (
-                    <li key={q.id} id={`item-${q.products!.id}`} className={`scroll-mt-24 rounded-2xl bg-slate-50 p-4 ring-1 ${q.products!.id === focusId ? "ring-2 ring-emerald-400" : "ring-slate-200"}`}>
-                      <p className="font-bold text-slate-900">{q.products!.title} {isFreeRow(q) && <FreeBadge className="ml-1 align-middle" />}</p>
-                      <p className="text-xs text-slate-500">{gotOn(q)}</p>
-                      <SubjectFiles files={filesOf.get(q.products!.id)} title={q.products!.title} empty="This opens Physics, Chemistry and Mathematics — see the full Question Bank." />
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <p className="text-sm text-slate-600">
-                {questionBank.length === 0 && "Included with your crash course. "}
-                All your Physics, Chemistry and Mathematics questions by subject — <Link href="/dashboard/question-bank" className="font-semibold text-brand-700 underline">open the Question Bank</Link>.
-              </p>
+          {oldQB.length > 0 && (
+            <Panel title="Question Bank">
+              <ul className="space-y-4">
+                {oldQB.map((q) => (
+                  <li key={q.id} id={`item-${q.products!.id}`} className={`scroll-mt-24 rounded-2xl bg-slate-50 p-4 ring-1 ${q.products!.id === focusId ? "ring-2 ring-emerald-400" : "ring-slate-200"}`}>
+                    <p className="font-bold text-slate-900">{q.products!.title} {isFreeRow(q) && <FreeBadge className="ml-1 align-middle" />}</p>
+                    <p className="text-xs text-slate-500">{gotOn(q)}</p>
+                    <SubjectFiles files={filesOf.get(q.products!.id)} title={q.products!.title} />
+                  </li>
+                ))}
+              </ul>
             </Panel>
           )}
 

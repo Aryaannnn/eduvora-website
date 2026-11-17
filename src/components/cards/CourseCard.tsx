@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { durationBadge, isFormulaBook } from "@/lib/courses";
+import { durationBadge, enrollLabel } from "@/lib/courses";
 import type { FileSummary } from "@/lib/file-summary";
 import { discountPercent, formatPrice } from "@/lib/format";
 import type { Product } from "@/lib/types";
@@ -60,7 +60,7 @@ export default function CourseCard({ course, files }: { course: Product; files?:
           </div>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             <Link href={`/courses/${course.slug}`} className="btn-light !px-2 !py-2 text-xs sm:text-sm">Details</Link>
-            <BuyButton productId={course.id} label={free ? (isFormulaBook(course.slug) ? "Get it Free" : "Enroll Free") : isFormulaBook(course.slug) ? "Buy Now" : "Enroll Now"} className="btn-primary w-full !px-2 !py-2 text-xs sm:text-sm" trust={false} free={course.is_free} />
+            <BuyButton productId={course.id} label={enrollLabel(free)} className="btn-primary w-full !px-2 !py-2 text-xs sm:text-sm" trust={false} free={course.is_free} />
           </div>
           {!free && <SecurePaymentNote className="mt-2.5" refundKind="digital" />}
         </div>

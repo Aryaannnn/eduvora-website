@@ -20,7 +20,7 @@ import EnrolledBadge from "@/components/EnrolledBadge";
 import { getFileSummary } from "@/lib/file-summary";
 import CourseGrid from "@/components/courses/CourseGrid";
 import { SUBJECT_KEYS, SUBJECT_UI } from "@/components/courses/SubjectIcon";
-import { durationBadge, isFormulaBook } from "@/lib/courses";
+import { durationBadge, enrollLabel as enrollText, productNoun } from "@/lib/courses";
 import { siteConfig } from "@/config/site";
 
 export async function generateMetadata(props: PageProps<"/courses/[slug]">): Promise<Metadata> {
@@ -87,8 +87,8 @@ async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
   const [allCourses, seatsLeft, files] = await Promise.all([getCourses(), getSeatsLeft(course.id, seatLimitOf(d)), getFileSummary(course.id)]);
   const others = allCourses.filter((c) => c.id !== course.id).slice(0, 3);
   const badge = durationBadge(course.slug, d.duration);
-  const book = isFormulaBook(course.slug); // the Formula Book: "Buy Now", "book" wording
-  const item = book ? "Formula Book" : "course";
+  const item = productNoun(course.slug); // "course" / "Formula Book" / "Question Bank"
+  const special = item !== "course";
   const hasOriginal = !!course.original_price && course.original_price > course.price;
   // Admin FAQ, or a short neutral one
   const faqs = has(d.faqs)
@@ -102,7 +102,7 @@ async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
   const full = seatsLeft === 0;
   const free = course.is_free || course.price <= 0;
   const priceText = free ? "Free" : formatPrice(course.price);
-  const enrollLabel = free ? (book ? "Get it Free" : "Enroll Free") : book ? "Buy Now" : "Enroll Now";
+  const enrollLabel = enrollText(free); // same text everywhere (src/lib/courses.ts)
   const delivery = [
     d.delivery?.live && { icon: VideoIcon, title: "Live classes", text: d.delivery.live },
     d.delivery?.recording && { icon: MonitorIcon, title: "Recordings", text: d.delivery.recording },
@@ -242,7 +242,7 @@ async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
             )}
           </Section>
           {course.description && course.description !== d.short && (
-            <Section title={book ? "About this book" : "About this course"}>
+            <Section title={special ? `About the ${item}` : "About this course"}>
               <p className="leading-relaxed text-slate-600">{course.description}</p>
             </Section>
           )}
@@ -319,7 +319,7 @@ async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
           <Section title="How you get access">
             <ol className="grid gap-3 sm:grid-cols-3">
               {[
-                { t: book ? "Buy and pay" : "Enroll and pay", x: "Pay securely with Razorpay — UPI, cards or net banking." },
+                { t: "Enroll and pay", x: "Pay securely with Razorpay — UPI, cards or net banking." },
                 { t: "Open your dashboard", x: `The ${item} appears in My Courses & Material right after payment.` },
                 { t: "Study by subject", x: "Open or download each PDF — watermarked with your name." },
               ].map((step, i) => (
@@ -331,7 +331,7 @@ async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
               ))}
             </ol>
           </Section>
-          <Section title={book ? "Questions about the Formula Book" : "Questions about this course"}>
+          <Section title={special ? `Questions about the ${item}` : "Questions about this course"}>
             <Accordion items={faqs} />
             {!free && <RefundNote kind="digital" className="mt-4 !text-left" />}
           </Section>

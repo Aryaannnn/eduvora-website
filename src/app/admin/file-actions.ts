@@ -113,8 +113,7 @@ export async function updateFileInfo(id: string, info: { subject?: string | null
 
 export type FileDestination = { value: string; label: string; group: string };
 const MOVE_GROUPS: Record<string, string> = {
-  crash_course: "Crash courses",
-  question_bank: "Question Bank",
+  crash_course: "Courses, Formula Book & Question Bank", // (each × Physics / Chemistry / Mathematics)
   study_material: "Study material",
   previous_paper: "Previous year papers",
 };

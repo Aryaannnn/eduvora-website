@@ -12,7 +12,6 @@ import PredictorLockBadge from "../predictor/PredictorLockBadge";
 export const dashboardLinks = [
   { href: "/dashboard", label: "Home", icon: GridIcon },
   { href: "/dashboard/courses", label: "My Courses & Material", short: "Courses", icon: BookIcon },
-  { href: "/dashboard/question-bank", label: "Question Bank", short: "Q. Bank", icon: ClipboardIcon },
   { href: "/dashboard/tests", label: "My Tests", short: "Tests", icon: ClipboardIcon },
   { href: "/dashboard/progress", label: "My Progress", short: "Progress", icon: ChartIcon },
   { href: "/dashboard/predictor", label: "Rank & College Predictor", short: "Predictor", icon: TargetIcon },
