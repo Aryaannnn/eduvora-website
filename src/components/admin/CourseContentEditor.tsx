@@ -75,7 +75,7 @@ export default function CourseContentEditor({ json, onChange }: { json: string; 
         </div>
         <div className="sm:col-span-3">
           <Label htmlFor="cc-mode">Mode (short)</Label>
-          <input id="cc-mode" defaultValue={String(d.mode ?? "")} onBlur={(e) => put({ mode: e.target.value.trim() })} className="input" placeholder="e.g. Online live + recordings" />
+          <input id="cc-mode" defaultValue={String(d.mode ?? "")} onBlur={(e) => put({ mode: e.target.value.trim() })} className="input" placeholder="e.g. PDF course (in your dashboard)" />
         </div>
       </div>
 
@@ -84,11 +84,9 @@ export default function CourseContentEditor({ json, onChange }: { json: string; 
       {area("cc-sched", "Schedule and timings", "schedule", "Mon – Sat, 7:00 – 9:00 PM IST\nSunday: full mock test, 10 AM")}
 
       <div>
-        <Label>How classes are delivered (empty = not shown)</Label>
+        <Label>How you study (empty = not shown)</Label>
         <div className="grid gap-3 sm:grid-cols-3">
           {([
-            ["live", "Live classes", "Live classes — link in your dashboard"],
-            ["recording", "Recordings", "Every class recorded, available within 24 h"],
             ["pdf", "PDF notes", "Chapter-wise PDF notes to download"],
           ] as const).map(([k, label, ph]) => (
             <div key={k}>
@@ -99,8 +97,8 @@ export default function CourseContentEditor({ json, onChange }: { json: string; 
         </div>
       </div>
 
-      {area("cc-after", "What you get after payment", "after_payment", "Instant access in My Courses\nClass links + batch group invite\nInvoice by email")}
-      {area("cc-feat", "Key features (optional)", "features", "Daily doubt solving\nWeekly mock tests")}
+      {area("cc-after", "What you get after payment", "after_payment", "Instant access in My Courses\nChapter-wise PDFs for Physics, Chemistry and Mathematics\nInvoice in your dashboard")}
+      {area("cc-feat", "Key features (optional)", "features", "Chapter-wise PDF notes\nDay-wise study plan")}
 
       <div>
         <Label>Questions about this course (FAQ)</Label>

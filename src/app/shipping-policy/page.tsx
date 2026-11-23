@@ -7,7 +7,7 @@ import { pageMeta } from "@/lib/seo";
 
 export const metadata: Metadata = pageMeta({
   title: "Shipping & Delivery Policy",
-  description: "EDUVORA sells digital services only — no physical shipping. How and when you get access to counselling, study material, tests and live batches after payment.",
+  description: "EDUVORA sells digital services only — no physical shipping. How and when you get access to counselling, PDF crash courses, study material and tests after payment.",
   path: "/shipping-policy",
 });
 
@@ -19,7 +19,7 @@ export default async function ShippingPolicyPage() {
     <LegalPage title="Shipping & Delivery Policy" path="/shipping-policy">
       <p>
         {siteConfig.businessName} provides <strong>digital services only</strong>: VITEEE counselling, study material, previous year
-        papers, mock tests and live online batches. <strong>Nothing is shipped physically</strong> — there are no delivery charges
+        papers, mock tests and PDF crash courses (Formula Book and Question Bank included). <strong>Nothing is shipped physically</strong> — there are no delivery charges
         and no courier.
       </p>
 
@@ -42,7 +42,7 @@ export default async function ShippingPolicyPage() {
           <strong>Counselling:</strong> a 30-minute one-to-one <strong>voice call</strong> at the date and time you booked (India time).{" "}
           {siteConfig.founder.name.split(" ")[0]} Sir calls you on the number you gave when booking.
         </li>
-        <li><strong>Live crash courses / batches:</strong> start on the date shown on the course page; class links appear in your dashboard.</li>
+        <li><strong>Crash courses, Formula Book and Question Bank:</strong> chapter-wise PDF notes for Physics, Chemistry and Mathematics, available in your dashboard right after payment.</li>
       </ul>
 
       <h2>3. Didn&apos;t get access?</h2>

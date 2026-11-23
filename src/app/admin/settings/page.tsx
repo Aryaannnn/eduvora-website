@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import CommunitySettingsForm from "@/components/admin/CommunitySettingsForm";
 import ExportDataCard from "@/components/admin/ExportDataCard";
+import ClaimWatcher from "@/components/admin/ClaimWatcher";
 import GoogleCalendarCard from "@/components/admin/GoogleCalendarCard";
 import MaintenanceCard, { type MaintenanceState } from "@/components/admin/MaintenanceCard";
 import ReferralSettingsForm from "@/components/admin/ReferralSettingsForm";
@@ -27,7 +28,10 @@ export const metadata: Metadata = { title: "Settings" };
 export default function SettingsPage() {
   return (
     <Suspense fallback={<DashSkeleton />}>
-      <Content />
+      {/* warns if "live class", "recorded", "lecture", "doubt" or "batch" is typed (courses are PDF-only) */}
+      <ClaimWatcher>
+        <Content />
+      </ClaimWatcher>
     </Suspense>
   );
 }

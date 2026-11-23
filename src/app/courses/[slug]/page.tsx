@@ -29,7 +29,7 @@ export async function generateMetadata(props: PageProps<"/courses/[slug]">): Pro
   const course = await getProductBySlug(slug);
   if (!course) return { title: "Course not found", robots: { index: false } };
   const raw = (course.details.short ?? course.description ?? "").trim();
-  const description = (raw.length >= 70 ? raw : `${course.title}: VITEEE crash course by EDUVORA with live classes, mock tests and doubt support. ${raw}`).slice(0, 158);
+  const description = (raw.length >= 70 ? raw : `${course.title}: VITEEE crash course by EDUVORA with chapter-wise PDF notes for Physics, Chemistry and Mathematics, available in your dashboard. ${raw}`).slice(0, 158);
   return pageMeta({ title: course.title, description, path: `/courses/${course.slug}`, ...(course.thumbnail_url ? { image: { url: course.thumbnail_url, alt: course.title } } : {}) });
 }
 
@@ -105,17 +105,15 @@ async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
   const priceText = free ? "Free" : formatPrice(course.price);
   const enrollLabel = enrollText(free); // same text everywhere (src/lib/courses.ts)
   const delivery = [
-    d.delivery?.live && { icon: VideoIcon, title: "Live classes", text: d.delivery.live },
-    d.delivery?.recording && { icon: MonitorIcon, title: "Recordings", text: d.delivery.recording },
     d.delivery?.pdf && { icon: FileIcon, title: "PDF notes", text: d.delivery.pdf },
   ].filter(Boolean) as { icon: typeof VideoIcon; title: string; text: string }[];
   const afterPayment = has(d.after_payment) ? d.after_payment! : d.includes ?? [];
 
   const fullBox = (
     <div className="rounded-xl bg-amber-50 p-3 text-center ring-1 ring-amber-200">
-      <p className="text-sm font-bold text-amber-900">This batch is full</p>
+      <p className="text-sm font-bold text-amber-900">Enrolment is full</p>
       {open ? (
-        <a href={whatsappLink(`Hi, the ${course.title} batch is full. Can I join the waiting list or the next batch?`, open.waDigits)} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1.5 text-sm font-bold text-emerald-700 underline">
+        <a href={whatsappLink(`Hi, enrolment for the ${course.title} is full. Can I join the waiting list?`, open.waDigits)} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1.5 text-sm font-bold text-emerald-700 underline">
           <WhatsAppIcon className="h-4 w-4" /> Join the waiting list
         </a>
       ) : (
@@ -181,7 +179,7 @@ async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
               {seatsLeft !== null && (
                 <li className={`flex items-center gap-2.5 rounded-2xl px-4 py-2.5 ring-1 ${full ? "bg-red-500/20 ring-red-300/40" : "bg-accent-400/20 ring-accent-300/40"}`}>
                   <UsersIcon className="h-5 w-5 text-accent-300" />
-                  <span className="font-extrabold">{full ? "Batch full" : `${seatsLeft} seat${seatsLeft === 1 ? "" : "s"} left`}</span>
+                  <span className="font-extrabold">{full ? "Enrolment full" : `${seatsLeft} seat${seatsLeft === 1 ? "" : "s"} left`}</span>
                 </li>
               )}
             </ul>
@@ -205,7 +203,7 @@ async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
               <Fact icon={LockIcon} label="Access" value={accessLabel(productAccess(course.details)).replace(/^Access:\s*|^Access\s+/, "").replace(/^until/, "Until").replace(/^Lifetime access$/, "Lifetime")} />
               {files && files.pdfs > 0 && <Fact icon={FileIcon} label="Includes" value={files.text} />}
               {plan && <Fact icon={CalendarIcon} label="Study plan" value={`Day-wise (${plan.days} days)`} />}
-              {seatsLeft !== null && <Fact icon={UsersIcon} label="Seats" value={full ? "Batch full" : `${seatsLeft} left`} strong={!full && seatsLeft <= 10} />}
+              {seatsLeft !== null && <Fact icon={UsersIcon} label="Seats" value={full ? "Enrolment full" : `${seatsLeft} left`} strong={!full && seatsLeft <= 10} />}
             </ul>
             <div className="mt-5">
               {full ? fullBox : <BuyButton productId={course.id} label={enrollLabel} className="btn-primary w-full !py-3.5 text-base" trust={false} free={course.is_free} />}
@@ -280,7 +278,7 @@ async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
             </Section>
           )}
           {has(d.schedule) && (
-            <Section title="Schedule and timings">
+            <Section title="Study schedule">
               <ul className="divide-y divide-slate-100 rounded-2xl ring-1 ring-slate-200">
                 {d.schedule!.map((x) => (
                   <li key={x} className="flex items-start gap-3 px-4 py-3 text-slate-700">
@@ -291,7 +289,7 @@ async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
             </Section>
           )}
           {delivery.length > 0 && (
-            <Section title="How classes are delivered">
+            <Section title="How you study">
               <ul className={`grid gap-3 ${delivery.length > 1 ? "sm:grid-cols-3" : ""}`}>
                 {delivery.map((x) => (
                   <li key={x.title} className="rounded-2xl p-4 ring-1 ring-slate-200">
@@ -368,7 +366,7 @@ async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
           )}
           <div className="min-w-0 flex-1">
             {full ? (
-              <a href="#enroll" className="btn-light h-12 w-full !rounded-xl !py-0">Batch full — see options</a>
+              <a href="#enroll" className="btn-light h-12 w-full !rounded-xl !py-0">Enrolment full — see options</a>
             ) : (
               <BuyButton productId={course.id} label={free ? enrollLabel : `${enrollLabel} – ${priceText}`} className="btn-primary h-12 w-full !rounded-xl !py-0 text-[15px]" trust={false} free={course.is_free} />
             )}

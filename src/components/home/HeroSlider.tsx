@@ -71,11 +71,11 @@ const slides: Slide[] = [
   {
     eyebrow: "Score higher, faster",
     title: "VITEEE Crash Courses",
-    text: "Focused live classes, smart shortcuts and daily practice to revise the full syllabus before exam day.",
+    text: "Chapter-wise PDF notes for Physics, Chemistry and Mathematics — 60, 45, 30 or 10 days, available in your dashboard.",
     cta: { label: "Explore Courses", href: "/courses" },
     icon: RocketIcon,
     color: "from-accent-400 to-accent-600",
-    points: ["Live + recorded classes", "Daily doubt solving", "Weekly mock tests"],
+    points: ["Physics, Chemistry & Maths PDFs", "Day-wise study plan", "Your personal watermarked copy"],
   },
 ];
 

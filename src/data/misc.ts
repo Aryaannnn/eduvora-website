@@ -16,6 +16,6 @@ export const faqs = [
   },
   {
     q: "Can I get a refund for a crash course?",
-    a: `For live crash courses and batches: ${siteConfig.refunds.liveBatchNote} Study material PDFs, previous year papers and mock test packs are non-refundable once you get access.`,
+    a: `Crash courses, the Formula Book, the Question Bank, study material PDFs, previous year papers and mock test packs are digital products: non-refundable once you open or download them. If you can't access something you paid for, we fix it or refund you within ${siteConfig.refunds.techIssueDays} days.`,
   },
 ];

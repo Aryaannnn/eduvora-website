@@ -36,17 +36,17 @@ export default function TermsPage() {
           counted from the date your payment is confirmed (or until the fixed date shown).
         </li>
         <li>
-          When the access period ends, the item stays listed in your dashboard as &ldquo;Access expired&rdquo;, but its PDFs, class links
-          and tests can no longer be opened or downloaded. We remind you in your dashboard 7 days before access ends. Where renewal is
+          When the access period ends, the item stays listed in your dashboard as &ldquo;Access expired&rdquo;, but its PDFs and tests can no
+          longer be opened or downloaded. We remind you in your dashboard 7 days before access ends. Where renewal is
           offered, you can renew from your dashboard; we may also extend access at our discretion.
         </li>
-        <li>We may change class timings, faculty or schedules when needed, and will inform students in advance.</li>
+        <li>We may update course content (add, replace or reorder PDFs) to keep it accurate.</li>
       </ul>
 
       <h2>4. Study material and content</h2>
       <p>
-        All notes, videos, tests and other material are our property and are for personal study only. Copying,
-        recording, selling or sharing them without written permission is not allowed.
+        All notes, PDFs, tests and other material are our property and are for personal study only. Copying,
+        capturing, selling or sharing them without written permission is not allowed.
       </p>
       <p>
         Study material, previous year papers and other PDFs are delivered as a <strong>personal PDF</strong> (open it in your
@@ -59,7 +59,7 @@ export default function TermsPage() {
 
       <h2>5. Student conduct</h2>
       <p>
-        Students must behave respectfully in classes and online groups. We may suspend or cancel access without
+        Students must behave respectfully in our online groups and calls. We may suspend or cancel access without
         refund in cases of misconduct, sharing of content or misuse of our platforms.
       </p>
 

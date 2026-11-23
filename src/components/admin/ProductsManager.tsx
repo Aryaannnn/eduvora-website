@@ -12,6 +12,7 @@ import { formatBytes } from "@/lib/product-files";
 import FilesManager from "./FilesManager";
 import StudyPlanEditor from "./StudyPlanEditor";
 import AccessEditor from "./AccessEditor";
+import ClaimWatcher from "./ClaimWatcher";
 import { AdminHeader, Label, Modal, Notice, Toggle } from "./ui";
 
 export type AdminProduct = {
@@ -222,6 +223,9 @@ function ProductForm({ product, defaultCategory, onClose, onSaved, onChanged }: 
 
   return (
     <Modal title={productId ? "Edit product" : "Add product"} onClose={onClose} wide>
+      <ClaimWatcher initialText={`${f.title}
+${f.description}
+${f.details}`}>
       <form onSubmit={submit} className="space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
@@ -350,6 +354,7 @@ function ProductForm({ product, defaultCategory, onClose, onSaved, onChanged }: 
           <button type="submit" disabled={saving} className="btn-primary disabled:opacity-60">{saving ? "Saving…" : "Save"}</button>
         </div>
       </form>
+      </ClaimWatcher>
     </Modal>
   );
 }

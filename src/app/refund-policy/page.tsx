@@ -3,14 +3,13 @@ import { pageMeta } from "@/lib/seo";
 import LegalPage from "@/components/LegalPage";
 import { emailLink, siteConfig } from "@/config/site";
 
-export const metadata: Metadata = pageMeta({ title: "Refund & Cancellation Policy", description: "How cancellations, rescheduling and refunds work for EDUVORA counselling sessions, live crash courses and study material, with timelines and conditions.", path: "/refund-policy" });
+export const metadata: Metadata = pageMeta({ title: "Refund & Cancellation Policy", description: "How cancellations, rescheduling and refunds work for EDUVORA counselling sessions, PDF crash courses, the Formula Book, Question Bank and study material.", path: "/refund-policy" });
 
 // ✏️ The numbers (24 hours, 3 days, 7 days, 5–7 working days) come from
 //    src/config/site.ts → refunds. Change them there.
 export default function RefundPolicyPage() {
   const r = siteConfig.refunds;
   const h = r.counsellingHours;
-  const d = r.liveBatchDays;
   return (
     <LegalPage title="Refund & Cancellation Policy" path="/refund-policy">
       <p>
@@ -21,8 +20,7 @@ export default function RefundPolicyPage() {
       <h2>In short</h2>
       <ul>
         <li><strong>Counselling session (30-minute voice call):</strong> free reschedule or full refund up to {h} hours before your slot.</li>
-        <li><strong>Live crash courses / batches:</strong> refund up to {d} days before the batch starts; full refund if we cancel the batch. Once classes begin, no refund.</li>
-        <li><strong>Study material, previous year papers and mock test packs:</strong> delivered as a personal, watermarked PDF (or online tests) — non-refundable once opened or downloaded.</li>
+        <li><strong>Crash courses, Formula Book, Question Bank, study material, previous year papers and mock test packs:</strong> digital products, delivered as personal, watermarked PDFs (or online tests) in your dashboard — non-refundable once opened or downloaded.</li>
         <li><strong>Can&apos;t access what you paid for?</strong> We fix it or refund you within {r.techIssueDays} days.</li>
         <li><strong>Refunds</strong> go back to your original payment method within {r.processingTime}.</li>
       </ul>
@@ -37,11 +35,10 @@ export default function RefundPolicyPage() {
         <li>If <strong>we</strong> have to cancel your session, you can choose a new time or a full refund.</li>
       </ul>
 
-      <h2>2. Live crash courses and batches</h2>
+      <h2>2. Crash courses, Formula Book and Question Bank</h2>
       <ul>
-        <li><strong>Cancel {d} or more days before the batch starts</strong>: you get a <strong>full refund</strong>.</li>
-        <li><strong>Less than {d} days before</strong> the start, or <strong>once classes have begun</strong>: <strong>no refund</strong>.</li>
-        <li>If <strong>we</strong> cancel the batch, you get a <strong>full refund</strong> (or you can move to the next batch if you prefer).</li>
+        <li>These are <strong>PDF courses</strong>: chapter-wise PDF notes for Physics, Chemistry and Mathematics, available in your dashboard right after payment.</li>
+        <li>They follow the same rules as other digital products (section 3): <strong>non-refundable once a PDF is opened or downloaded</strong>, and a full refund if you can&apos;t access what you paid for and we can&apos;t fix it.</li>
       </ul>
 
       <h2>3. Study material, previous year papers and mock test packs</h2>

@@ -169,9 +169,7 @@ async function CoursesContent({ searchParams }: { searchParams: PageProps<"/dash
                           </a>
                         ))}
                       </div>
-                    ) : (
-                      <p className="mt-3 text-sm text-slate-500">Your class links will appear here when the batch starts.</p>
-                    )}
+                    ) : null}
                     {siteConfig.inWebsiteReader ? (
                       <FileList files={filesOf.get(c.products!.id)} itemTitle={c.products!.title} suggestion={suggestionFor(c)} />
                     ) : (
@@ -343,7 +341,7 @@ function ExpiredBox({ productId, renew }: { productId: string; renew: boolean })
   return (
     <div className="mt-3 rounded-xl bg-red-50 p-4 text-sm text-red-900 ring-1 ring-red-200">
       <p className="font-bold">Your access to this has ended.</p>
-      <p className="mt-1">The PDFs, class links and tests can&apos;t be opened any more.{renew ? " Renew to get access again." : " Please contact us if you need more time."}</p>
+      <p className="mt-1">The PDFs and tests can&apos;t be opened any more.{renew ? " Renew to get access again." : " Please contact us if you need more time."}</p>
       {renew && <div className="mt-3 max-w-xs"><BuyButton productId={productId} label="Renew" className="btn-primary w-full" trust /></div>}
     </div>
   );

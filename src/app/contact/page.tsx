@@ -53,7 +53,7 @@ export default async function ContactPage() {
             )}
           </dl>
           <p className="mt-4 text-xs text-slate-500">
-            We provide digital services (counselling, study material, tests, live batches). See our{" "}
+            We provide digital services (counselling, crash course PDFs, study material and tests). See our{" "}
             <Link href="/shipping-policy" className="underline">Shipping &amp; Delivery</Link> and <Link href="/refund-policy" className="underline">Refund</Link> policies.
           </p>
         </div>

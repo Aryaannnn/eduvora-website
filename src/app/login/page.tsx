@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 };
 
 const benefits = [
-  "Access your courses and recorded classes",
+  "Access your crash courses, Formula Book and Question Bank",
   "Take mock tests and track your scores",
   "Open or download your study material anytime",
   "See and manage your counselling bookings",

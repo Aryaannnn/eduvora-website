@@ -228,7 +228,7 @@ async function selectTolerant(db: SupabaseClient, table: string, cols: string, i
 // Payment method: saved on the row; looked up from Razorpay the first time
 async function methodFor(db: SupabaseClient, table: "purchases" | "bookings", id: string, saved: string | null, paymentId: string | null, amount: number) {
   if (saved) return saved;
-  if (!paymentId) return amount === 0 ? "Free" : "Recorded by EDUVORA";
+  if (!paymentId) return amount === 0 ? "Free" : "Received by EDUVORA";
   const m = await getPaymentMethod(paymentId);
   if (m) await db.from(table).update({ payment_method: m }).eq("id", id); // remember it
   return m ?? "Online (Razorpay)";

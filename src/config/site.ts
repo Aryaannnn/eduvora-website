@@ -15,7 +15,7 @@ const SUPPORT_EMAIL = "eduvora.support@gmail.com";
 // ✏️ Counselling: free reschedule / full refund up to this many HOURS before the slot.
 //    One number for the whole website (FAQ, booking page, emails, Refund policy…).
 const RESCHEDULE_HOURS = 24;
-// ✏️ Live crash courses / batches: refund up to this many DAYS before the batch starts.
+// (not used any more — the crash courses are PDF courses, refunded like other digital products)
 const LIVE_BATCH_REFUND_DAYS = 3;
 
 export const siteConfig = {
@@ -136,14 +136,14 @@ export const siteConfig = {
   refunds: {
     // Counselling sessions — ONE rule used everywhere
     counsellingHours: RESCHEDULE_HOURS, // free reschedule / full refund up to this many hours before the slot (set at the top of this file)
-    // Live crash courses / batches
-    liveBatchDays: LIVE_BATCH_REFUND_DAYS, // refund up to this many days before the batch starts (set at the top of this file)
-    // Digital products (study material PDFs, previous year papers, mock test packs)
+    liveBatchDays: LIVE_BATCH_REFUND_DAYS, // (unused)
+    // Digital products (crash course PDFs, Formula Book, Question Bank, study material, papers, mock test packs)
     techIssueDays: 7, // we fix the problem or refund within this many days
     processingTime: "5–7 working days", // how long a refund takes to reach the student
     // Short notes shown next to the payment buttons
     counsellingNote: `Free reschedule or full refund up to ${RESCHEDULE_HOURS} hours before your slot. No refund within ${RESCHEDULE_HOURS} hours or if the session is missed.`,
-    liveBatchNote: `Refund available up to ${LIVE_BATCH_REFUND_DAYS} days before the batch starts; full refund if we cancel the batch. Once classes begin, no refund.`,
+    // (older "live" refund notes now show the digital-product rule — there are no live courses)
+    liveBatchNote: "Digital product — a personal PDF watermarked with your name. Non-refundable once opened or downloaded. If you can't access it, we'll fix it or refund within 7 days.",
     digitalNote: "Digital product — a personal PDF watermarked with your name. Non-refundable once opened or downloaded. If you can't access it, we'll fix it or refund within 7 days.",
   },
 
