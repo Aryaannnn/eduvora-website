@@ -1,5 +1,6 @@
 "use client";
 
+import PlanButton from "./PlanButton";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { assignBooking, rescheduleBooking, retryBookingCalendar, updateBooking } from "@/app/admin/actions";
@@ -32,8 +33,10 @@ const intlPhone = (p: string) => {
 };
 
 export default function BookingsManager({
-  bookings, today, freeSlots = [], callReady = true, staff = null, staffNames = {}, notes = {}, me = "",
+  bookings, today, freeSlots = [], callReady = true, staff = null, staffNames = {}, notes = {}, me = "", plans = {},
 }: {
+  /** college plan per booking (supabase/college-plans.sql) */
+  plans?: Record<string, "draft" | "published">;
   bookings: AdminBooking[]; today: string; freeSlots?: FreeSlot[];
   /** false until supabase/voice-calls.sql is run (no call status / note yet) */
   callReady?: boolean;
@@ -173,6 +176,7 @@ export default function BookingsManager({
                       <CallButton phone={b.phone} name={b.name} />
                       <a href={wa} target="_blank" rel="noopener noreferrer" className="btn-primary !bg-[#25D366] !px-4 !py-2 text-sm"><WhatsAppIcon className="h-4 w-4" /> WhatsApp</a>
                     </div>
+                    <PlanButton bookingId={b.id} status={plans[b.id]} />
                     <div className="flex gap-2">
                       <select value={b.status} onChange={(e) => change(b.id, { status: e.target.value as AdminBooking["status"] })} className={`rounded-xl border-0 px-3 py-2 text-sm font-bold capitalize ring-1 ring-slate-200 ${statusColor[b.status]}`} aria-label="Booking status">
                         {STATUS.map((s) => <option key={s} value={s}>{s}</option>)}

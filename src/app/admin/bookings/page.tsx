@@ -18,17 +18,19 @@ export default function BookingsPage({ searchParams }: PageProps<"/admin/booking
   );
 }
 
-/** Staff names + booking notes (empty before supabase/counsellor.sql). */
+/** Staff names + booking notes (empty before supabase/counsellor.sql) + college plan status per booking. */
 async function staffExtras(s: Session) {
-  const [staff, notesRes] = await Promise.all([
+  const [staff, notesRes, plansRes] = await Promise.all([
     s.supabase.from("staff_members").select("id,full_name,email,role").order("full_name"),
     s.supabase.from("booking_notes").select("id,booking_id,body,created_at,created_by").order("created_at", { ascending: false }).limit(5000),
+    s.supabase.from("college_plans").select("booking_id,status").limit(5000), // supabase/college-plans.sql
   ]);
+  const plans = Object.fromEntries(((plansRes.data ?? []) as { booking_id: string; status: "draft" | "published" }[]).map((p) => [p.booking_id, p.status]));
   const members = (staff.data ?? []) as { id: string; full_name: string | null; email: string | null; role: string }[];
   const staffNames = Object.fromEntries(members.map((m) => [m.id, m.full_name || m.email || "Staff"]));
   const notes: Record<string, BookingNote[]> = {};
   for (const n of (notesRes.data ?? []) as (BookingNote & { booking_id: string })[]) (notes[n.booking_id] ??= []).push(n);
-  return { members, staffNames, notes, ready: !staff.error && !notesRes.error };
+  return { members, staffNames, notes, plans, ready: !staff.error && !notesRes.error };
 }
 
 async function Content({ searchParams }: { searchParams: PageProps<"/admin/bookings">["searchParams"] }) {
@@ -44,7 +46,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/admin/booki
     const callReady = !error;
     if (error) ({ data, error } = await loadStaff(base)); // voice-calls.sql not run yet
     if (error) return <p className="card p-6 text-red-600">Bookings are not set up for counsellors yet (admin: run supabase/roles.sql once).</p>;
-    return <StaffBookings bookings={(data ?? []) as unknown as StaffBooking[]} notes={extras.notes} today={todayInIndia()} me={s.user.id} staffNames={extras.staffNames} notAllowed={sp.notAllowed === "1"} callReady={callReady} />;
+    return <StaffBookings bookings={(data ?? []) as unknown as StaffBooking[]} notes={extras.notes} today={todayInIndia()} me={s.user.id} staffNames={extras.staffNames} notAllowed={sp.notAllowed === "1"} callReady={callReady} plans={extras.plans} />;
   }
 
   // ---------- ADMIN ----------
@@ -83,6 +85,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/admin/booki
       staffNames={extras.staffNames}
       notes={extras.notes}
       me={s.user.id}
+      plans={extras.plans}
     />
   );
 }

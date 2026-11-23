@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import { PLAN_COLUMNS, type CollegePlan } from "@/lib/college-plan";
+import CollegePlanCard from "@/components/dashboard/CollegePlanCard";
+import { after } from "next/server";
 import Link from "next/link";
 import { Suspense } from "react";
 import { CancelBookingButton } from "@/components/dashboard/Actions";
@@ -29,6 +32,14 @@ async function BookingsContent() {
     s.supabase.from("session_feedback").select("booking_id,rating,helped_most,improve,allow_public").eq("user_id", s.user.id), // empty before feedback.sql
   ]);
   const feedback = new Map(((fbRes.data ?? []) as (MyFeedback & { booking_id: string })[]).map((f) => [f.booking_id, f]));
+  // Published college plans for these bookings (Row Level Security: only the student's own)
+  const { data: planRows } = bookings.length
+    ? await s.supabase.from("college_plans").select(PLAN_COLUMNS).in("booking_id", bookings.map((b) => b.id)).eq("status", "published")
+    : { data: [] };
+  const plans = new Map(((planRows ?? []) as CollegePlan[]).map((p) => [p.booking_id, p]));
+  // opened → the "New" badge goes away next time (shown as New on THIS visit)
+  const unseen = [...plans.values()].filter((p) => !p.seen_at);
+  if (unseen.length) after(() => Promise.all(unseen.map((p) => s.supabase.rpc("mark_college_plan_seen", { p_plan: p.id }))).then(() => null, () => null));
   const today = todayInIndia();
 
   return (
@@ -45,6 +56,7 @@ async function BookingsContent() {
           {bookings.map((b) => {
             const upcoming = !!b.slots && b.slots.date >= today && ["pending", "confirmed"].includes(b.status);
             const fb = feedback.get(b.id);
+            const plan = plans.get(b.id);
             return (
               <li key={b.id} className="card p-5">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -72,6 +84,7 @@ async function BookingsContent() {
                 </div>
                 <div className="flex items-center gap-4 sm:flex-col sm:items-end sm:gap-2">
                   <StatusBadge status={b.status} />
+                  {plan && <a href={`#plan-${plan.id}`} className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-800">✓ Plan ready</a>}
                   {b.invoice_number && (
                     <span className="text-xs">
                       <Link href={`/invoice/${b.id}`} className="font-semibold text-brand-700 underline">Invoice {b.invoice_number}</Link>
@@ -82,6 +95,7 @@ async function BookingsContent() {
                   {upcoming && b.slots && <CancelBookingButton bookingId={b.id} slotDate={b.slots.date} slotTime={b.slots.start_time} paid={b.payment_status === "paid" && (b.amount ?? 0) > 0} />}
                 </div>
               </div>
+              {plan && <CollegePlanCard plan={plan} />}
               {b.status === "completed" && !fbRes.error && (
                 <details className="group mt-4 rounded-2xl bg-slate-50 ring-1 ring-slate-200" open={!fb}>
                   <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-bold text-slate-800">

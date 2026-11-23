@@ -4,6 +4,7 @@
 // (the data comes from the staff_bookings view, which doesn't have them).
 // Can: call the student, mark the call called / no answer / completed, add notes,
 // filter "Assigned to me".
+import PlanButton from "./PlanButton";
 import { useState } from "react";
 import { formatDate, formatTime } from "@/lib/format";
 import { SearchIcon, WhatsAppIcon } from "../Icons";
@@ -24,7 +25,7 @@ const intlPhone = (p: string) => {
   return d.length === 10 ? `91${d}` : d;
 };
 
-export default function StaffBookings({ bookings, notes, today, me, staffNames, notAllowed, callReady = true }: { bookings: StaffBooking[]; notes: Record<string, BookingNote[]>; today: string; me: string; staffNames: Record<string, string>; notAllowed: boolean; callReady?: boolean }) {
+export default function StaffBookings({ bookings, notes, today, me, staffNames, notAllowed, callReady = true, plans = {} }: { bookings: StaffBooking[]; notes: Record<string, BookingNote[]>; today: string; me: string; staffNames: Record<string, string>; notAllowed: boolean; callReady?: boolean; plans?: Record<string, "draft" | "published"> }) {
   const [filter, setFilter] = useState<"upcoming" | "today" | "completed" | "all">("upcoming");
   const [mine, setMine] = useState(false);
   const [q, setQ] = useState("");
@@ -99,6 +100,7 @@ export default function StaffBookings({ bookings, notes, today, me, staffNames, 
                   <div className="flex shrink-0 flex-wrap gap-2 lg:flex-col lg:items-end">
                     <CallButton phone={b.phone} name={b.name} />
                     <a href={wa} target="_blank" rel="noopener noreferrer" className="btn-primary !bg-[#25D366] !px-4 !py-2 text-sm"><WhatsAppIcon className="h-4 w-4" /> WhatsApp</a>
+                    <PlanButton bookingId={b.id} status={plans[b.id]} />
                   </div>
                 </div>
               </li>

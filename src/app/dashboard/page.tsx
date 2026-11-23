@@ -51,6 +51,9 @@ async function HomeContent() {
         </div>
       </section>
 
+      {/* A college plan was published and not opened yet */}
+      <Suspense fallback={null}><NewPlanBanner s={s} /></Suspense>
+
       {/* Parent progress link */}
       <Suspense fallback={null}><ParentLinkBadge s={s} /></Suspense>
 
@@ -153,6 +156,19 @@ async function ParentLinkBadge({ s }: { s: Session }) {
         <span className="text-sm text-slate-700"><strong>Share your progress with your parents</strong>{share.status === "expired" ? " — your link expired" : ""}</span>
       </span>
       <span className="text-xs font-semibold text-brand-700">Share →</span>
+    </Link>
+  );
+}
+
+/** "New: your college plan is ready" (Row Level Security: only the student's own published plans) */
+async function NewPlanBanner({ s }: { s: Session }) {
+  const { data } = await s.supabase.from("college_plans").select("id").eq("status", "published").eq("student_id", s.user.id).is("seen_at", null).limit(1);
+  const plan = data?.[0];
+  if (!plan) return null;
+  return (
+    <Link href={`/dashboard/bookings#plan-${plan.id}`} className="flex items-center gap-3 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-900 ring-1 ring-emerald-200 hover:bg-emerald-100">
+      <span className="rounded-full bg-accent-400 px-2.5 py-0.5 text-xs font-extrabold text-brand-950">New</span>
+      📋 Your college plan is ready — open it in My Bookings →
     </Link>
   );
 }
