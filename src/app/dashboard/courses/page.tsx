@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import CourseTabs from "@/components/files/CourseTabs";
+import StudyPlanView from "@/components/files/StudyPlanView";
+import { loadCoursePlans } from "@/lib/study-plan-server";
 import { loadMyProgress, newFileIds } from "@/lib/progress";
 import { QUESTION_BANK_SLUG } from "@/lib/courses";
 import { getAdminSupabase } from "@/lib/supabase/admin";
@@ -9,7 +12,7 @@ import FreeBadge from "@/components/FreeBadge";
 import { BookIcon, CheckIcon, ClipboardIcon, ExternalIcon, FileIcon, LockIcon, RocketIcon } from "@/components/Icons";
 import { getMyPurchases, getProductContent, paidOnly, requireUser, type PurchaseRow } from "@/lib/dashboard";
 import { getProducts } from "@/lib/data";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, todayInIndia } from "@/lib/format";
 import { getFreeResources, suggestFor, type Suggestion } from "@/lib/free-resources";
 import { formatBytes } from "@/lib/product-files";
 import { siteConfig } from "@/config/site";
@@ -76,6 +79,10 @@ async function CoursesContent({ searchParams }: { searchParams: PageProps<"/dash
   const newIds = newFileIds([...[...filesOf.values()].flat(), ...qbFiles], progress);
   const newIn = (list: { id: string }[] = []) => list.filter((f) => newIds.includes(f.id)).length;
   const startSubject = typeof sp.subject === "string" ? sp.subject : undefined; // bell → that subject
+  // Day-wise study plans (supabase/study-plans.sql): days, my ticks, my start date (default: enrolment)
+  const plans = await loadCoursePlans(s.supabase, s.user.id, courses.map((c) => ({ id: c.products!.id, enrolledAt: c.created_at })));
+  const today = todayInIndia();
+  const namesOf = (id: string) => Object.fromEntries((filesOf.get(id) ?? []).map((f) => [f.id, f.display_name]));
   // earlier per-subject Question Bank items: only while they still hold PDFs (supabase/question-bank.sql moves them)
   const oldQB = questionBank.filter((q) => (filesOf.get(q.products!.id) ?? []).length > 0);
 
@@ -149,7 +156,14 @@ async function CoursesContent({ searchParams }: { searchParams: PageProps<"/dash
                     {siteConfig.inWebsiteReader ? (
                       <FileList files={filesOf.get(c.products!.id)} itemTitle={c.products!.title} suggestion={suggestionFor(c)} />
                     ) : (
-                      <SubjectTabs files={filesOf.get(c.products!.id) ?? []} title={c.products!.title} progress={progress ?? {}} tracking={progress !== null} newIds={newIds} startSubject={c.products!.id === focusId ? startSubject : undefined} />
+                      <CourseTabs
+                        planDays={plans?.get(c.products!.id)?.days.length ?? 0}
+                        pdfs={<SubjectTabs files={filesOf.get(c.products!.id) ?? []} title={c.products!.title} progress={progress ?? {}} tracking={progress !== null} newIds={newIds} startSubject={c.products!.id === focusId ? startSubject : undefined} />}
+                        plan={(() => {
+                          const p = plans?.get(c.products!.id);
+                          return p ? <StudyPlanView productId={c.products!.id} days={p.days} done={p.done} start={p.start} defaultStart={p.defaultStart} today={today} fileNames={namesOf(c.products!.id)} /> : null;
+                        })()}
+                      />
                     )}
                     {withQB.has(c.products!.id) && qbHref && c.products!.id !== qbProduct?.id && (
                       <Link href={qbHref} className="btn-accent mt-3 !px-4 !py-2 text-sm">Included: VITEEE Question Bank →</Link>

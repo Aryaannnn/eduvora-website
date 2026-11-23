@@ -25,3 +25,15 @@ export async function getFileSummary(productId: string): Promise<FileSummary | n
   const pdfs = rows.length;
   return { pdfs, subjects, bySubject, text: pdfs ? `${pdfs} PDF${pdfs === 1 ? "" : "s"}${subjects.length ? ` · ${subjects.join(", ")}` : ""}` : "" };
 }
+
+/** "Day-wise study plan included (60 days)" — real days only (SAMPLE days don't count). null = none / SQL not run. */
+export async function getPlanSummary(productId: string): Promise<{ days: number } | null> {
+  "use cache";
+  cacheTag("products");
+  cacheLife("hours");
+  const db = getAdminSupabase();
+  if (!db) return null;
+  const { data, error } = await db.from("study_plan_days").select("day_number").eq("product_id", productId).eq("is_sample", false);
+  if (error || !data?.length) return null;
+  return { days: Math.max(...data.map((d) => Number(d.day_number) || 0)) };
+}

@@ -17,7 +17,7 @@ import { getSeatsLeft, seatLimitOf } from "@/lib/seats";
 import JsonLd from "@/components/seo/JsonLd";
 import { breadcrumbLd, courseLd, pageMeta } from "@/lib/seo";
 import EnrolledBadge from "@/components/EnrolledBadge";
-import { getFileSummary } from "@/lib/file-summary";
+import { getFileSummary, getPlanSummary } from "@/lib/file-summary";
 import CourseGrid from "@/components/courses/CourseGrid";
 import { SUBJECT_KEYS, SUBJECT_UI } from "@/components/courses/SubjectIcon";
 import { durationBadge, enrollLabel as enrollText, productNoun } from "@/lib/courses";
@@ -84,7 +84,7 @@ async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
   const d = course.details;
   const off = discountPercent(course.price, course.original_price);
   // files: "45 PDFs · Physics, Chemistry, Mathematics" — a summary only (no file names, no links)
-  const [allCourses, seatsLeft, files] = await Promise.all([getCourses(), getSeatsLeft(course.id, seatLimitOf(d)), getFileSummary(course.id)]);
+  const [allCourses, seatsLeft, files, plan] = await Promise.all([getCourses(), getSeatsLeft(course.id, seatLimitOf(d)), getFileSummary(course.id), getPlanSummary(course.id)]);
   const others = allCourses.filter((c) => c.id !== course.id).slice(0, 3);
   const badge = durationBadge(course.slug, d.duration);
   const item = productNoun(course.slug); // "course" / "Formula Book" / "Question Bank"
@@ -202,6 +202,7 @@ async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
               {d.duration && <Fact icon={ClockIcon} label="Duration" value={d.duration} />}
               {d.mode && <Fact icon={MonitorIcon} label="Mode" value={d.mode} />}
               {files && files.pdfs > 0 && <Fact icon={FileIcon} label="Includes" value={files.text} />}
+              {plan && <Fact icon={CalendarIcon} label="Study plan" value={`Day-wise (${plan.days} days)`} />}
               {seatsLeft !== null && <Fact icon={UsersIcon} label="Seats" value={full ? "Batch full" : `${seatsLeft} left`} strong={!full && seatsLeft <= 10} />}
             </ul>
             <div className="mt-5">
@@ -239,6 +240,9 @@ async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
             </ul>
             {files && files.pdfs > 0 && (
               <p className="mt-3 flex items-center gap-2 text-sm font-semibold text-slate-700"><FileIcon className="h-4 w-4 text-brand-600" /> {files.text}</p>
+            )}
+            {plan && (
+              <p className="mt-2 flex items-center gap-2 text-sm font-semibold text-slate-700"><CalendarIcon className="h-4 w-4 text-brand-600" /> Day-wise study plan included ({plan.days} days)</p>
             )}
           </Section>
           {course.description && course.description !== d.short && (

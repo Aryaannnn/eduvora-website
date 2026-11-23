@@ -10,6 +10,7 @@ import { EditIcon, FileIcon, PlusIcon, SearchIcon, TrashIcon } from "../Icons";
 import { siteConfig } from "@/config/site";
 import { formatBytes } from "@/lib/product-files";
 import FilesManager from "./FilesManager";
+import StudyPlanEditor from "./StudyPlanEditor";
 import { AdminHeader, Label, Modal, Notice, Toggle } from "./ui";
 
 export type AdminProduct = {
@@ -304,6 +305,14 @@ function ProductForm({ product, defaultCategory, onClose, onSaved, onChanged }: 
           </div>
           <p className="mt-1 text-xs text-slate-500">These links are private: only students who paid can see them.</p>
         </div>
+
+        {/* Crash courses: day-wise study plan (supabase/study-plans.sql) */}
+        {f.category === "crash_course" && productId && (
+          <details className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+            <summary className="cursor-pointer text-sm font-bold text-slate-800">📅 Study plan (day-wise) — days, topics, linked PDFs, CSV import</summary>
+            <div className="mt-4"><StudyPlanEditor productId={productId} /></div>
+          </details>
+        )}
 
         {/* Crash courses: every section of the public course page */}
         {f.category === "crash_course" && (

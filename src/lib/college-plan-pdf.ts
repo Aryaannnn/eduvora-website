@@ -14,7 +14,8 @@ const TEXT = rgb(0.2, 0.25, 0.33);
 const MUTED = rgb(0.42, 0.47, 0.55);
 
 let logoBytes: Uint8Array | null | undefined;
-async function logo() {
+/** EDUVORA logo bytes (also used by the study plan PDF) */
+export async function logo() {
   if (logoBytes !== undefined) return logoBytes;
   try {
     logoBytes = new Uint8Array(await readFile(path.join(process.cwd(), "public", "logo-email.png")));
@@ -30,11 +31,11 @@ async function logo() {
 }
 
 /** The standard PDF font has no "–", curly quotes or "₹" → close plain characters first */
-const plain = (t: string) =>
-  pdfSafe(String(t ?? "").replace(/[–—−]/g, "-").replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/₹\s?/g, "Rs. ").replace(/•/g, "-"));
+export const plain = (t: string) =>
+  pdfSafe(String(t ?? "").replace(/[–—−]/g, "-").replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/₹\s?/g, "Rs. ").replace(/•/g, "-").replace(/→/g, "->"));
 
 /** Split text into lines that fit `width` */
-function wrap(text: string, font: PDFFont, size: number, width: number) {
+export function wrap(text: string, font: PDFFont, size: number, width: number) {
   const out: string[] = [];
   for (const para of plain(text).split(/\n/)) {
     let line = "";
