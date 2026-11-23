@@ -12,6 +12,7 @@ import { checkFile, isPdfSubject, kindOf, MIME, niceName, slugName, subjectLabel
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import { removePages } from "@/lib/pdf-pages";
 import { clearCopiesOfFile } from "@/lib/pdf-delivery";
+import { existingCopy, hashStored, removeIfUnused } from "@/lib/storage-files";
 
 const BUCKET = "materials";
 const fail = (error: string): ActionResult<never> => ({ ok: false, error });
@@ -64,34 +65,52 @@ export async function finishFileUpload(input: { productId: string; path: string;
   if (!stored) return fail("The upload did not finish. Please try again.");
   const realSize = Number((stored.metadata as { size?: number } | null)?.size ?? size);
 
+  // Identical PDF already stored (any product)? → keep ONE copy: remove this upload, reuse the existing file
+  const hash = await hashStored(db, path).catch(() => null);
+  const reuse = await existingCopy(db, hash, path).catch(() => null);
+  let filePath = reuse ?? path;
+  const withHash = (row: Record<string, unknown>) => (hash ? { ...row, content_hash: hash } : row);
+  const noHashColumn = (msg: string) => /content_hash/.test(msg);
+  // (before supabase/storage-cleanup.sql a stored file can't be shared → keep this upload instead)
+  const sharedNotAllowed = (msg: string) => !!reuse && /file_path|duplicate key/i.test(msg);
+  // the new upload is removed only AFTER the database accepted the shared copy
+  const dropUploadIfReused = async () => {
+    if (filePath !== path) await db.storage.from(BUCKET).remove([path]);
+  };
+
   if (replaceId) {
     const { data: old } = await db.from("product_files").select("id,file_path,product_id").eq("id", replaceId).maybeSingle();
     if (!old || old.product_id !== productId) return fail("File not found.");
-    const { data: row, error } = await db
-      .from("product_files")
-      .update({ file_path: path, file_type: kind, size_bytes: realSize, created_at: new Date().toISOString() })
-      .eq("id", replaceId)
-      .select("*")
-      .single();
+    const patch = { file_path: filePath, file_type: kind, size_bytes: realSize, created_at: new Date().toISOString() };
+    let { data: row, error } = await db.from("product_files").update(withHash(patch)).eq("id", replaceId).select("*").single();
+    if (error && noHashColumn(error.message)) ({ data: row, error } = await db.from("product_files").update(patch).eq("id", replaceId).select("*").single());
+    if (error && sharedNotAllowed(error.message)) {
+      filePath = path;
+      ({ data: row, error } = await db.from("product_files").update({ ...patch, file_path: path }).eq("id", replaceId).select("*").single());
+    }
     if (error) return fail(error.message);
-    await db.storage.from(BUCKET).remove([old.file_path]);
+    await dropUploadIfReused();
+    if (old.file_path !== filePath) await removeIfUnused(db, old.file_path); // other products may share it
     await clearCopiesOfFile(db, replaceId).catch(() => {}); // students' watermarked copies of the OLD file
     await syncProductFilePath(db, productId);
-    return { ok: true, data: { file: row as ProductFile }, message: "File replaced. Students get the new version from now on." };
+    return { ok: true, data: { file: row as ProductFile }, message: `File replaced. Students get the new version from now on.${filePath !== path ? " (This PDF was already stored, so the existing copy is reused — no extra space used.)" : ""}` };
   }
 
   const { data: last } = await db.from("product_files").select("sort_order").eq("product_id", productId).order("sort_order", { ascending: false }).limit(1);
-  const { data: row, error } = await db
-    .from("product_files")
-    .insert({ product_id: productId, display_name: niceName(fileName), file_path: path, file_type: kind, size_bytes: realSize, sort_order: (last?.[0]?.sort_order ?? -1) + 1, ...(subject ? { subject } : {}) })
-    .select("*")
-    .single();
+  const newRow = { product_id: productId, display_name: niceName(fileName), file_path: filePath, file_type: kind, size_bytes: realSize, sort_order: (last?.[0]?.sort_order ?? -1) + 1, ...(subject ? { subject } : {}) };
+  let { data: row, error } = await db.from("product_files").insert(withHash(newRow)).select("*").single();
+  if (error && noHashColumn(error.message)) ({ data: row, error } = await db.from("product_files").insert(newRow).select("*").single());
+  if (error && sharedNotAllowed(error.message)) {
+    filePath = path;
+    ({ data: row, error } = await db.from("product_files").insert(withHash({ ...newRow, file_path: path })).select("*").single());
+  }
   if (error) {
-    await db.storage.from(BUCKET).remove([path]);
+    await db.storage.from(BUCKET).remove([path]); // this upload is not used
     return fail(/subject/.test(error.message) ? "Run supabase/courses-question-bank.sql in Supabase first." : /product_files/.test(error.message) ? "Run supabase/product-files.sql in Supabase first." : error.message);
   }
+  await dropUploadIfReused();
   await syncProductFilePath(db, productId);
-  return { ok: true, data: { file: row as ProductFile } };
+  return { ok: true, data: { file: row as ProductFile }, ...(filePath !== path ? { message: "This PDF was already stored, so the existing copy is reused — no extra space used." } : {}) };
 }
 
 /** Subject (Physics / Chemistry / Mathematics) and chapter / day label of one PDF. */
@@ -199,7 +218,8 @@ export async function deleteProductFile(id: string): Promise<ActionResult> {
   await clearCopiesOfFile(db, id).catch(() => {}); // students' watermarked copies
   const { error } = await db.from("product_files").delete().eq("id", id);
   if (error) return fail(error.message);
-  await db.storage.from(BUCKET).remove([f.file_path]);
+  await syncProductFilePath(db, f.product_id);
+  await removeIfUnused(db, f.file_path); // identical PDFs in other products share the stored copy
   await removePages(db, id).catch(() => {}); // its reader page pictures too
   await syncProductFilePath(db, f.product_id);
   return { ok: true, message: "File deleted." };

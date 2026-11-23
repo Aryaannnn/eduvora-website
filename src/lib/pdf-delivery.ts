@@ -4,7 +4,7 @@
 //  student who has access. Every request:
 //   1. login + access (paid / free / admin) checked against the database
 //   2. daily limit per student per file (Admin → Settings, default 20)
-//   3. their personal watermarked copy: from the 7-day cache in the private
+//   3. their personal watermarked copy: from the 24-hour cache in the private
 //      'watermarked' bucket, or made now with pdf-lib (src/lib/watermark.ts)
 //   4. logged (Admin → Products → Downloads) with the ID printed on the copy
 //   5. the copy's BYTES are streamed from this server (inline to open,
@@ -25,7 +25,7 @@ import { unlockFreeProduct } from "./free-resources";
 import { canRead, type ReaderFile } from "./reader";
 import { cleanupWatermarked, deviceId, shortCopyId, watermarkPdf, WM_VERSION } from "./watermark";
 
-const CACHE_DAYS = 7;
+const CACHE_MS = 24 * 60 * 60 * 1000; // a student's copy is kept at most 24 hours (then made again on the next open)
 const BUCKET = "watermarked";
 const DEFAULT_DAILY_LIMIT = 20;
 
@@ -120,7 +120,7 @@ export async function deliverPdf(request: NextRequest, db: SupabaseClient, s: Se
       })
       .then(({ error }) => error && console.warn("[pdf] log failed (run supabase/pdf-downloads.sql?):", error.message));
 
-  // ---- the student's copy: cached (7 days) or made now ----
+  // ---- the student's copy: cached (24 hours) or made now ----
   let storagePath = "";
   let copyId = "";
   let madeNow: Uint8Array | null = null;
@@ -131,7 +131,7 @@ export async function deliverPdf(request: NextRequest, db: SupabaseClient, s: Se
       cached &&
       cached.file_path === file.file_path &&
       Number(cached.wm_version) >= WM_VERSION &&
-      Date.now() - new Date(cached.created_at as string).getTime() < CACHE_DAYS * 86_400_000;
+      Date.now() - new Date(cached.created_at as string).getTime() < CACHE_MS;
     if (fresh) {
       storagePath = cached.storage_path as string;
       copyId = cached.copy_id as string;
@@ -161,7 +161,24 @@ export async function deliverPdf(request: NextRequest, db: SupabaseClient, s: Se
   // ---- the copy's bytes, streamed from this server (never a storage link) ----
   let body: ReadableStream<Uint8Array>;
   try {
-    body = madeNow ? bytesStream(madeNow) : await storedCopyStream(db, storagePath);
+    if (madeNow) body = bytesStream(madeNow);
+    else {
+      try {
+        body = await storedCopyStream(db, storagePath);
+      } catch {
+        // the cached copy was cleaned up in the meantime → make it again now (same copy ID)
+        const remade = await watermarkPdf(await originalBytes(db, file), {
+          name: s.profile?.full_name || s.user.email?.split("@")[0] || "Student",
+          phone: s.profile?.phone ? `+${String(s.profile.phone).replace(/^\+/, "")}` : s.user.phone ? `+${s.user.phone}` : "",
+          email: s.profile?.email || s.user.email || "",
+          copyId,
+          when: new Date(),
+          title: file.display_name,
+        });
+        await db.storage.from(BUCKET).upload(storagePath, remade, { contentType: "application/pdf", upsert: true, cacheControl: "0" });
+        body = bytesStream(remade);
+      }
+    }
   } catch (e) {
     await log({ copyId, watermarked: true, status: "failed", error: (e as Error).message.slice(0, 300) });
     return page("Please try again", "We couldn't open your copy just now. Please try again in a moment.", 503, `/api/files/${fileId}/${mode}`);
@@ -204,10 +221,10 @@ async function storedCopyStream(db: SupabaseClient, path: string): Promise<Reada
   return res.body;
 }
 
-/** Remove watermarked copies older than 7 days (+ the old temporary folders). */
+/** Remove watermarked copies older than 24 hours (+ the old temporary folders). */
 export async function cleanupCopies(db: SupabaseClient) {
   await cleanupWatermarked(db).catch(() => 0);
-  const before = new Date(Date.now() - CACHE_DAYS * 86_400_000).toISOString();
+  const before = new Date(Date.now() - CACHE_MS).toISOString();
   const { data: old } = await db.from("pdf_copies").select("user_id,file_id,storage_path").lt("created_at", before).limit(300);
   if (!old?.length) return 0;
   await db.storage.from(BUCKET).remove(old.map((o) => o.storage_path as string));

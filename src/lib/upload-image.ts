@@ -3,13 +3,16 @@
 // Admin picture upload (blog + test questions) → public https address.
 // Uses the public 'blog-images' bucket (supabase/blog.sql): anyone can view,
 // only admins (2-step login) can upload — checked by Supabase storage rules.
+import { compressImage } from "@/lib/compress-image";
 import { getBrowserSupabase } from "./supabase/client";
 
 const MAX_IMAGE_MB = 5;
 
-export async function uploadPublicImage(file: File, folder: string): Promise<string> {
-  if (!/^image\/(jpeg|png|webp|gif)$/.test(file.type)) throw new Error("Please choose a JPG, PNG, WebP or GIF picture.");
-  if (file.size > MAX_IMAGE_MB * 1024 * 1024) throw new Error(`Pictures must be smaller than ${MAX_IMAGE_MB} MB.`);
+export async function uploadPublicImage(original: File, folder: string): Promise<string> {
+  if (!/^image\/(jpeg|png|webp|gif)$/.test(original.type)) throw new Error("Please choose a JPG, PNG, WebP or GIF picture.");
+  if (original.size > 25 * 1024 * 1024) throw new Error("Pictures must be smaller than 25 MB.");
+  const file = await compressImage(original); // WebP, max 1600 px wide (src/lib/compress-image.ts)
+  if (file.size > MAX_IMAGE_MB * 1024 * 1024) throw new Error(`This picture is still larger than ${MAX_IMAGE_MB} MB after compressing. Please use a smaller one.`);
   const supabase = getBrowserSupabase();
   if (!supabase) throw new Error("Supabase is not connected.");
   const ext = file.type.split("/")[1].replace("jpeg", "jpg");

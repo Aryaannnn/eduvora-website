@@ -27,6 +27,6 @@ export async function handleFileRequest(request: NextRequest, id: string, mode: 
   const isAdmin = session.profile?.role === "admin";
   if (siteConfig.inWebsiteReader && !isAdmin) return NextResponse.redirect(new URL(`/dashboard/read/${id}`, request.url));
   const res = await deliverPdf(request, db, session, id, mode);
-  after(() => cleanupCopies(db).catch(() => 0)); // tidy copies older than 7 days
+  after(() => cleanupCopies(db).catch(() => 0)); // tidy copies older than 24 hours
   return res;
 }

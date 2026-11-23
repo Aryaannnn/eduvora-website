@@ -63,6 +63,12 @@ export const siteConfig = {
     maxFileMB: 50,
     // Your plan's total storage (Free plan = 1 GB) — used for the "storage used" bar.
     storageLimitGB: 1,
+    // Your plan's database size (Free plan = 500 MB) — Admin → Settings → Storage & database.
+    databaseLimitMB: 500,
+    // Admin → Products → Files: a PDF bigger than this gets a warning (it still uploads).
+    warnFileMB: 15,
+    // Pictures (blog, tests, stories) are turned into WebP, at most this wide, before upload.
+    imageMaxWidth: 1600,
   },
 
   // ---------- Emails (sent with Resend) ----------

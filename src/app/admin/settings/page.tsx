@@ -12,6 +12,7 @@ import PriceLabelsCard from "@/components/admin/PriceLabelsCard";
 import InvoiceSettingsCard from "@/components/admin/InvoiceSettingsCard";
 import LeadCaptureCard, { type LeadCaptureState } from "@/components/admin/LeadCaptureCard";
 import PdfLimitCard from "@/components/admin/PdfLimitCard";
+import StorageCard, { type StorageKind } from "@/components/admin/StorageCard";
 import ContactModeCard from "@/components/admin/ContactModeCard";
 import BookingNoticeCard from "@/components/admin/BookingNoticeCard";
 import { DashSkeleton } from "@/components/dashboard/ui";
@@ -33,7 +34,7 @@ export default function SettingsPage() {
 
 async function Content() {
   const s = await requireAdmin("/admin/settings");
-  const [{ data, error }, ref, wc, cal, mt, wy, ds, gs, fp, bn, cm, pl] = await Promise.all([
+  const [{ data, error }, ref, wc, cal, mt, wy, ds, gs, fp, bn, cm, pl, sr] = await Promise.all([
     s.supabase.from("site_stats").select("id,label,value,suffix,sort_order").order("sort_order"),
     s.supabase.from("referral_settings").select("enabled,referred_discount,referrer_reward").eq("id", 1).maybeSingle(),
     s.supabase.from("community_settings").select("whatsapp_link").eq("id", 1).maybeSingle(),
@@ -46,7 +47,9 @@ async function Content() {
     s.supabase.from("booking_settings").select("min_notice_minutes").eq("id", 1).maybeSingle(),
     s.supabase.from("contact_settings").select("mode,open_note,private_note").eq("id", 1).maybeSingle(),
     s.supabase.from("pdf_settings").select("daily_limit").eq("id", 1).maybeSingle(),
+    s.supabase.rpc("storage_report"), // supabase/storage-cleanup.sql
   ]);
+  const storage = <StorageCard kinds={sr.error ? null : ((sr.data ?? []) as StorageKind[]).map((k) => ({ ...k, bytes: Number(k.bytes), files: k.files === null ? null : Number(k.files) }))} setupMissing={!!sr.error} />;
   const pdfLimit = siteConfig.inWebsiteReader ? null : <PdfLimitCard initial={pl.error || !pl.data ? null : Number(pl.data.daily_limit)} />;
   const contactMode = (
     <ContactModeCard
@@ -96,6 +99,7 @@ async function Content() {
         {contactMode}
         {bookingNotice}
         {pdfLimit}
+        {storage}
         {leadCapture}
         <ExportDataCard />
         {calendar}
@@ -114,6 +118,7 @@ async function Content() {
       {contactMode}
       {bookingNotice}
       {pdfLimit}
+      {storage}
       {leadCapture}
       <ExportDataCard />
       {calendar}

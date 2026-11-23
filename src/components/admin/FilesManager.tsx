@@ -78,6 +78,7 @@ export default function FilesManager({ productId, category = "" }: { productId: 
   const [uploads, setUploads] = useState<Upload[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
   const [notice, setNotice] = useState("");
+  const [warnings, setWarnings] = useState<string[]>([]); // big files (they still upload)
   const [dragOver, setDragOver] = useState<string | null>(null); // which drop area
   const [dragId, setDragId] = useState<string | null>(null);
   const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null);
@@ -143,6 +144,7 @@ export default function FilesManager({ productId, category = "" }: { productId: 
       const saved = done.data!.file;
       setFiles((fs) => (replaceId ? (fs ?? []).map((f) => (f.id === replaceId ? saved : f)) : [...(fs ?? []), saved]));
       patchUpload(key, { progress: 100, status: "done" });
+      if (done.message) setNotice(done.message); // e.g. "already stored — the existing copy is reused"
       setTimeout(() => setUploads((u) => u.filter((x) => x.key !== key)), 4000);
       if (saved.file_type === "pdf" && siteConfig.inWebsiteReader) void preparePages(saved.id); // pages → WebP for the in-website reader (once)
     } catch (e) {
@@ -160,6 +162,10 @@ export default function FilesManager({ productId, category = "" }: { productId: 
     }
     setErrors(problems);
     setNotice("");
+    const big = ok.filter((f) => f.size > siteConfig.uploads.warnFileMB * 1024 * 1024);
+    setWarnings(
+      big.map((f) => `"${f.name}" is ${formatBytes(f.size)} — larger than ${siteConfig.uploads.warnFileMB} MB. It uploads, but uses a lot of storage and is slow for students on mobile data. Consider compressing the PDF (e.g. "Reduce file size" in your PDF app) and using Replace.`),
+    );
     ok.forEach((f) => void uploadOne(f, undefined, subject));
   }
 
@@ -366,6 +372,11 @@ export default function FilesManager({ productId, category = "" }: { productId: 
       {errors.length > 0 && (
         <div role="alert" className="space-y-1 rounded-xl bg-red-50 p-3 text-sm text-red-700 ring-1 ring-red-200">
           {errors.map((e, i) => <p key={i}>⚠️ {e}</p>)}
+        </div>
+      )}
+      {warnings.length > 0 && (
+        <div role="status" className="space-y-1 rounded-xl bg-amber-50 p-3 text-sm text-amber-900 ring-1 ring-amber-200">
+          {warnings.map((w, i) => <p key={i}>⚠️ {w}</p>)}
         </div>
       )}
       {notice && <p className="text-xs font-semibold text-emerald-700">✓ {notice}</p>}

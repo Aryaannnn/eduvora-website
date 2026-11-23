@@ -3,6 +3,7 @@
 // a few pages per call (the admin page calls again with `from` = nextFrom
 // until finished, showing progress). from = 1 starts again from scratch
 // (new version folder); the old pictures are removed when the new set is done.
+import { siteConfig } from "@/config/site";
 import { NextResponse, type NextRequest } from "next/server";
 import { hasAdmin2fa } from "@/lib/admin";
 import { getSession } from "@/lib/dashboard";
@@ -34,6 +35,8 @@ async function getPdf(key: string, fetchBytes: () => Promise<Uint8Array>) {
 }
 
 export async function POST(request: NextRequest, ctx: RouteContext<"/api/admin/files/[id]/process">) {
+  // The in-website reader is switched off → no page pictures are made (they would only use storage)
+  if (!siteConfig.inWebsiteReader) return NextResponse.json({ error: "The in-website reader is switched off, so pages are not prepared." }, { status: 409 });
   const started = Date.now();
   const { id } = await ctx.params;
   const s = await getSession();
