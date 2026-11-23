@@ -1,5 +1,6 @@
 "use client";
 
+import AccessExtend from "./AccessExtend";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { adjustSessionCredits, adminDeleteAccount, setPredictorAccess, setUserRole } from "@/app/admin/actions";
@@ -37,6 +38,8 @@ export type AdminStudent = {
   freeItems: { title: string; kind: "item" | "test"; at: string }[];
   /** course progress: PDFs marked done / PDFs in each course bought (null until supabase/course-progress.sql) */
   progress?: { productId: string; title: string; done: number; total: number }[] | null;
+  /** each paid item: access end (null = lifetime) — "Extend" (null until supabase/access-periods.sql) */
+  access?: { purchaseId: string; title: string; until: string | null }[] | null;
   /** package session credits (null until supabase/packages.sql is run) */
   credits: { total: number; used: number; unlimited: boolean } | null;
 };
@@ -234,6 +237,11 @@ export default function StudentsManager({ students, currentUserId, setupMissing 
                 <td className="whitespace-nowrap px-4 py-3 text-slate-600">{formatDateTime(s.created_at)}</td>
                 <td className="px-4 py-3 text-slate-600">
                   {s.bought.length ? <ul className="list-disc pl-4 text-xs">{s.bought.map((b, i) => <li key={i}>{b}</li>)}</ul> : <span className="text-xs text-slate-400">Nothing yet</span>}
+                  {s.access && s.access.length > 0 && (
+                    <ul className="mt-2 space-y-1" aria-label="Access">
+                      {s.access.map((a) => <AccessExtend key={a.purchaseId} purchaseId={a.purchaseId} title={a.title} until={a.until} />)}
+                    </ul>
+                  )}
                   {s.progress && s.progress.length > 0 && (
                     <ul className="mt-2 space-y-1.5" aria-label="Course progress">
                       {s.progress.map((p) => {

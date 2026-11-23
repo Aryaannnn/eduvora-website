@@ -30,7 +30,16 @@ export default function TermsPage() {
       <h2>3. Course access</h2>
       <ul>
         <li>Online course access is for the enrolled student only and must not be shared.</li>
-        <li>Recordings and test access remain available for the period stated on the course page.</li>
+        <li>
+          <strong>Access period:</strong> each course, book or material has an access period shown on its page, at checkout and on
+          your invoice — for example &ldquo;1 year from enrolment&rdquo;, &ldquo;until 31 Aug 2027&rdquo; or &ldquo;Lifetime&rdquo;. It is
+          counted from the date your payment is confirmed (or until the fixed date shown).
+        </li>
+        <li>
+          When the access period ends, the item stays listed in your dashboard as &ldquo;Access expired&rdquo;, but its PDFs, class links
+          and tests can no longer be opened or downloaded. We remind you in your dashboard 7 days before access ends. Where renewal is
+          offered, you can renew from your dashboard; we may also extend access at our discretion.
+        </li>
         <li>We may change class timings, faculty or schedules when needed, and will inform students in advance.</li>
       </ul>
 

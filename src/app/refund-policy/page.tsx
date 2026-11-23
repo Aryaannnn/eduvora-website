@@ -50,6 +50,11 @@ export default function RefundPolicyPage() {
         <li>Material is delivered as a <strong>personal PDF watermarked with your name, phone number and email</strong>. Once you <strong>open or download</strong> it, it is <strong>non-refundable</strong>.</li>
         <li><strong>Sharing it is not allowed.</strong> Every copy carries your details and an ID, and every open and download is logged, so shared copies can be traced to the account.</li>
         <li>
+          <strong>Access period:</strong> access lasts for the period shown on the product page and your invoice (for example 1 year from
+          enrolment, until a fixed date, or lifetime). The end of the access period is not a reason for a refund, and no refund is given for
+          unused time after access ends.
+        </li>
+        <li>
           <strong>Technical problem?</strong> If you paid but cannot open or read the content, tell us. We will fix the problem
           or give you a full refund <strong>within {r.techIssueDays} days</strong>.
         </li>

@@ -47,7 +47,7 @@ async function Content() {
     if (error) return <p className="card p-6 text-red-600">Students are not set up for counsellors yet (admin: run supabase/roles.sql once).</p>;
     return <StaffStudents students={(data ?? []) as StaffStudent[]} />;
   }
-  const [profiles, purchases, paidCounselling, overrides, signIn, freeAttempts, pkgPurchases, creditBookings, adjustments, coursePurchases, courseFiles, doneRows] = await Promise.all([
+  const [profiles, purchases, paidCounselling, overrides, signIn, freeAttempts, pkgPurchases, creditBookings, adjustments, coursePurchases, courseFiles, doneRows, accessRows] = await Promise.all([
     s.supabase.from("profiles").select("id,full_name,email,phone,role,created_at").order("created_at", { ascending: false }).limit(2000),
     s.supabase.from("purchases").select("user_id,amount,created_at,products(title,is_free)").eq("status", "paid").order("created_at", { ascending: false }).limit(10000),
     // Same rule as has_predictor_access() in supabase/predictor-access.sql
@@ -64,7 +64,14 @@ async function Content() {
     s.supabase.from("purchases").select("user_id,product_id,products!inner(title,category)").eq("status", "paid").eq("products.category", "crash_course").limit(20000),
     s.supabase.from("product_files").select("id,product_id").eq("file_type", "pdf").limit(20000),
     s.supabase.from("file_progress").select("user_id,file_id").eq("done", true).limit(50000),
+    // access periods (supabase/access-periods.sql)
+    s.supabase.from("purchases").select("id,user_id,access_until,amount,products(title,category)").eq("status", "paid").limit(20000),
   ]);
+  const accessOf = new Map<string, NonNullable<AdminStudent["access"]>>();
+  for (const a of (accessRows.data ?? []) as unknown as { id: string; user_id: string; access_until: string | null; products: { title: string; category: string } | null }[]) {
+    if (a.products?.category === "counselling_package") continue;
+    accessOf.set(a.user_id, [...(accessOf.get(a.user_id) ?? []), { purchaseId: a.id, title: a.products?.title ?? "Product", until: a.access_until }]);
+  }
   if (profiles.error) return <p className="card p-6 text-red-600">Could not load students: {profiles.error.message}</p>;
 
   // Paid items vs FREE items (₹0 unlocks + free tests taken) — for follow-up calls
@@ -129,6 +136,7 @@ async function Content() {
     predictor: predictorFor(p.id as string, p.role as string),
     signedUpWith: signIn.get(p.id as string) ?? [],
     progress: progressReady ? (progressOf.get(p.id as string) ?? []) : null,
+    access: accessRows.error ? null : (accessOf.get(p.id as string) ?? []),
   })) as AdminStudent[];
   const setupMissing = !!overrides.error;
   return <StudentsManager students={students} currentUserId={s.user.id} setupMissing={setupMissing} />;

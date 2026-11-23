@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { accessLabel, productAccess } from "@/lib/access";
 import RatingLine from "@/components/reviews/RatingLine";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -201,6 +202,7 @@ async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
               {d.start_date && <Fact icon={CalendarIcon} label="Start date" value={showDate(d.start_date)} />}
               {d.duration && <Fact icon={ClockIcon} label="Duration" value={d.duration} />}
               {d.mode && <Fact icon={MonitorIcon} label="Mode" value={d.mode} />}
+              <Fact icon={LockIcon} label="Access" value={accessLabel(productAccess(course.details)).replace(/^Access:\s*|^Access\s+/, "").replace(/^until/, "Until").replace(/^Lifetime access$/, "Lifetime")} />
               {files && files.pdfs > 0 && <Fact icon={FileIcon} label="Includes" value={files.text} />}
               {plan && <Fact icon={CalendarIcon} label="Study plan" value={`Day-wise (${plan.days} days)`} />}
               {seatsLeft !== null && <Fact icon={UsersIcon} label="Seats" value={full ? "Batch full" : `${seatsLeft} left`} strong={!full && seatsLeft <= 10} />}

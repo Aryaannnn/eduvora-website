@@ -5,6 +5,7 @@
 // 4. Paid item → works out the price ON THE SERVER (coupon, referral ₹ off,
 //    reward credit — src/lib/pricing.ts), creates the Razorpay order for
 //    that amount + saves a 'created' purchase with the discount details
+import { productAccess } from "@/lib/access";
 import { phoneRequired } from "@/lib/phone-guard";
 import { countEnrolled, seatLimitOf } from "@/lib/seats";
 import { after, NextResponse, type NextRequest } from "next/server";
@@ -39,15 +40,16 @@ export async function POST(request: NextRequest) {
     .maybeSingle();
   if (!product || !product.is_active) return json({ error: "This item is not available." }, 404);
 
-  // Already bought? Never charge twice.
-  const { data: owned } = await admin
-    .from("purchases")
-    .select("id")
-    .eq("user_id", session.user.id)
-    .eq("product_id", product.id)
-    .eq("status", "paid")
-    .limit(1)
-    .maybeSingle();
+  // Already bought (and access not ended)? Never charge twice.
+  // Access ended → buy again only if renewals are on for this product (supabase/access-periods.sql).
+  const paidQ = (cols: string) => admin.from("purchases").select(cols).eq("user_id", session.user.id).eq("product_id", product.id).eq("status", "paid");
+  let paidRes = await paidQ("id,access_until");
+  if (paidRes.error) paidRes = await paidQ("id"); // SQL not run yet
+  const rows = (paidRes.data ?? []) as unknown as { id: string; access_until?: string | null }[];
+  const owned = rows.find((r) => !r.access_until || new Date(r.access_until).getTime() > Date.now()) ?? null;
+  if (!owned && rows.length && !productAccess(product.details).renewals) {
+    return json({ error: "Your access to this item has ended. Please contact us to renew it." }, 409);
+  }
   if (owned) {
     const redirect = product.category === "counselling_package" ? "/book-a-slot" : product.is_free ? `/dashboard/courses?unlocked=${product.id}#item-${product.id}` : `/dashboard/courses?open=${product.id}#item-${product.id}`;
     return json({ owned: true, redirect });

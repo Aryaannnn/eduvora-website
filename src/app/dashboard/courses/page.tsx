@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import BuyButton from "@/components/BuyButton";
+import { productAccess, purchaseAccessText } from "@/lib/access";
+import { endingSoon, loadMyAccess, type MyAccess } from "@/lib/access-server";
 import CourseTabs from "@/components/files/CourseTabs";
 import StudyPlanView from "@/components/files/StudyPlanView";
 import { loadCoursePlans } from "@/lib/study-plan-server";
@@ -80,6 +83,13 @@ async function CoursesContent({ searchParams }: { searchParams: PageProps<"/dash
   const newIn = (list: { id: string }[] = []) => list.filter((f) => newIds.includes(f.id)).length;
   const startSubject = typeof sp.subject === "string" ? sp.subject : undefined; // bell → that subject
   // Day-wise study plans (supabase/study-plans.sql): days, my ticks, my start date (default: enrolment)
+  // Access periods (supabase/access-periods.sql): until when, ended?, renewals allowed?
+  const access = await loadMyAccess(s.supabase, s.user.id);
+  const { data: detailRows } = ids.length ? await s.supabase.from("products").select("id,details").in("id", ids) : { data: [] };
+  const renewable = new Set(((detailRows ?? []) as { id: string; details: unknown }[]).filter((r) => productAccess(r.details).renewals).map((r) => r.id));
+  const ended = (pid: string) => !!access?.get(pid)?.ended;
+  const soon = endingSoon(access);
+  const titleOf = (pid: string) => paid.find((x) => x.products!.id === pid)?.products!.title ?? "an item";
   const plans = await loadCoursePlans(s.supabase, s.user.id, courses.map((c) => ({ id: c.products!.id, enrolledAt: c.created_at })));
   const today = todayInIndia();
   const namesOf = (id: string) => Object.fromEntries((filesOf.get(id) ?? []).map((f) => [f.id, f.display_name]));
@@ -101,6 +111,11 @@ async function CoursesContent({ searchParams }: { searchParams: PageProps<"/dash
   return (
     <>
       <PageHeader title="My Courses & Material" subtitle="Everything you've bought or unlocked for free, ready to use." />
+      {soon.map(([pid, a]) => (
+        <p key={pid} role="status" className="mb-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900 ring-1 ring-amber-200">
+          ⏳ Your access to <a href={`#item-${pid}`} className="underline">{titleOf(pid)}</a> ends on {new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kolkata" }).format(new Date(a.until!))}. Download or finish what you need before then.
+        </p>
+      ))}
       {unlocked && (
         <p role="status" className="mb-4 flex items-center gap-2 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 ring-1 ring-emerald-200">
           <CheckIcon className="h-5 w-5 shrink-0" /> Unlocked for free: {unlocked.products!.title}. It&apos;s ready below. 🎉
@@ -139,9 +154,13 @@ async function CoursesContent({ searchParams }: { searchParams: PageProps<"/dash
                           {newIn(filesOf.get(c.products!.id)) > 0 && <span className="ml-1.5 rounded-full bg-accent-400 px-2 py-0.5 align-middle text-[11px] font-extrabold text-brand-950">{newIn(filesOf.get(c.products!.id))} new</span>}
                         </p>
                         <p className="text-xs text-slate-500">{gotOn(c)}</p>
+                        <AccessChip a={access?.get(c.products!.id)} />
                       </div>
                       <Link href={`/courses/${c.products!.slug}`} className="hidden text-sm font-semibold text-brand-700 hover:underline sm:block">Course page</Link>
                     </div>
+                    {ended(c.products!.id) ? (
+                      <ExpiredBox productId={c.products!.id} renew={renewable.has(c.products!.id)} />
+                    ) : <>
                     {links[i].length > 0 ? (
                       <div className="mt-4 flex flex-wrap gap-2">
                         {links[i].map((l) => (
@@ -169,6 +188,7 @@ async function CoursesContent({ searchParams }: { searchParams: PageProps<"/dash
                       <Link href={qbHref} className="btn-accent mt-3 !px-4 !py-2 text-sm">Included: VITEEE Question Bank →</Link>
                     )}
                     <TestButtons row={c} />
+                    </>}
                   </li>
                 ))}
                 {qbIncluded && (
@@ -202,9 +222,10 @@ async function CoursesContent({ searchParams }: { searchParams: PageProps<"/dash
                       <div>
                         <p className="font-bold text-slate-900">{f.products!.title} {isFreeRow(f) && <FreeBadge className="ml-1 align-middle" />}</p>
                         <p className="text-xs text-slate-500">{gotOn(f)}</p>
+                        <AccessChip a={access?.get(f.products!.id)} />
                       </div>
                     </div>
-                    <FileList files={filesOf.get(f.products!.id)} empty="Files coming soon." itemTitle={f.products!.title} suggestion={suggestionFor(f)} />
+                    {ended(f.products!.id) ? <ExpiredBox productId={f.products!.id} renew={renewable.has(f.products!.id)} /> : <FileList files={filesOf.get(f.products!.id)} empty="Files coming soon." itemTitle={f.products!.title} suggestion={suggestionFor(f)} />}
                   </li>
                 ))}
               </ul>
@@ -231,8 +252,15 @@ async function CoursesContent({ searchParams }: { searchParams: PageProps<"/dash
                 {tests.map((t) => (
                   <li key={t.id} id={`item-${t.products!.id}`} className={`scroll-mt-24 rounded-2xl bg-slate-50 p-4 ring-1 ${t.products!.id === focusId ? "ring-2 ring-emerald-400" : "ring-slate-200"}`}>
                     <p className="flex flex-wrap items-center gap-2 font-bold text-slate-900"><ClipboardIcon className="h-5 w-5 text-emerald-600" /> {t.products!.title} {isFreeRow(t) && <FreeBadge />}</p>
-                    <FileList files={filesOf.get(t.products!.id)} itemTitle={t.products!.title} suggestion={suggestionFor(t)} />
-                    <TestButtons row={t} empty="Tests will be added to this pack soon." />
+                    <AccessChip a={access?.get(t.products!.id)} />
+                    {ended(t.products!.id) ? (
+                      <ExpiredBox productId={t.products!.id} renew={renewable.has(t.products!.id)} />
+                    ) : (
+                      <>
+                        <FileList files={filesOf.get(t.products!.id)} itemTitle={t.products!.title} suggestion={suggestionFor(t)} />
+                        <TestButtons row={t} empty="Tests will be added to this pack soon." />
+                      </>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -297,5 +325,26 @@ function FileList({ files, empty, itemTitle = "", suggestion }: { files?: Studen
       </p>
     )}
     </>
+  );
+}
+
+/** "Access until 31 Aug 2027" / "Lifetime access" / "Access expired" */
+function AccessChip({ a }: { a?: MyAccess }) {
+  if (!a) return null;
+  return a.ended ? (
+    <span className="mt-1 inline-block rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-bold text-red-700">Access expired</span>
+  ) : (
+    <span className="mt-1 inline-block rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600">{purchaseAccessText(a.until)}</span>
+  );
+}
+
+/** The course stays listed; its PDFs, links and tests are closed (checked on the server too). */
+function ExpiredBox({ productId, renew }: { productId: string; renew: boolean }) {
+  return (
+    <div className="mt-3 rounded-xl bg-red-50 p-4 text-sm text-red-900 ring-1 ring-red-200">
+      <p className="font-bold">Your access to this has ended.</p>
+      <p className="mt-1">The PDFs, class links and tests can&apos;t be opened any more.{renew ? " Renew to get access again." : " Please contact us if you need more time."}</p>
+      {renew && <div className="mt-3 max-w-xs"><BuyButton productId={productId} label="Renew" className="btn-primary w-full" trust /></div>}
+    </div>
   );
 }

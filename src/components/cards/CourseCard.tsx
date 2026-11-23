@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { accessLabel, productAccess } from "@/lib/access";
 import { durationBadge, enrollLabel } from "@/lib/courses";
 import type { FileSummary } from "@/lib/file-summary";
 import { discountPercent, formatPrice } from "@/lib/format";
@@ -62,7 +63,8 @@ export default function CourseCard({ course, files }: { course: Product; files?:
             <Link href={`/courses/${course.slug}`} className="btn-light !px-2 !py-2 text-xs sm:text-sm">Details</Link>
             <BuyButton productId={course.id} label={enrollLabel(free)} className="btn-primary w-full !px-2 !py-2 text-xs sm:text-sm" trust={false} free={course.is_free} />
           </div>
-          {!free && <SecurePaymentNote className="mt-2.5" refundKind="digital" />}
+          <p className="mt-2 text-center text-[11px] font-semibold text-slate-500">{accessLabel(productAccess(course.details))}</p>
+          {!free && <SecurePaymentNote className="mt-1.5" refundKind="digital" />}
         </div>
       </div>
     </article>

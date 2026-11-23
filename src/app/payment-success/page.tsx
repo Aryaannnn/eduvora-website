@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { purchaseAccessText } from "@/lib/access";
 import Link from "next/link";
 import { Suspense } from "react";
 import CheckPaymentButton from "@/components/CheckPaymentButton";
@@ -48,6 +49,8 @@ async function Content({ searchParams }: { searchParams: PageProps<"/payment-suc
         .maybeSingle()
     : { data: null };
   const order = data as unknown as Order | null;
+  // access period of this purchase (supabase/access-periods.sql — missing before it is run)
+  const { data: acc } = order ? await s.supabase.from("purchases").select("access_until").eq("id", order.id).maybeSingle() : { data: null };
   const access = await getContactAccess();
 
   if (order?.status === "failed") {
@@ -144,6 +147,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/payment-suc
       {order?.status === "paid" && order.product_id && !isPackage && (
         <div className="mt-6 rounded-3xl bg-emerald-50 p-6 text-center ring-1 ring-emerald-200">
           <p className="text-lg font-extrabold text-emerald-900">Your course is ready in My Courses</p>
+          {acc && <p className="mt-1 text-sm font-bold text-emerald-900">{purchaseAccessText(acc.access_until as string | null)}</p>}
           <p className="mt-1 text-sm text-emerald-800">Open or download every PDF there — your personal copy, watermarked with your name.</p>
           <Link href={`/dashboard/courses?open=${order.product_id}#item-${order.product_id}`} className="btn-primary mt-4">Go to My Courses</Link>
         </div>

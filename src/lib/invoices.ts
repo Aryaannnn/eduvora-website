@@ -11,6 +11,7 @@
 //  ✏️ Address / GSTIN / Udyam / signature: src/config/site.ts → invoice
 //  ✏️ Signature image: Supabase → Storage → bucket "assets" → signature.png (private)
 // =====================================================================
+import { purchaseAccessText } from "./access";
 import "server-only";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -108,6 +109,9 @@ async function buildFromPayment(db: SupabaseClient, id: string): Promise<Invoice
     const amount = Number(p.amount);
     const product = p.products as unknown as { title: string; category?: string } | null;
     const title = product?.title ?? "Purchase";
+    // access period (supabase/access-periods.sql — skipped before it is run)
+    const { data: acc, error: accErr } = await db.from("purchases").select("access_until").eq("id", p.id).maybeSingle();
+    const accessNote = accErr || !acc || product?.category === "counselling_package" ? "" : purchaseAccessText(acc.access_until as string | null);
     return await finish({
       kind: "purchase",
       id: p.id,
@@ -118,7 +122,7 @@ async function buildFromPayment(db: SupabaseClient, id: string): Promise<Invoice
       email: prof?.email || "",
       phone: prof?.phone ? `+${String(prof.phone).replace(/^\+/, "")}` : "",
       itemTitle: title,
-      itemDetail: CATEGORY_LABEL[product?.category ?? ""] ?? "",
+      itemDetail: [CATEGORY_LABEL[product?.category ?? ""] ?? "", accessNote].filter(Boolean).join(" · "),
       amount,
       ...pricing(p, amount),
       method: await methodFor(db, "purchases", p.id, p.payment_method as string | null, p.razorpay_payment_id as string | null, amount),

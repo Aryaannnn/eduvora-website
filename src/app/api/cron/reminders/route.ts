@@ -16,6 +16,7 @@ import { cronHeaders, cronUnauthorised, isCronAuthorised } from "@/lib/cron-auth
 import { completePastBookings, sendCheckoutReminders, sendDueFeedbackRequests, sendDueReminders } from "@/lib/email/notify";
 import { retryMissingCalendarEvents } from "@/lib/google-calendar";
 import { sendMaterialEmails } from "@/lib/email/material";
+import { sendAccessReminders } from "@/lib/email/access";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 
 export const maxDuration = 60;
@@ -38,5 +39,7 @@ export async function GET(request: NextRequest) {
   const leadRes = await getAdminSupabase()?.rpc("sync_leads").then((r) => r, () => null);
   // "New material added to your course" (one per course per day; only when emails are switched on)
   const materialEmails = await sendMaterialEmails().catch((e) => ({ error: (e as Error).message }));
-  return NextResponse.json({ ok: true, reminders24h: sent.r24, reminders1h: sent.r1, calendarEventsAdded: calendarEvents, completed, feedbackEmails, checkoutReminders2h: checkout.r2h, checkoutReminders24h: checkout.r24h, leadsSynced: leadRes && !leadRes.error ? leadRes.data : 0, materialEmails }, { headers: cronHeaders });
+  // "Your access ends in 7 days" (once per purchase; only when emails are switched on)
+  const accessReminders = await sendAccessReminders().catch((e) => ({ error: (e as Error).message }));
+  return NextResponse.json({ ok: true, reminders24h: sent.r24, reminders1h: sent.r1, calendarEventsAdded: calendarEvents, completed, feedbackEmails, checkoutReminders2h: checkout.r2h, checkoutReminders24h: checkout.r24h, leadsSynced: leadRes && !leadRes.error ? leadRes.data : 0, materialEmails, accessReminders }, { headers: cronHeaders });
 }

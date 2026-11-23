@@ -11,6 +11,7 @@ import { siteConfig } from "@/config/site";
 import { formatBytes } from "@/lib/product-files";
 import FilesManager from "./FilesManager";
 import StudyPlanEditor from "./StudyPlanEditor";
+import AccessEditor from "./AccessEditor";
 import { AdminHeader, Label, Modal, Notice, Toggle } from "./ui";
 
 export type AdminProduct = {
@@ -263,6 +264,7 @@ function ProductForm({ product, defaultCategory, onClose, onSaved, onChanged }: 
               <Toggle checked={f.includes_question_bank} onChange={(v) => set("includes_question_bank", v)} label="Include Question Bank access" />
             )}
           </div>
+          <AccessEditor json={f.details} onChange={(v) => set("details", v)} />
           {!f.is_active && productId && (
             <p className="text-xs text-slate-500 sm:col-span-2">Hidden: not shown or sold on the website — students who already bought it keep their access.</p>
           )}

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { endingSoon, loadMyAccess } from "@/lib/access-server";
 import { getMyParentShare } from "@/lib/parent-share";
 import type { Session } from "@/lib/dashboard";
 import { Suspense } from "react";
@@ -52,6 +53,9 @@ async function HomeContent() {
           )}
         </div>
       </section>
+
+      {/* Access ending within 7 days (supabase/access-periods.sql) */}
+      <Suspense fallback={null}><AccessEndingBanner s={s} /></Suspense>
 
       {/* A college plan was published and not opened yet */}
       <Suspense fallback={null}><NewPlanBanner s={s} /></Suspense>
@@ -207,5 +211,22 @@ async function CourseProgress({ s, courses }: { s: Session; courses: { id: strin
         })}
       </ul>
     </section>
+  );
+}
+
+/** "Your access to … ends on …" (within 7 days) */
+async function AccessEndingBanner({ s }: { s: Session }) {
+  const soon = endingSoon(await loadMyAccess(s.supabase, s.user.id));
+  if (!soon.length) return null;
+  const { data: names } = await s.supabase.from("products").select("id,title").in("id", soon.map(([pid]) => pid));
+  const title = (pid: string) => (names ?? []).find((n) => n.id === pid)?.title ?? "a course";
+  return (
+    <div className="space-y-2">
+      {soon.map(([pid, a]) => (
+        <Link key={pid} href={`/dashboard/courses?open=${pid}#item-${pid}`} className="block rounded-2xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900 ring-1 ring-amber-200 hover:bg-amber-100">
+          ⏳ Your access to {title(pid)} ends on {new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kolkata" }).format(new Date(a.until!))} →
+        </Link>
+      ))}
+    </div>
   );
 }

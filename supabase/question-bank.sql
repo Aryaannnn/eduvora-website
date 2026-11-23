@@ -32,6 +32,24 @@ select 'VITEEE Question Bank', 'viteee-question-bank',
 update public.products set category = 'crash_course', sort_order = 6 where slug = 'viteee-question-bank';
 
 -- ---------- access: earlier Question Bank buyers + crash courses that include it ----------
+-- (the SAME rule as access-periods.sql, so running the files in any order gives the same result)
+alter table public.purchases add column if not exists access_until timestamptz;   -- null = lifetime (access-periods.sql)
+
+-- ---------- "has a paid purchase whose access hasn't ended" ----------
+create or replace function public.purchase_active(p_user uuid, p_product uuid)
+returns boolean
+language sql stable security definer set search_path = public
+as $$
+  select exists (
+    select 1 from public.purchases
+     where user_id = p_user and product_id = p_product and status = 'paid'
+       and (access_until is null or access_until > now())
+  );
+$$;
+revoke all on function public.purchase_active(uuid, uuid) from public, anon;
+grant execute on function public.purchase_active(uuid, uuid) to authenticated, service_role;
+
+-- ---------- the one access rule (same as question-bank.sql + access end) ----------
 create or replace function public.can_access_product(p_user uuid, p_product uuid)
 returns boolean
 language plpgsql stable security definer set search_path = public
@@ -40,39 +58,28 @@ declare
   p  public.products;
 begin
   if p_user is null or p_product is null then return false; end if;
-  -- a logged-in person may only ask about themselves (the server may ask about anyone)
   if auth.uid() is not null and auth.uid() <> p_user and not public.is_admin() then return false; end if;
   if exists (select 1 from public.profiles where id = p_user and role = 'admin') then return true; end if;
 
   select * into p from public.products where id = p_product;
   if not found then return false; end if;
 
-  -- paid for it (also after it was hidden)
-  if exists (select 1 from public.purchases where user_id = p_user and product_id = p_product and status = 'paid') then return true; end if;
+  -- paid for it and access hasn't ended (also after the product was hidden)
+  if public.purchase_active(p_user, p_product) then return true; end if;
   -- free while active
   if p.is_active and (p.is_free or p.price = 0) then return true; end if;
 
-  -- the VITEEE Question Bank: anyone who bought / unlocked an earlier Question Bank
-  -- product (any subject or the PCM bundle), or a crash course that includes it
-  if p.slug = 'viteee-question-bank' then
+  -- the VITEEE Question Bank: an earlier Question Bank purchase, or a crash course that includes it (access not ended)
+  if p.slug = 'viteee-question-bank' or p.category = 'question_bank' then
     if exists (select 1 from public.purchases pu join public.products b on b.id = pu.product_id
-                where pu.user_id = p_user and pu.status = 'paid' and b.category = 'question_bank') then
+                where pu.user_id = p_user and pu.status = 'paid' and (pu.access_until is null or pu.access_until > now())
+                  and b.category = 'question_bank'
+                  and (p.slug = 'viteee-question-bank' or b.subject = 'pcm')) then
       return true;
     end if;
     if exists (select 1 from public.purchases pu join public.products c on c.id = pu.product_id
-                where pu.user_id = p_user and pu.status = 'paid' and c.category = 'crash_course' and c.includes_question_bank) then
-      return true;
-    end if;
-  end if;
-
-  -- (earlier per-subject Question Bank products — kept working)
-  if p.category = 'question_bank' then
-    if exists (select 1 from public.purchases pu join public.products b on b.id = pu.product_id
-                where pu.user_id = p_user and pu.status = 'paid' and b.category = 'question_bank' and b.subject = 'pcm') then
-      return true;
-    end if;
-    if exists (select 1 from public.purchases pu join public.products c on c.id = pu.product_id
-                where pu.user_id = p_user and pu.status = 'paid' and c.category = 'crash_course' and c.includes_question_bank) then
+                where pu.user_id = p_user and pu.status = 'paid' and (pu.access_until is null or pu.access_until > now())
+                  and c.category = 'crash_course' and c.includes_question_bank) then
       return true;
     end if;
   end if;

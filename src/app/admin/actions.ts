@@ -119,11 +119,18 @@ export async function saveProduct(input: ProductInput): Promise<ActionResult<{ i
     }
   };
 
+  // Access duration changed? → students who already bought it get the rule from today (supabase/access-periods.sql)
+  const applyAccess = async (id: string) => {
+    const { data: n, error: e } = await s.supabase.rpc("apply_product_access", { p_product: id });
+    return e || !n ? "" : ` Access updated for ${n} existing buyer${n === 1 ? "" : "s"}.`;
+  };
+
   if (input.id) {
     const { error } = await s.supabase.from("products").update(row).eq("id", input.id);
     if (!error) await clearPopular(input.id);
+    const accessNote = error ? "" : await applyAccess(input.id);
     updateTag("products");
-    return qbSql(error) ?? dbResult(error, "Product saved.");
+    return qbSql(error) ?? dbResult(error, `Product saved.${accessNote}`);
   }
   const { data: created, error } = await s.supabase.from("products").insert(row).select("id").single();
   if (!error && created) await clearPopular(created.id as string);
