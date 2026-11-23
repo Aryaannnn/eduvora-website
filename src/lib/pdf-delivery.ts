@@ -22,6 +22,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { siteConfig } from "@/config/site";
 import type { Session } from "./dashboard";
 import { unlockFreeProduct } from "./free-resources";
+import { recordOpened } from "./progress";
 import { canRead, type ReaderFile } from "./reader";
 import { cleanupWatermarked, deviceId, shortCopyId, watermarkPdf, WM_VERSION } from "./watermark";
 
@@ -184,6 +185,7 @@ export async function deliverPdf(request: NextRequest, db: SupabaseClient, s: Se
     return page("Please try again", "We couldn't open your copy just now. Please try again in a moment.", 503, `/api/files/${fileId}/${mode}`);
   }
   await log({ copyId, watermarked: true, status: "ok" }); // every open / download, with the account (admins too)
+  await recordOpened(db, s.user.id, file.id); // "Continue where you left off" (supabase/course-progress.sql)
   return new NextResponse(body, {
     status: 200,
     headers: {

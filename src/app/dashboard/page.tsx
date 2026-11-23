@@ -14,6 +14,8 @@ import { getNextDates } from "@/lib/important-dates";
 import { NextDatesList, OFFICIAL_NOTE } from "@/components/dates/DateBits";
 import { claimReferralFromCookie } from "@/lib/pricing";
 import { getAdminSupabase } from "@/lib/supabase/admin";
+import { countDone, loadMyProgress } from "@/lib/progress";
+import { byProduct, loadStudentFiles } from "@/lib/student-files";
 
 export default function DashboardHome() {
   return (
@@ -62,6 +64,9 @@ async function HomeContent() {
 
       {/* Counselling package: "Sessions left: 2 of 3" */}
       <SessionCreditsCard credits={credits} />
+
+      {/* My courses with their progress */}
+      <Suspense fallback={null}><CourseProgress s={s} courses={paidOnly(purchases).filter((p) => p.products!.category === "crash_course").map((p) => p.products!)} /></Suspense>
 
       {/* Quick cards */}
       <div className="grid gap-4 sm:grid-cols-3">
@@ -170,5 +175,37 @@ async function NewPlanBanner({ s }: { s: Session }) {
       <span className="rounded-full bg-accent-400 px-2.5 py-0.5 text-xs font-extrabold text-brand-950">New</span>
       📋 Your college plan is ready — open it in My Bookings →
     </Link>
+  );
+}
+
+/** Each enrolled course: "x of y PDFs done" + bar → opens it in My Courses */
+async function CourseProgress({ s, courses }: { s: Session; courses: { id: string; title: string }[] }) {
+  if (!courses.length) return null;
+  const files = byProduct(await loadStudentFiles(s.supabase, courses.map((c) => c.id)));
+  const progress = await loadMyProgress(s.supabase, [...files.values()].flat().map((f) => f.id));
+  if (progress === null) return null; // supabase/course-progress.sql not run yet
+  return (
+    <section className="card p-5 sm:p-6" aria-labelledby="my-progress">
+      <h2 id="my-progress" className="text-lg font-extrabold text-slate-900">My courses</h2>
+      <ul className="mt-4 space-y-4">
+        {courses.map((c) => {
+          const ids = (files.get(c.id) ?? []).map((f) => f.id);
+          const p = countDone(ids, progress);
+          return (
+            <li key={c.id}>
+              <Link href={`/dashboard/courses?open=${c.id}#item-${c.id}`} className="group block">
+                <div className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
+                  <span className="font-bold text-slate-900 group-hover:text-brand-700">{c.title}</span>
+                  <span className="text-slate-600">{p.total ? <><strong className="text-slate-900">{p.pct}%</strong> · {p.done} of {p.total} PDFs done</> : "PDFs coming soon"}</span>
+                </div>
+                <div className="mt-1.5 h-2.5 overflow-hidden rounded-full bg-slate-200" role="progressbar" aria-valuenow={p.pct} aria-valuemin={0} aria-valuemax={100} aria-label={`${c.title} progress`}>
+                  <div className={`h-full rounded-full ${p.pct >= 100 ? "bg-emerald-500" : "bg-accent-400"}`} style={{ width: `${Math.max(p.pct, p.pct ? 2 : 0)}%` }} />
+                </div>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }

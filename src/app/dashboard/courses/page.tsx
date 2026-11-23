@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { loadMyProgress } from "@/lib/progress";
 import { QUESTION_BANK_SLUG } from "@/lib/courses";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import Link from "next/link";
@@ -68,6 +69,9 @@ async function CoursesContent({ searchParams }: { searchParams: PageProps<"/dash
   const qbIncluded = qbProduct && !qbOwned && qbAllowed === true ? (qbProduct as { id: string; title: string; slug: string }) : null;
   const qbFiles = qbIncluded ? await loadStudentFiles(s.supabase, [qbIncluded.id]) : [];
   const qbHref = qbProduct ? `/dashboard/courses?open=${qbProduct.id}#item-${qbProduct.id}` : "";
+  // "Mark as done" + last opened, for every PDF shown here (own rows only; null before supabase/course-progress.sql)
+  const allFileIds = [...[...filesOf.values()].flat().map((f) => f.id), ...qbFiles.map((f) => f.id)];
+  const progress = await loadMyProgress(s.supabase, allFileIds);
   // earlier per-subject Question Bank items: only while they still hold PDFs (supabase/question-bank.sql moves them)
   const oldQB = questionBank.filter((q) => (filesOf.get(q.products!.id) ?? []).length > 0);
 
@@ -138,7 +142,7 @@ async function CoursesContent({ searchParams }: { searchParams: PageProps<"/dash
                     {siteConfig.inWebsiteReader ? (
                       <FileList files={filesOf.get(c.products!.id)} itemTitle={c.products!.title} suggestion={suggestionFor(c)} />
                     ) : (
-                      <SubjectTabs files={filesOf.get(c.products!.id) ?? []} title={c.products!.title} />
+                      <SubjectTabs files={filesOf.get(c.products!.id) ?? []} title={c.products!.title} progress={progress ?? {}} tracking={progress !== null} />
                     )}
                     {withQB.has(c.products!.id) && qbHref && c.products!.id !== qbProduct?.id && (
                       <Link href={qbHref} className="btn-accent mt-3 !px-4 !py-2 text-sm">Included: VITEEE Question Bank →</Link>
@@ -155,7 +159,7 @@ async function CoursesContent({ searchParams }: { searchParams: PageProps<"/dash
                         <p className="text-xs text-slate-500">Included with your earlier purchase</p>
                       </div>
                     </div>
-                    <SubjectTabs files={qbFiles} title={qbIncluded.title} />
+                    <SubjectTabs files={qbFiles} title={qbIncluded.title} progress={progress ?? {}} tracking={progress !== null} />
                   </li>
                 )}
               </ul>

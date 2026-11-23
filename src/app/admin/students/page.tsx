@@ -47,7 +47,7 @@ async function Content() {
     if (error) return <p className="card p-6 text-red-600">Students are not set up for counsellors yet (admin: run supabase/roles.sql once).</p>;
     return <StaffStudents students={(data ?? []) as StaffStudent[]} />;
   }
-  const [profiles, purchases, paidCounselling, overrides, signIn, freeAttempts, pkgPurchases, creditBookings, adjustments] = await Promise.all([
+  const [profiles, purchases, paidCounselling, overrides, signIn, freeAttempts, pkgPurchases, creditBookings, adjustments, coursePurchases, courseFiles, doneRows] = await Promise.all([
     s.supabase.from("profiles").select("id,full_name,email,phone,role,created_at").order("created_at", { ascending: false }).limit(2000),
     s.supabase.from("purchases").select("user_id,amount,created_at,products(title,is_free)").eq("status", "paid").order("created_at", { ascending: false }).limit(10000),
     // Same rule as has_predictor_access() in supabase/predictor-access.sql
@@ -60,6 +60,10 @@ async function Content() {
     s.supabase.from("purchases").select("user_id,sessions_granted,sessions_unlimited").eq("status", "paid").or("sessions_granted.not.is.null,sessions_unlimited.eq.true").limit(20000),
     s.supabase.from("bookings").select("user_id").eq("paid_with", "credit").in("status", ["pending", "confirmed", "completed"]).limit(20000),
     s.supabase.from("session_credit_adjustments").select("user_id,delta").limit(20000),
+    // Course progress (supabase/course-progress.sql): courses bought, their PDFs, PDFs marked done
+    s.supabase.from("purchases").select("user_id,product_id,products!inner(title,category)").eq("status", "paid").eq("products.category", "crash_course").limit(20000),
+    s.supabase.from("product_files").select("id,product_id").eq("file_type", "pdf").limit(20000),
+    s.supabase.from("file_progress").select("user_id,file_id").eq("done", true).limit(50000),
   ]);
   if (profiles.error) return <p className="card p-6 text-red-600">Could not load students: {profiles.error.message}</p>;
 
@@ -82,6 +86,24 @@ async function Content() {
   }
   for (const a of (adjustments.data ?? []) as { user_id: string; delta: number }[]) c(a.user_id).total += a.delta;
   for (const b of (creditBookings.data ?? []) as { user_id: string }[]) c(b.user_id).used += 1;
+
+  // progress per student per course: PDFs done / PDFs in the course
+  const progressReady = !doneRows.error;
+  const productOf = new Map(((courseFiles.data ?? []) as { id: string; product_id: string }[]).map((f) => [f.id, f.product_id]));
+  const totalOf = new Map<string, number>();
+  for (const pid of productOf.values()) totalOf.set(pid, (totalOf.get(pid) ?? 0) + 1);
+  const doneOf = new Map<string, number>(); // "user|product" → done
+  for (const d of (doneRows.data ?? []) as { user_id: string; file_id: string }[]) {
+    const pid = productOf.get(d.file_id);
+    if (pid) doneOf.set(`${d.user_id}|${pid}`, (doneOf.get(`${d.user_id}|${pid}`) ?? 0) + 1);
+  }
+  const progressOf = new Map<string, NonNullable<AdminStudent["progress"]>>();
+  for (const p of (coursePurchases.data ?? []) as unknown as { user_id: string; product_id: string; products: { title: string } }[]) {
+    const list = progressOf.get(p.user_id) ?? [];
+    if (list.some((x) => x.productId === p.product_id)) continue;
+    list.push({ productId: p.product_id, title: p.products.title, done: doneOf.get(`${p.user_id}|${p.product_id}`) ?? 0, total: totalOf.get(p.product_id) ?? 0 });
+    progressOf.set(p.user_id, list);
+  }
 
   const seenTest = new Set<string>();
   for (const a of (freeAttempts.data ?? []) as unknown as { user_id: string; started_at: string; tests: { title: string } | null }[]) {
@@ -106,6 +128,7 @@ async function Content() {
     credits: creditsSetup ? (cred.get(p.id as string) ?? { total: 0, used: 0, unlimited: false }) : null,
     predictor: predictorFor(p.id as string, p.role as string),
     signedUpWith: signIn.get(p.id as string) ?? [],
+    progress: progressReady ? (progressOf.get(p.id as string) ?? []) : null,
   })) as AdminStudent[];
   const setupMissing = !!overrides.error;
   return <StudentsManager students={students} currentUserId={s.user.id} setupMissing={setupMissing} />;

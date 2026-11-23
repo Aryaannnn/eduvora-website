@@ -35,6 +35,8 @@ export type AdminStudent = {
   signedUpWith: string[];
   /** free items this student unlocked (₹0) or free tests they took — newest first */
   freeItems: { title: string; kind: "item" | "test"; at: string }[];
+  /** course progress: PDFs marked done / PDFs in each course bought (null until supabase/course-progress.sql) */
+  progress?: { productId: string; title: string; done: number; total: number }[] | null;
   /** package session credits (null until supabase/packages.sql is run) */
   credits: { total: number; used: number; unlimited: boolean } | null;
 };
@@ -157,7 +159,7 @@ export default function StudentsManager({ students, currentUserId, setupMissing 
       <AdminHeader title="Students" subtitle={`${students.length} registered user${students.length === 1 ? "" : "s"} · ${withAccess} with predictor access.`}>
         <button
           type="button"
-          onClick={() => downloadCsv("students.csv", ["Name", "Email", "Phone", "Role", "Signed up with", "Joined", "Bought", "Free items", "Sessions", "Predictor access"], shown.map((s) => [s.full_name, s.email, s.phone, s.role, s.signedUpWith.map(providerLabel).join(" + "), csvDateTimeIST(s.created_at), s.bought.join("; "), s.freeItems.map((f) => `${f.title}${f.kind === "test" ? " (test)" : ""} — ${csvDateTimeIST(f.at)}`).join("; "), s.credits ? (s.credits.unlimited ? "Unlimited" : `${Math.max(s.credits.total - s.credits.used, 0)} of ${s.credits.total} left`) : "", `${s.predictor.access ? "Yes" : "No"} (${REASON[s.predictor.reason]})`]))}
+          onClick={() => downloadCsv("students.csv", ["Name", "Email", "Phone", "Role", "Signed up with", "Joined", "Bought", "Course progress", "Free items", "Sessions", "Predictor access"], shown.map((s) => [s.full_name, s.email, s.phone, s.role, s.signedUpWith.map(providerLabel).join(" + "), csvDateTimeIST(s.created_at), s.bought.join("; "), (s.progress ?? []).map((p) => `${p.title}: ${p.done}/${p.total}`).join("; "), s.freeItems.map((f) => `${f.title}${f.kind === "test" ? " (test)" : ""} — ${csvDateTimeIST(f.at)}`).join("; "), s.credits ? (s.credits.unlimited ? "Unlimited" : `${Math.max(s.credits.total - s.credits.used, 0)} of ${s.credits.total} left`) : "", `${s.predictor.access ? "Yes" : "No"} (${REASON[s.predictor.reason]})`]))}
           className="btn-light"
         >
           Export CSV
@@ -232,6 +234,19 @@ export default function StudentsManager({ students, currentUserId, setupMissing 
                 <td className="whitespace-nowrap px-4 py-3 text-slate-600">{formatDateTime(s.created_at)}</td>
                 <td className="px-4 py-3 text-slate-600">
                   {s.bought.length ? <ul className="list-disc pl-4 text-xs">{s.bought.map((b, i) => <li key={i}>{b}</li>)}</ul> : <span className="text-xs text-slate-400">Nothing yet</span>}
+                  {s.progress && s.progress.length > 0 && (
+                    <ul className="mt-2 space-y-1.5" aria-label="Course progress">
+                      {s.progress.map((p) => {
+                        const pct = p.total ? Math.round((p.done / p.total) * 100) : 0;
+                        return (
+                          <li key={p.productId} className="text-xs">
+                            <span className="flex justify-between gap-2"><span className="truncate">{p.title}</span><strong className="shrink-0 text-slate-800">{p.total ? `${p.done}/${p.total} · ${pct}%` : "no PDFs"}</strong></span>
+                            <span className="mt-0.5 block h-1.5 overflow-hidden rounded-full bg-slate-200"><span className={`block h-full rounded-full ${pct >= 100 ? "bg-emerald-500" : "bg-accent-400"}`} style={{ width: `${pct}%` }} /></span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-slate-600">
                   {s.freeItems.length ? (
