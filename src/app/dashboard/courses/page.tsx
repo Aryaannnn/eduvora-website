@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { loadMyProgress } from "@/lib/progress";
+import { loadMyProgress, newFileIds } from "@/lib/progress";
 import { QUESTION_BANK_SLUG } from "@/lib/courses";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import Link from "next/link";
@@ -72,6 +72,10 @@ async function CoursesContent({ searchParams }: { searchParams: PageProps<"/dash
   // "Mark as done" + last opened, for every PDF shown here (own rows only; null before supabase/course-progress.sql)
   const allFileIds = [...[...filesOf.values()].flat().map((f) => f.id), ...qbFiles.map((f) => f.id)];
   const progress = await loadMyProgress(s.supabase, allFileIds);
+  // "New": added in the last 7 days and not opened since (per student)
+  const newIds = newFileIds([...[...filesOf.values()].flat(), ...qbFiles], progress);
+  const newIn = (list: { id: string }[] = []) => list.filter((f) => newIds.includes(f.id)).length;
+  const startSubject = typeof sp.subject === "string" ? sp.subject : undefined; // bell → that subject
   // earlier per-subject Question Bank items: only while they still hold PDFs (supabase/question-bank.sql moves them)
   const oldQB = questionBank.filter((q) => (filesOf.get(q.products!.id) ?? []).length > 0);
 
@@ -123,7 +127,10 @@ async function CoursesContent({ searchParams }: { searchParams: PageProps<"/dash
                     <div className="flex items-start gap-3">
                       <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-600 text-white"><RocketIcon className="h-5 w-5" /></span>
                       <div className="min-w-0 flex-1">
-                        <p className="font-bold text-slate-900">{c.products!.title} {isFreeRow(c) && <FreeBadge className="ml-1 align-middle" />}</p>
+                        <p className="font-bold text-slate-900">
+                          {c.products!.title} {isFreeRow(c) && <FreeBadge className="ml-1 align-middle" />}
+                          {newIn(filesOf.get(c.products!.id)) > 0 && <span className="ml-1.5 rounded-full bg-accent-400 px-2 py-0.5 align-middle text-[11px] font-extrabold text-brand-950">{newIn(filesOf.get(c.products!.id))} new</span>}
+                        </p>
                         <p className="text-xs text-slate-500">{gotOn(c)}</p>
                       </div>
                       <Link href={`/courses/${c.products!.slug}`} className="hidden text-sm font-semibold text-brand-700 hover:underline sm:block">Course page</Link>
@@ -142,7 +149,7 @@ async function CoursesContent({ searchParams }: { searchParams: PageProps<"/dash
                     {siteConfig.inWebsiteReader ? (
                       <FileList files={filesOf.get(c.products!.id)} itemTitle={c.products!.title} suggestion={suggestionFor(c)} />
                     ) : (
-                      <SubjectTabs files={filesOf.get(c.products!.id) ?? []} title={c.products!.title} progress={progress ?? {}} tracking={progress !== null} />
+                      <SubjectTabs files={filesOf.get(c.products!.id) ?? []} title={c.products!.title} progress={progress ?? {}} tracking={progress !== null} newIds={newIds} startSubject={c.products!.id === focusId ? startSubject : undefined} />
                     )}
                     {withQB.has(c.products!.id) && qbHref && c.products!.id !== qbProduct?.id && (
                       <Link href={qbHref} className="btn-accent mt-3 !px-4 !py-2 text-sm">Included: VITEEE Question Bank →</Link>
@@ -155,11 +162,14 @@ async function CoursesContent({ searchParams }: { searchParams: PageProps<"/dash
                     <div className="flex items-start gap-3">
                       <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-600 text-white"><ClipboardIcon className="h-5 w-5" /></span>
                       <div className="min-w-0 flex-1">
-                        <p className="font-bold text-slate-900">{qbIncluded.title}</p>
+                        <p className="font-bold text-slate-900">
+                          {qbIncluded.title}
+                          {newIn(qbFiles) > 0 && <span className="ml-1.5 rounded-full bg-accent-400 px-2 py-0.5 align-middle text-[11px] font-extrabold text-brand-950">{newIn(qbFiles)} new</span>}
+                        </p>
                         <p className="text-xs text-slate-500">Included with your earlier purchase</p>
                       </div>
                     </div>
-                    <SubjectTabs files={qbFiles} title={qbIncluded.title} progress={progress ?? {}} tracking={progress !== null} />
+                    <SubjectTabs files={qbFiles} title={qbIncluded.title} progress={progress ?? {}} tracking={progress !== null} newIds={newIds} startSubject={qbIncluded.id === focusId ? startSubject : undefined} />
                   </li>
                 )}
               </ul>

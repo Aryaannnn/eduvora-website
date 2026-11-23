@@ -53,6 +53,7 @@ export async function dailyMaintenance(db: SupabaseClient) {
       await db.from("product_files").update({ pages_status: "none", pages_done: 0, pages_bytes: 0 }).neq("pages_status", "none").then(() => null, () => null);
     }
   } else out.cleanup = "run supabase/storage-cleanup.sql";
+  out.oldMaterialUpdates = await db.rpc("purge_old_material_updates").then((r) => (r.error ? 0 : r.data), () => 0); // > 60 days
   const { data: logs, error } = await db.rpc("purge_old_logs");
   out.logsDeleted = error ? "run supabase/storage-cleanup.sql" : logs;
   return out;

@@ -15,6 +15,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { cronHeaders, cronUnauthorised, isCronAuthorised } from "@/lib/cron-auth";
 import { completePastBookings, sendCheckoutReminders, sendDueFeedbackRequests, sendDueReminders } from "@/lib/email/notify";
 import { retryMissingCalendarEvents } from "@/lib/google-calendar";
+import { sendMaterialEmails } from "@/lib/email/material";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 
 export const maxDuration = 60;
@@ -35,5 +36,7 @@ export async function GET(request: NextRequest) {
   const checkout = await sendCheckoutReminders().catch(() => ({ r2h: 0, r24h: 0 }));
   // CRM: collect new leads (signups, enquiries, predictor…) and mark payers as Paid
   const leadRes = await getAdminSupabase()?.rpc("sync_leads").then((r) => r, () => null);
-  return NextResponse.json({ ok: true, reminders24h: sent.r24, reminders1h: sent.r1, calendarEventsAdded: calendarEvents, completed, feedbackEmails, checkoutReminders2h: checkout.r2h, checkoutReminders24h: checkout.r24h, leadsSynced: leadRes && !leadRes.error ? leadRes.data : 0 }, { headers: cronHeaders });
+  // "New material added to your course" (one per course per day; only when emails are switched on)
+  const materialEmails = await sendMaterialEmails().catch((e) => ({ error: (e as Error).message }));
+  return NextResponse.json({ ok: true, reminders24h: sent.r24, reminders1h: sent.r1, calendarEventsAdded: calendarEvents, completed, feedbackEmails, checkoutReminders2h: checkout.r2h, checkoutReminders24h: checkout.r24h, leadsSynced: leadRes && !leadRes.error ? leadRes.data : 0, materialEmails }, { headers: cronHeaders });
 }

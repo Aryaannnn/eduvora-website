@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import BackButton from "@/components/BackButton";
 import DashboardNav from "@/components/dashboard/DashboardNav";
+import NotificationBell from "@/components/dashboard/NotificationBell";
+import { Suspense } from "react";
 
 export const metadata: Metadata = {
   title: { default: "Dashboard", template: "%s | Dashboard" },
@@ -16,7 +18,11 @@ export default function DashboardLayout({ children }: LayoutProps<"/dashboard">)
       <div className="dash-shell container-page pb-28 pt-6 sm:pt-8 lg:grid lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-8 lg:pb-0 lg:pt-0">
         <DashboardNav />
         <div id="dashboard-content" className="dash-content min-w-0">
-          <div className="mb-4 print:hidden"><BackButton /></div>
+          <div className="mb-4 flex items-center justify-between gap-3 print:hidden">
+            <BackButton />
+            {/* new material in the student's courses (supabase/material-updates.sql) */}
+            <Suspense fallback={null}><NotificationBell /></Suspense>
+          </div>
           {children}
         </div>
       </div>

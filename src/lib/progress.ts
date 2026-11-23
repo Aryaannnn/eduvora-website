@@ -25,6 +25,25 @@ export async function recordOpened(db: SupabaseClient, userId: string, fileId: s
     .then(() => null, () => null);
 }
 
+export const NEW_DAYS = 7;
+
+/** PDFs that are "New" for this student: added in the last 7 days and not opened since. */
+export function newFileIds(files: { id: string; added_at?: string | null }[], progress: ProgressMap | null): string[] {
+  const since = Date.now() - NEW_DAYS * 86_400_000;
+  return files
+    .filter((f) => {
+      if (!f.added_at) return false;
+      const added = new Date(f.added_at).getTime();
+      if (added < since) return false;
+      const opened = progress?.[f.id]?.last_opened_at;
+      return !opened || new Date(opened).getTime() < added;
+    })
+    .map((f) => f.id);
+}
+
+/** ISO time `days` ago (bell: updates of the last 30 days) */
+export const materialSince = (days: number) => new Date(Date.now() - days * 86_400_000).toISOString();
+
 /** done / total for a list of PDFs */
 export function countDone(fileIds: string[], progress: ProgressMap) {
   const done = fileIds.filter((id) => progress[id]?.done).length;

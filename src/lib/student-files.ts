@@ -11,7 +11,8 @@ export async function loadStudentFiles(supabase: SupabaseClient, productIds: str
   if (!productIds.length) return [];
   const q = (cols: string) =>
     supabase.from("product_files").select(cols).in("product_id", productIds).eq("file_type", "pdf").order("sort_order").order("created_at");
-  let { data, error } = await q(`${BASE},subject,chapter`);
+  let { data, error } = await q(`${BASE},subject,chapter,added_at`);
+  if (error) ({ data, error } = await q(`${BASE},subject,chapter`)); // supabase/material-updates.sql not run yet
   if (error) ({ data, error } = await q(BASE)); // supabase/courses-question-bank.sql not run yet
   if (error) console.warn("loadStudentFiles:", error.message);
   return (data ?? []) as unknown as SubjectFile[];

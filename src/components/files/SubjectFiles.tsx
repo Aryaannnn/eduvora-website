@@ -10,6 +10,8 @@ export type SubjectFile = {
   sort_order: number;
   subject?: string | null;
   chapter?: string | null;
+  /** when it was uploaded to / moved into this course (supabase/material-updates.sql) */
+  added_at?: string | null;
 };
 
 // Files of a crash course / the Question Bank, in sections: Physics · Chemistry ·

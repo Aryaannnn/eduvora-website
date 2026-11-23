@@ -15,13 +15,14 @@ export type TabProgress = Record<string, { done: boolean; done_at: string | null
 //  • Physics · Chemistry · Mathematics tabs, each with "x of y done"
 //  • every PDF: Open PDF + Download (watermarked, access checked by the server) and "Mark as done"
 // Progress is saved per student (supabase/course-progress.sql — own rows only).
-export default function SubjectTabs({ files, title, progress = {}, tracking = true }: { files: SubjectFile[]; title: string; progress?: TabProgress; tracking?: boolean }) {
+export default function SubjectTabs({ files, title, progress = {}, tracking = true, newIds = [], startSubject }: { files: SubjectFile[]; title: string; progress?: TabProgress; tracking?: boolean; newIds?: string[]; startSubject?: string }) {
+  const isNew = new Set(newIds);
   const other = files.filter((f) => !SUBJECT_KEYS.includes(f.subject as SubjectKey));
   const tabs: { key: string; label: string; items: SubjectFile[] }[] = [
     ...SUBJECT_KEYS.map((k) => ({ key: k as string, label: SUBJECT_UI[k].label, items: files.filter((f) => f.subject === k) })),
     ...(other.length ? [{ key: "other", label: "Other", items: other }] : []),
   ];
-  const [active, setActive] = useState(() => tabs.find((t) => t.items.length)?.key ?? "physics");
+  const [active, setActive] = useState(() => (startSubject && tabs.some((t) => t.key === startSubject) ? startSubject : tabs.find((t) => t.items.some((f) => isNew.has(f.id)))?.key ?? tabs.find((t) => t.items.length)?.key ?? "physics"));
   const [done, setDone] = useState<Record<string, boolean>>(() => Object.fromEntries(Object.entries(progress).map(([id, p]) => [id, p.done])));
   const [saving, setSaving] = useState<string>("");
   const [error, setError] = useState("");
@@ -89,6 +90,7 @@ export default function SubjectTabs({ files, title, progress = {}, tracking = tr
               {ui && <ui.Icon className="h-4 w-4 shrink-0" />}
               <span className="truncate">{t.label}</span>
               <span className={`rounded-full px-1.5 text-[11px] ${on ? "bg-brand-50 text-brand-700" : "bg-white/70"}`}>{tracking ? `${count(t.items)}/${t.items.length}` : t.items.length}</span>
+              {t.items.some((f) => isNew.has(f.id)) && <span className="rounded-full bg-accent-400 px-1.5 text-[10px] font-extrabold text-brand-950">{t.items.filter((f) => isNew.has(f.id)).length} new</span>}
             </button>
           );
         })}
@@ -113,7 +115,10 @@ export default function SubjectTabs({ files, title, progress = {}, tracking = tr
                   <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl text-[11px] font-extrabold text-white ${isDone ? "bg-emerald-600" : "bg-red-500"}`}>{isDone ? <CheckIcon className="h-5 w-5" /> : "PDF"}</span>
                   <div className="min-w-0 flex-1">
                     {f.chapter && <p className="text-[11px] font-bold uppercase tracking-wide text-brand-700">{f.chapter}</p>}
-                    <p className="truncate font-semibold text-slate-900">{f.display_name}</p>
+                    <p className="truncate font-semibold text-slate-900">
+                      {isNew.has(f.id) && <span className="mr-1.5 rounded-full bg-accent-400 px-2 py-0.5 align-middle text-[10px] font-extrabold uppercase text-brand-950">New</span>}
+                      {f.display_name}
+                    </p>
                     <p className="text-xs text-slate-500">PDF · watermarked with your name · {formatBytes(Number(f.size_bytes))}</p>
                   </div>
                   {tracking && (
