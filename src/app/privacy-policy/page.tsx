@@ -6,12 +6,9 @@ import { siteConfig as site } from "@/config/site";
 
 export const metadata: Metadata = pageMeta({ title: "Privacy Policy – How We Protect Your Data", description: "How EDUVORA collects, uses, shares and protects your personal data, how long we keep it, and how to download or delete your account data.", path: "/privacy-policy" });
 
-// ⚠️ IMPORTANT: This policy is a well-meant starting point, NOT legal advice.
-//    Have it reviewed by a legal professional (India: Digital Personal Data
-//    Protection Act, 2023 and the IT Act/Rules) before launch, and update
-//    "policiesUpdated" in src/config/site.ts whenever you change it.
-//    (The yellow note at the top of the page comes from src/components/LegalPage.tsx —
-//    remove it there once a lawyer has approved the text.)
+// ✏️ Keep this in line with India's Digital Personal Data Protection Act, 2023 and
+//    the IT Act/Rules, and update "policiesUpdated" in src/config/site.ts whenever
+//    you change it.
 export default function PrivacyPolicyPage() {
   const founder = site.founder.name;
   return (
