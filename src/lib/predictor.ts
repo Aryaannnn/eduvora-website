@@ -66,18 +66,62 @@ export function rankAtMarks(marks: number, bands: RankBand[]): { rank: number; c
   return null;
 }
 
-/** Predicted rank RANGE for the student's expected marks (± MARKS_SPREAD marks). */
+/** The rank data as clean numbers, lowest marks first (shared by the functions below). */
+function cleanBands(bands: RankBand[]) {
+  return bands
+    .map((b) => ({ min_marks: +b.min_marks, max_marks: +b.max_marks, min_rank: +b.min_rank, max_rank: +b.max_rank }))
+    .filter((b) => Number.isFinite(b.min_marks) && Number.isFinite(b.max_marks) && b.max_marks >= b.min_marks)
+    .sort((a, b) => a.min_marks - b.min_marks);
+}
+
+/**
+ * Predicted rank RANGE for the student's expected marks (± MARKS_SPREAD marks).
+ *  • inside the data → the range for marks ± spread (the spread never goes past the data)
+ *  • ABOVE the data  → the highest row's whole rank range (never "rank 1" just because data is missing)
+ *  • BELOW the data  → the lowest row's whole rank range
+ *  • in a GAP        → a straight line between the two nearest rows
+ */
 export function predictFromMarks(marks: number, bands: RankBand[], spread = MARKS_SPREAD): Prediction | null {
   if (!Number.isFinite(marks)) return null;
   const m = clamp(marks, 0, MAX_MARKS);
-  const mid = rankAtMarks(m, bands);
-  if (!mid) return null;
-  const best = rankAtMarks(Math.min(m + spread, MAX_MARKS), bands)!; // a few more marks → better rank
-  const worst = rankAtMarks(Math.max(m - spread, 0), bands)!; // a few fewer marks → worse rank
+  const list = cleanBands(bands);
+  const mid = rankAtMarks(m, list);
+  if (!mid || !list.length) return null;
+  const lowest = list[0];
+  const highest = list[list.length - 1];
+
+  if (mid.coverage !== "ok") {
+    const row = mid.coverage === "above" ? highest : lowest;
+    const minRank = Math.max(1, roundDown(row.min_rank));
+    const maxRank = Math.max(minRank, roundUp(row.max_rank));
+    return { source: "marks", marks: m, rank: clamp(Math.round((row.min_rank + row.max_rank) / 2), minRank, maxRank), minRank, maxRank, coverage: mid.coverage };
+  }
+
+  // keep the ± spread inside the data, so the edges don't jump to "above/below" values
+  const best = rankAtMarks(Math.min(m + spread, highest.max_marks), list)!; // a few more marks → better rank
+  const worst = rankAtMarks(Math.max(m - spread, lowest.min_marks), list)!; // a few fewer marks → worse rank
   const minRank = Math.max(1, roundDown(best.rank));
   const maxRank = Math.max(minRank, roundUp(worst.rank));
   const rank = clamp(Math.round(mid.rank), minRank, maxRank);
-  return { source: "marks", marks: m, rank, minRank, maxRank, coverage: mid.coverage };
+  return { source: "marks", marks: m, rank, minRank, maxRank, coverage: "ok" };
+}
+
+/** Admin → Predictor: which marks 0–400 the rank data covers, the gaps, and whether it reaches 0 and 400. */
+export function dataCoverage(bands: RankBand[]) {
+  const list = cleanBands(bands);
+  const gaps: { from: number; to: number }[] = [];
+  const overlaps: { from: number; to: number }[] = [];
+  let rankProblems = 0;
+  for (let i = 1; i < list.length; i++) {
+    const a = list[i - 1];
+    const b = list[i];
+    if (b.min_marks > a.max_marks + 1) gaps.push({ from: a.max_marks, to: b.min_marks });
+    else if (b.min_marks < a.max_marks) overlaps.push({ from: b.min_marks, to: a.max_marks });
+    if (b.min_rank > a.min_rank || b.max_rank > a.max_rank) rankProblems++; // higher marks must give a better (smaller) rank
+  }
+  const from = list.length ? list[0].min_marks : null;
+  const to = list.length ? list[list.length - 1].max_marks : null;
+  return { rows: list.length, from, to, gaps, overlaps, rankProblems, reachesTop: to !== null && to >= MAX_MARKS, startsAtZero: from !== null && from <= 0 };
 }
 
 /** When the student already knows their rank. */

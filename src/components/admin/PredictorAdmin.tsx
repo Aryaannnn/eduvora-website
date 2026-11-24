@@ -16,7 +16,8 @@ import {
 } from "@/app/admin/predictor-actions";
 import { csvToObjects } from "@/lib/csv";
 import { csvDateTimeIST, formatDateTime, formatPhoneIN, todayInIndia } from "@/lib/format";
-import { predictFromMarks } from "@/lib/predictor";
+import { dataCoverage, predictFromMarks } from "@/lib/predictor";
+import { HIDE_SAMPLES } from "@/lib/sample";
 import { DownloadIcon, EditIcon, PhoneIcon, PlusIcon, SearchIcon, TrashIcon, UploadIcon, WhatsAppIcon } from "../Icons";
 import { AdminHeader, Label, Modal, Notice, downloadCsv } from "./ui";
 import { MAX_MARKS } from "@/lib/predictor";
@@ -63,9 +64,14 @@ export default function PredictorAdmin({ settings, bands, cutoffs, predictions }
     <>
       <AdminHeader title="Rank & College Predictor" subtitle={`Active year: ${settings.active_year}. Changes show on the website immediately.`} />
 
+      <CoverageCheck bands={bands.filter((b) => b.year === settings.active_year)} year={settings.active_year} />
+
       {sampleCount > 0 && (
         <div className="mb-4 flex flex-col gap-3 rounded-2xl bg-amber-50 p-4 text-sm text-amber-900 ring-1 ring-amber-200 sm:flex-row sm:items-center sm:justify-between">
-          <p><strong>⚠️ {sampleCount} SAMPLE rows</strong> are in use. They are NOT real VITEEE data — replace them before going live.</p>
+          <p>
+            <strong>⚠️ {sampleCount} SAMPLE rows</strong> are in use. They are NOT real VITEEE data — replace them with real data.
+            {HIDE_SAMPLES && <><br /><strong>Your website is Live:</strong> visitors no longer see a &ldquo;SAMPLE&rdquo; label, but their predictions still come from this sample data.</>}
+          </p>
           <button type="button" onClick={() => confirm("Delete ALL sample rank data and cutoffs? The predictor will be empty until you upload real data.") && run(deleteSampleData)} className="btn-light shrink-0 !px-3 !py-2 text-xs !text-red-600">
             <TrashIcon /> Delete all sample data
           </button>
@@ -476,5 +482,34 @@ function Settings({ settings, years, run }: { settings: { active_year: number; d
       </div>
       <button type="submit" className="btn-primary">Save settings</button>
     </form>
+  );
+}
+
+/** "Data coverage": which marks 0–400 the active year's rank data covers, gaps, overlaps, order. */
+function CoverageCheck({ bands, year }: { bands: AdminBand[]; year: number }) {
+  const c = dataCoverage(bands);
+  const problems = [
+    !c.rows && `There is no rank data for ${year} — the predictor can't show ranks.`,
+    c.rows > 0 && !c.reachesTop && `The data stops at ${c.to} marks (full marks are ${MAX_MARKS}). Marks above ${c.to} only get the highest row's rank range. Add rows up to ${MAX_MARKS}${c.to !== null && c.to <= 125 ? " — or run supabase/predictor-400.sql to convert the old 0–125 SAMPLE data" : ""}.`,
+    c.rows > 0 && !c.startsAtZero && `The data starts at ${c.from} marks — marks below that only get the lowest row's rank range.`,
+    ...c.gaps.map((g) => `Gap: no row covers ${g.from}–${g.to} marks (a straight line between the nearest rows is used).`),
+    ...c.overlaps.map((o) => `Overlap: rows overlap between ${o.from} and ${o.to} marks.`),
+    c.rankProblems > 0 && `${c.rankProblems} row(s) give a WORSE rank for more marks — check the rank columns.`,
+  ].filter(Boolean) as string[];
+  const rows = bands.map((b) => ({ a: Number(b.min_marks), b: Number(b.max_marks) }));
+  return (
+    <section className={`mb-4 rounded-2xl p-4 text-sm ring-1 ${problems.length ? "bg-amber-50 text-amber-900 ring-amber-200" : "bg-emerald-50 text-emerald-900 ring-emerald-200"}`} aria-label="Data coverage">
+      <p className="font-bold">
+        Data coverage ({year}): {c.rows ? `marks ${c.from}–${c.to} of 0–${MAX_MARKS} · ${c.rows} rows` : "no rows"}
+        {!problems.length && " · ✓ complete, in order, no gaps"}
+      </p>
+      <div className="relative mt-2 h-3 overflow-hidden rounded-full bg-white ring-1 ring-black/10" aria-hidden>
+        {rows.map((r, i) => (
+          <span key={i} className="absolute inset-y-0 bg-emerald-500/80" style={{ left: `${(r.a / MAX_MARKS) * 100}%`, width: `${Math.max(0.5, ((r.b - r.a) / MAX_MARKS) * 100)}%` }} />
+        ))}
+      </div>
+      <div className="mt-0.5 flex justify-between text-[10px] text-slate-500"><span>0</span><span>100</span><span>200</span><span>300</span><span>{MAX_MARKS}</span></div>
+      {problems.length > 0 && <ul className="mt-2 list-disc space-y-1 pl-5">{problems.map((p, i) => <li key={i}>{p}</li>)}</ul>}
+    </section>
   );
 }

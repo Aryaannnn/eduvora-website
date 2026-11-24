@@ -8,6 +8,7 @@
 //    sent to the browser. The browser only receives the RESULT — and college
 //    results only after the full-access check passes.
 // =====================================================================
+import { HIDE_SAMPLES } from "./sample";
 import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import { cache } from "react";
@@ -102,9 +103,13 @@ export type PredictorOptions = {
   branchesByCampus: Record<string, string[]>;
 };
 
+/** The public "SAMPLE" label: only while the site is in pre-launch mode (src/config/launch.ts).
+ *  Once Live it is hidden — Admin → Predictor warns instead if SAMPLE data is still active. */
+const publicSample = (data: PredictorData) => data.isSample && !HIDE_SAMPLES;
+
 /** Options for users WITHOUT full access: no campus or branch lists at all. */
 export function basicOptionsFrom(data: PredictorData): PredictorOptions {
-  return { activeYear: data.activeYear, disclaimer: data.disclaimer, isSample: data.isSample, hasData: data.bands.length > 0, campuses: [], branchesByCampus: {} };
+  return { activeYear: data.activeYear, disclaimer: data.disclaimer, isSample: publicSample(data), hasData: data.bands.length > 0, campuses: [], branchesByCampus: {} };
 }
 
 /** Options for users WITH full access (campus & branch filter lists). */
@@ -114,7 +119,7 @@ export function optionsFrom(data: PredictorData): PredictorOptions {
   return {
     activeYear: data.activeYear,
     disclaimer: data.disclaimer,
-    isSample: data.isSample,
+    isSample: publicSample(data),
     hasData: data.bands.length > 0,
     campuses: Object.keys(byCampus),
     branchesByCampus: Object.fromEntries(Object.entries(byCampus).map(([k, v]) => [k, [...v].sort()])),

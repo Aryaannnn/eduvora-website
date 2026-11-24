@@ -10,6 +10,7 @@ import {
   predictFromRank,
   previewMatches,
   rankAtMarks,
+  dataCoverage,
 } from "../src/lib/predictor.ts";
 
 // Same bands as the SAMPLE data in supabase/predictor.sql
@@ -127,4 +128,52 @@ test("gauge percentile", () => {
   assert.equal(percentileFor(1, bands), 100);
   assert.equal(percentileFor(60001, bands), 50);
   assert.equal(percentileFor(120000, bands), 0);
+});
+
+// ---- data outside the range: never "rank 1" just because data is missing ----
+const oldScale = [
+  { min_marks: 0, max_marks: 30, min_rank: 85000, max_rank: 120000 },
+  { min_marks: 30, max_marks: 125, min_rank: 1, max_rank: 85000 },
+];
+const middle = [
+  { min_marks: 100, max_marks: 200, min_rank: 20000, max_rank: 60000 },
+  { min_marks: 200, max_marks: 300, min_rank: 5000, max_rank: 20000 },
+];
+
+test("marks above the data → the highest row's whole rank range", () => {
+  const p = predictFromMarks(350, middle);
+  assert.equal(p.coverage, "above");
+  assert.equal(p.minRank, 5000);
+  assert.equal(p.maxRank, 20000);
+  assert.ok(p.rank > 1);
+});
+
+test("marks below the data → the lowest row's whole rank range", () => {
+  const p = predictFromMarks(40, middle);
+  assert.equal(p.coverage, "below");
+  assert.equal(p.minRank, 20000);
+  assert.equal(p.maxRank, 60000);
+});
+
+test("old 0–125 data never makes 300 marks 'rank 1'", () => {
+  const p = predictFromMarks(300, oldScale);
+  assert.equal(p.coverage, "above");
+  assert.ok(p.rank > 1 && p.maxRank > 1);
+});
+
+test("50 … 400 marks: higher marks always give a better (smaller) rank", () => {
+  let prev = Infinity;
+  for (const m of [50, 100, 150, 200, 267, 300, 350, 400]) {
+    const p = predictFromMarks(m, bands);
+    assert.ok(p.rank <= prev, `${m} marks`);
+    assert.ok(p.minRank <= p.rank && p.rank <= p.maxRank);
+    prev = p.rank;
+  }
+});
+
+test("data coverage check", () => {
+  assert.deepEqual(dataCoverage(bands).gaps, []);
+  assert.equal(dataCoverage(bands).reachesTop, true);
+  assert.equal(dataCoverage(oldScale).reachesTop, false);
+  assert.deepEqual(dataCoverage(middle.concat([{ min_marks: 320, max_marks: 400, min_rank: 1, max_rank: 4000 }])).gaps, [{ from: 300, to: 320 }]);
 });

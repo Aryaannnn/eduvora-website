@@ -285,7 +285,9 @@ export default function PredictorTool({
                   <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-700 ring-1 ring-slate-200">Better than {percentile}% of students</span>
                 </div>
                 {prediction.coverage !== "ok" && (
-                  <p className="mt-3 text-xs text-amber-700">Your marks are {prediction.coverage === "above" ? "above" : "below"} our data range, so this is the closest estimate.</p>
+                  <p className="mt-3 text-xs text-amber-700">
+                    Your marks are {prediction.coverage === "above" ? "higher than" : "lower than"} the marks in our data, so this shows the {prediction.coverage === "above" ? "best" : "lowest"} rank range we have data for. The real rank may be {prediction.coverage === "above" ? "better" : "lower"}.
+                  </p>
                 )}
                 {full ? (
                   <div className="mt-5 grid grid-cols-3 gap-2 text-center">
