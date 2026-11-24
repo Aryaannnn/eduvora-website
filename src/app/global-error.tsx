@@ -15,7 +15,7 @@ export default function GlobalError({ error, retry }: { error: unknown; retry: (
   const btn: React.CSSProperties = { display: "inline-block", padding: "12px 22px", borderRadius: 999, fontWeight: 700, fontSize: 15, textDecoration: "none", cursor: "pointer" };
   return (
     <html lang="en">
-      <body style={{ margin: 0, minHeight: "100vh", display: "grid", placeItems: "center", background: "#f8fafc", fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif", color: "#0f172a", padding: 16 }}>
+      <body style={{ margin: 0, minHeight: "100dvh", display: "grid", placeItems: "center", background: "#f8fafc", fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif", color: "#0f172a", padding: 16 }}>
         <title>{`Something went wrong | ${siteConfig.businessName}`}</title>
         <main style={{ maxWidth: 480, width: "100%", background: "#fff", borderRadius: 24, padding: "36px 28px", textAlign: "center", boxShadow: "0 10px 40px rgba(15,23,42,.08)", border: "1px solid #e2e8f0" }}>
           <p style={{ margin: 0, fontWeight: 800, letterSpacing: 1, color: "#1d4ed8" }}>{siteConfig.businessName}</p>

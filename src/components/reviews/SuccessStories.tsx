@@ -47,7 +47,7 @@ export default async function SuccessStoriesSection({ className = "" }: { classN
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <SectionHeading eyebrow="Success stories" title="Students who found their VIT college" subtitle="Real students, shared with their permission." />
           {stories.length > 3 && (
-            <Link href="/success-stories" className="inline-flex shrink-0 items-center gap-1 text-sm font-bold text-brand-700 hover:underline">
+            <Link href="/success-stories" className="tap inline-flex shrink-0 items-center gap-1 text-sm font-bold text-brand-700 hover:underline">
               All success stories <ArrowRightIcon className="h-4 w-4" />
             </Link>
           )}

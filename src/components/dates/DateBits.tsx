@@ -64,7 +64,7 @@ export function NextDatesList({ dates, dark = false }: { dates: ImportantDate[];
 
 export function OfficialLink({ href }: { href: string }) {
   return (
-    <a href={href} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm font-semibold text-brand-700 hover:underline">
+    <a href={href} target="_blank" rel="noopener noreferrer" className="tap inline-flex items-center gap-1 text-sm font-semibold text-brand-700 hover:underline">
       Official link <ExternalIcon className="h-3.5 w-3.5" />
     </a>
   );

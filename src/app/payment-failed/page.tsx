@@ -12,7 +12,7 @@ export const metadata: Metadata = { title: "Payment Failed", robots: { index: fa
 // /payment-failed?back=/courses/xyz&reason=...
 export default function PaymentFailedPage({ searchParams }: PageProps<"/payment-failed">) {
   return (
-    <section className="hero-bg relative min-h-[70vh] overflow-hidden py-12 sm:py-16">
+    <section className="hero-bg relative min-h-[70dvh] overflow-hidden py-12 sm:py-16">
       <div className="grid-pattern absolute inset-0 opacity-40" aria-hidden />
       <div className="container-page relative max-w-xl">
         <div className="card overflow-hidden text-center">

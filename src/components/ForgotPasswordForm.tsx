@@ -32,7 +32,7 @@ export default function ForgotPasswordForm() {
         </p>
         <p className="mt-3 text-xs text-slate-500">The link works for a limited time. Open it on this same device and browser.</p>
         <button type="button" onClick={() => setSent(false)} className="btn-light mt-6 w-full">Send again</button>
-        <Link href="/login" className="mt-3 block text-sm font-semibold text-brand-600 hover:underline">Back to Sign In</Link>
+        <Link href="/login" className="mt-2 flex min-h-11 items-center justify-center text-sm font-semibold text-brand-600 hover:underline">Back to Sign In</Link>
       </div>
     );
   }
@@ -47,7 +47,7 @@ export default function ForgotPasswordForm() {
         {sending ? "Sending…" : "Send reset link"}
       </button>
       <p className="text-center text-sm text-slate-600">
-        Remembered it? <Link href="/login" className="font-bold text-brand-600 hover:underline">Sign In</Link>
+        Remembered it? <Link href="/login" className="tap font-bold text-brand-600 hover:underline">Sign In</Link>
       </p>
     </form>
   );

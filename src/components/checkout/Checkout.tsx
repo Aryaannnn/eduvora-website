@@ -7,6 +7,7 @@
 //  out on the server) — this file never calculates a price itself.
 // =====================================================================
 import { useCallback, useEffect, useState } from "react";
+import { useScrollLock } from "@/lib/scroll-lock";
 import { createPortal } from "react-dom";
 import { formatPrice } from "@/lib/format";
 import { postJson } from "@/lib/razorpay-checkout";
@@ -150,6 +151,7 @@ export function PriceBreakdown({ q }: { q: QuoteView }) {
 /** Checkout window for courses, material, tests and packages. */
 export function CheckoutDialog({ productId, onClose, onPay, paying }: { productId: string; onClose: () => void; onPay: (coupon: string) => void; paying: boolean }) {
   const { quote, code, couponError, loading, error, apply, remove } = useQuote({ productId });
+  useScrollLock(true); // the page behind stays still
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && !paying && onClose();
@@ -160,7 +162,7 @@ export function CheckoutDialog({ productId, onClose, onPay, paying }: { productI
   // Rendered on <body>, so cards with animations can't trap the window inside them
   return createPortal(
     <div className="fixed inset-0 z-[70] flex items-end justify-center bg-slate-950/50 p-0 backdrop-blur-sm sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="checkout-title">
-      <div className="max-h-[92svh] w-full max-w-md animate-fade-up overflow-y-auto overscroll-contain rounded-t-[1.75rem] bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl sm:rounded-[1.75rem] sm:p-6">
+      <div className="max-h-[92dvh] w-full max-w-md animate-fade-up overflow-y-auto overscroll-contain rounded-t-[1.75rem] bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl sm:rounded-[1.75rem] sm:p-6">
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-xs font-bold uppercase tracking-wider text-brand-600">Checkout</p>

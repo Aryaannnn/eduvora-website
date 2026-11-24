@@ -204,7 +204,7 @@ function SectionHeader(props: { eyebrow: string; title: string; subtitle: string
   return (
     <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
       <SectionHeading eyebrow={props.eyebrow} title={props.title} subtitle={props.subtitle} />
-      <Link href={props.href} className="inline-flex shrink-0 items-center gap-1 text-sm font-bold text-brand-700 hover:underline">
+      <Link href={props.href} className="tap inline-flex shrink-0 items-center gap-1 text-sm font-bold text-brand-700 hover:underline">
         {props.linkText} <ArrowRightIcon className="h-4 w-4" />
       </Link>
     </div>

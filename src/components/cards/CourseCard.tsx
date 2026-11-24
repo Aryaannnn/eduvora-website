@@ -32,13 +32,13 @@ export default function CourseCard({ course, files }: { course: Product; files?:
           )}
           {free && <FreeBadge />}
         </div>
-        <h3 className="mt-2.5 text-sm font-extrabold leading-snug sm:text-lg">
-          <Link href={`/courses/${course.slug}`} className="hover:underline">{course.title}</Link>
+        <h3 className="mt-2.5 text-[15px] font-extrabold leading-snug sm:text-lg">
+          <Link href={`/courses/${course.slug}`} className="tap hover:underline">{course.title}</Link>
         </h3>
       </div>
 
       <div className="flex flex-1 flex-col p-3 sm:p-5">
-        {(d.short ?? course.description) && <p className="text-xs leading-relaxed text-slate-600 sm:text-sm">{d.short ?? course.description}</p>}
+        {(d.short ?? course.description) && <p className="text-[13px] leading-relaxed text-slate-600 sm:text-sm">{d.short ?? course.description}</p>}
 
         <ul className="mt-3 space-y-1.5" aria-label="Subjects">
           {SUBJECT_KEYS.map((k) => {
@@ -60,10 +60,10 @@ export default function CourseCard({ course, files }: { course: Product; files?:
             {off > 0 && <span className="rounded-md bg-green-100 px-1.5 py-0.5 text-[11px] font-bold text-green-700">{off}% off</span>}
           </div>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            <Link href={`/courses/${course.slug}`} className="btn-light !px-2 !py-2 text-xs sm:text-sm">Details</Link>
-            <BuyButton productId={course.id} label={enrollLabel(free)} className="btn-primary w-full !px-2 !py-2 text-xs sm:text-sm" trust={false} free={course.is_free} />
+            <Link href={`/courses/${course.slug}`} className="btn-light min-h-11 !px-2 !py-2 text-[13px] sm:min-h-0 sm:text-sm">Details</Link>
+            <BuyButton productId={course.id} label={enrollLabel(free)} className="btn-primary min-h-11 w-full !px-2 !py-2 text-[13px] sm:min-h-0 sm:text-sm" trust={false} free={course.is_free} />
           </div>
-          <p className="mt-2 text-center text-[11px] font-semibold text-slate-500">{accessLabel(productAccess(course.details))}</p>
+          <p className="mt-2 text-center text-xs font-semibold text-slate-500">{accessLabel(productAccess(course.details))}</p>
           {!free && <SecurePaymentNote className="mt-1.5" refundKind="digital" />}
         </div>
       </div>

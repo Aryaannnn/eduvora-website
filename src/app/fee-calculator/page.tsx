@@ -53,7 +53,7 @@ export default async function FeeCalculatorPage({ searchParams }: PageProps<"/fe
         </section>
 
         <p className="text-center text-xs text-slate-500">
-          {FEE_NOTE} <a href="https://vit.ac.in" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 underline">vit.ac.in <ExternalIcon className="h-3 w-3" /></a>
+          {FEE_NOTE} <a href="https://vit.ac.in" target="_blank" rel="noopener noreferrer" className="tap inline-flex items-center gap-0.5 underline">vit.ac.in <ExternalIcon className="h-3 w-3" /></a>
           {" "}Hostel, mess and other charges are separate from tuition.
         </p>
       </div>

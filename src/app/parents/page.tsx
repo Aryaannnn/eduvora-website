@@ -118,7 +118,7 @@ export default function ParentsPage() {
             <p className="mt-2 text-sm font-semibold text-accent-700 sm:text-base">{founder.title}</p>
             <p className="mt-5 text-lg leading-relaxed text-slate-600">{founder.summary}</p>
             <FounderHighlights className="mt-6" />
-            <Link href="/founder" className="mt-6 inline-flex items-center gap-1 font-bold text-brand-700 hover:underline">
+            <Link href="/founder" className="tap mt-6 inline-flex items-center gap-1 font-bold text-brand-700 hover:underline">
               {c.counsellor.linkText} <ArrowRightIcon className="h-4 w-4" />
             </Link>
           </Reveal>

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
+import { useScrollLock } from "@/lib/scroll-lock";
 import { track } from "@/lib/analytics";
 import { requestFreeGuide } from "@/lib/guide-actions";
 import { GUIDE_CLASSES } from "@/lib/guide-shared";
@@ -16,6 +17,7 @@ export default function GuideForm({ title, onClose }: { title: string; onClose: 
   const [downloaded, setDownloaded] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   const closeRef = useRef(onClose);
+  useScrollLock(true); // the page behind stays still
   useEffect(() => {
     closeRef.current = onClose;
   });
@@ -43,7 +45,7 @@ export default function GuideForm({ title, onClose }: { title: string; onClose: 
 
   return (
     <div className="fixed inset-0 z-[72] flex items-end justify-center bg-slate-950/55 p-3 backdrop-blur-[2px] sm:items-center sm:p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div ref={box} role="dialog" aria-modal="true" aria-labelledby="guide-title" className="relative max-h-[92vh] w-full max-w-md animate-fade-up overflow-y-auto rounded-[1.5rem] bg-white p-6 shadow-2xl sm:p-7">
+      <div ref={box} role="dialog" aria-modal="true" aria-labelledby="guide-title" className="relative max-h-[92dvh] w-full max-w-md animate-fade-up overflow-y-auto overscroll-contain rounded-[1.5rem] bg-white p-6 shadow-2xl sm:p-7">
         <button type="button" onClick={onClose} aria-label="Close" className="absolute right-3 top-3 grid h-10 w-10 place-items-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-800">
           <CloseIcon className="h-5 w-5" />
         </button>

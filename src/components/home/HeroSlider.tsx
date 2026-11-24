@@ -205,7 +205,7 @@ export default function HeroSlider() {
                       {s.cta.label} <ArrowRightIcon className="h-4 w-4" />
                     </Link>
                     {s.link && (
-                      <Link href={s.link.href} className="inline-flex items-center gap-1 self-center text-sm font-bold text-accent-300 underline decoration-accent-400/50 underline-offset-4 hover:text-accent-200 sm:self-auto" tabIndex={active ? 0 : -1}>
+                      <Link href={s.link.href} className="tap inline-flex items-center gap-1 self-center text-sm font-bold text-accent-300 underline decoration-accent-400/50 underline-offset-4 hover:text-accent-200 sm:self-auto" tabIndex={active ? 0 : -1}>
                         {s.link.label} <ArrowRightIcon className="h-3.5 w-3.5" />
                       </Link>
                     )}
@@ -242,7 +242,7 @@ export default function HeroSlider() {
 
         {/* Dots — click to jump to any slide. The active one fills with gold over 3 seconds. */}
         <div className="mt-8 flex justify-center px-16 lg:mt-10 lg:px-0">
-          <div className="flex flex-wrap items-center justify-center gap-1">
+          <div className="flex flex-wrap items-center justify-center">
             {slides.map((s, i) => (
               <button
                 key={s.title}
@@ -250,7 +250,7 @@ export default function HeroSlider() {
                 onClick={() => go(i, i >= index ? 1 : -1)}
                 aria-label={`Go to slide ${i + 1}: ${s.title}`}
                 aria-current={i === index}
-                className="group grid h-11 min-w-8 place-items-center px-1"
+                className="group grid h-11 min-w-11 place-items-center px-1"
               >
                 <span
                   className={`relative block h-2.5 overflow-hidden rounded-full transition-all duration-300 ${

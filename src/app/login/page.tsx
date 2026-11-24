@@ -53,7 +53,7 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
               <FormWithMode searchParams={searchParams} />
             </Suspense>
           </div>
-          <Link href="/" className="mt-6 flex items-center justify-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-brand-700">
+          <Link href="/" className="mt-4 flex min-h-11 items-center justify-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-brand-700">
             <HomeIcon className="h-4 w-4" /> Back to Home
           </Link>
         </div>

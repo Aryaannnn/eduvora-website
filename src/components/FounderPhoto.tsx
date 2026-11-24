@@ -19,8 +19,11 @@ export default function FounderPhoto({ size = "md", eager = false }: { size?: "m
               alt={founder.photoAlt}
               fill
               loading={eager ? "eager" : "lazy"}
-              quality={90}
-              sizes="(min-width: 1024px) 384px, 90vw"
+              // near the top of the page → fetch it first (it is the biggest thing on screen)
+              fetchPriority={eager ? "high" : "auto"}
+              // a photo looks the same at the default quality (75) and is ~30% smaller;
+              // on phones it is about 3/4 of the screen wide
+              sizes="(min-width: 640px) 384px, 75vw"
               className="object-cover object-[50%_28%]"
             />
           ) : (

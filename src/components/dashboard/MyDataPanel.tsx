@@ -2,6 +2,7 @@
 
 // Dashboard → My Profile → "Your data": download a copy, or delete the account.
 import { useState, useTransition } from "react";
+import { useScrollLock } from "@/lib/scroll-lock";
 import { siteConfig } from "@/config/site";
 import { deleteMyAccount } from "@/lib/privacy-actions";
 import { getBrowserSupabase } from "@/lib/supabase/client";
@@ -9,6 +10,7 @@ import { DownloadIcon, TrashIcon } from "../Icons";
 
 export default function MyDataPanel({ isAdmin, consentAt }: { isAdmin: boolean; consentAt: string | null }) {
   const [open, setOpen] = useState(false);
+  useScrollLock(open);
   const [typed, setTyped] = useState("");
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
@@ -54,7 +56,7 @@ export default function MyDataPanel({ isAdmin, consentAt }: { isAdmin: boolean; 
 
       {open && (
         <div className="fixed inset-0 z-[70] grid place-items-center bg-slate-950/60 p-4" role="dialog" aria-modal="true" aria-labelledby="del-title">
-          <div className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-[1.75rem] bg-white p-6 shadow-2xl sm:p-7">
+          <div className="max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-[1.75rem] bg-white p-6 shadow-2xl sm:p-7">
             <h3 id="del-title" className="text-xl font-extrabold text-red-700">Delete your account?</h3>
             <p className="mt-1 text-sm text-slate-600">This can&apos;t be undone.</p>
 

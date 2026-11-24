@@ -4,7 +4,7 @@ import Logo from "./Logo";
 // Navy page with a white EDUVORA card — used by Forgot Password and Set New Password
 export default function AuthCard({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
-    <section className="hero-bg relative min-h-[75vh] overflow-hidden px-4 py-8 sm:py-14">
+    <section className="hero-bg relative min-h-[75dvh] overflow-hidden px-4 py-8 sm:py-14">
       <div className="grid-pattern absolute inset-0" aria-hidden />
       <div className="relative mx-auto mb-6 max-w-md"><BackButton tone="dark" /></div>
       <div className="relative mx-auto w-full max-w-md animate-fade-up rounded-[1.75rem] bg-white p-6 shadow-2xl sm:p-8">

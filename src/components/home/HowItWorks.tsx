@@ -40,7 +40,7 @@ export default function HowItWorks() {
                     <span className="block text-lg font-extrabold text-slate-900">{s.title}</span>
                     <span className="mt-0.5 block text-sm leading-relaxed text-slate-600">{s.text}</span>
                     {s.cta && (
-                      <Link href={s.href} className="mt-1.5 inline-flex items-center gap-1 text-sm font-bold text-brand-700 hover:underline">
+                      <Link href={s.href} className="tap mt-1.5 inline-flex items-center gap-1 text-sm font-bold text-brand-700 hover:underline">
                         {s.cta} <ArrowRightIcon className="h-4 w-4" />
                       </Link>
                     )}

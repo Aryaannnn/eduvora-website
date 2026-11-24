@@ -209,7 +209,7 @@ export default function PredictorTool({
                     step={1}
                     value={marks}
                     onChange={(e) => { setMarks(Number(e.target.value)); setMarksText(e.target.value); }}
-                    className="h-3 flex-1 cursor-pointer appearance-none rounded-full bg-gradient-to-r from-rose-200 via-amber-200 to-emerald-300 accent-brand-600"
+                    className="h-11 flex-1 cursor-pointer appearance-none rounded-full bg-gradient-to-r bg-clip-content from-rose-200 via-amber-200 to-emerald-300 py-4 accent-brand-600"
                     aria-label="Expected marks slider"
                   />
                   <input

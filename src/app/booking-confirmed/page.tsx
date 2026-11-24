@@ -31,7 +31,7 @@ const mins = (t: string) => {
 // /booking-confirmed?id=<booking id> — shown ONLY after a verified payment
 export default function BookingConfirmedPage({ searchParams }: PageProps<"/booking-confirmed">) {
   return (
-    <section className="hero-bg relative min-h-[80vh] overflow-hidden py-10 sm:py-16">
+    <section className="hero-bg relative min-h-[80dvh] overflow-hidden py-10 sm:py-16">
       <div className="grid-pattern absolute inset-0 opacity-40" aria-hidden />
       <div className="container-page relative max-w-2xl">
         <Suspense fallback={<div className="card h-[28rem] animate-pulse" />}>

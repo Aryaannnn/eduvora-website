@@ -15,7 +15,7 @@ export default function Error({ error, retry }: { error: unknown; retry: () => v
   }, [error]);
 
   return (
-    <section className="container-page grid min-h-[60vh] place-items-center py-16">
+    <section className="container-page grid min-h-[60dvh] place-items-center py-16">
       <div className="card max-w-lg p-8 text-center sm:p-10">
         <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-amber-100 text-3xl" aria-hidden>😕</span>
         <h1 className="mt-5 text-2xl font-extrabold text-slate-900">Something went wrong</h1>

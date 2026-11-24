@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { lockScroll } from "@/lib/scroll-lock";
 import Logo from "../Logo";
 import { useLogout } from "@/lib/useLogout";
 import { Spinner } from "../Spinner";
@@ -35,6 +36,17 @@ export default function DashboardNav() {
   const isActive = (href: string) => (href === "/dashboard" ? pathname === href : pathname.startsWith(href));
   const moreLinks = dashboardLinks.filter((l) => !bottomHrefs.includes(l.href));
   const moreActive = moreLinks.some((l) => isActive(l.href));
+  // "More" sheet open: the page behind stays still; Escape closes it
+  useEffect(() => {
+    if (!moreOpen) return;
+    const unlock = lockScroll();
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setMoreOpen(false);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      unlock();
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [moreOpen]);
 
   return (
     <>
@@ -72,7 +84,7 @@ export default function DashboardNav() {
       </aside>
 
       {/* ---------- Phone bottom menu ---------- */}
-      <nav aria-label="Dashboard" className="print:hidden fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
+      <nav data-bottom-bar aria-label="Dashboard" className="print:hidden fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
         <ul className="grid grid-cols-5">
           {dashboardLinks
             .filter((l) => bottomHrefs.includes(l.href))
@@ -81,7 +93,7 @@ export default function DashboardNav() {
                 <Link
                   href={l.href}
                   aria-current={isActive(l.href) ? "page" : undefined}
-                  className={`flex flex-col items-center gap-1 py-2.5 text-[11px] font-semibold ${isActive(l.href) ? "text-brand-700" : "text-slate-500"}`}
+                  className={`flex flex-col items-center gap-1 py-2.5 text-xs font-semibold ${isActive(l.href) ? "text-brand-700" : "text-slate-500"}`}
                 >
                   <span className={`grid h-8 w-12 place-items-center rounded-full transition-colors ${isActive(l.href) ? "bg-brand-100" : ""}`}>
                     <l.icon className="h-5 w-5" />
@@ -95,7 +107,7 @@ export default function DashboardNav() {
               type="button"
               onClick={() => setMoreOpen(true)}
               aria-expanded={moreOpen}
-              className={`flex w-full flex-col items-center gap-1 py-2.5 text-[11px] font-semibold ${moreActive ? "text-brand-700" : "text-slate-500"}`}
+              className={`flex w-full flex-col items-center gap-1 py-2.5 text-xs font-semibold ${moreActive ? "text-brand-700" : "text-slate-500"}`}
             >
               <span className={`grid h-8 w-12 place-items-center rounded-full ${moreActive ? "bg-brand-100" : ""}`}><DotsIcon /></span>
               More
@@ -108,10 +120,10 @@ export default function DashboardNav() {
       {moreOpen && (
         <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="More options">
           <button type="button" aria-label="Close" className="absolute inset-0 bg-slate-950/40" onClick={() => setMoreOpen(false)} />
-          <div className="absolute inset-x-0 bottom-0 animate-fade-up rounded-t-3xl bg-white p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-2xl">
+          <div className="absolute inset-x-0 bottom-0 max-h-[85dvh] animate-fade-up overflow-y-auto overscroll-contain rounded-t-3xl bg-white p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-2xl">
             <div className="flex items-center justify-between">
               <p className="font-extrabold text-slate-900">More</p>
-              <button type="button" onClick={() => setMoreOpen(false)} aria-label="Close" className="grid h-9 w-9 place-items-center rounded-full hover:bg-slate-100">
+              <button type="button" onClick={() => setMoreOpen(false)} aria-label="Close" className="-mr-1 grid h-11 w-11 place-items-center rounded-full hover:bg-slate-100">
                 <CloseIcon className="h-5 w-5" />
               </button>
             </div>

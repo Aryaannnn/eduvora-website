@@ -174,10 +174,10 @@ export default function BuyButton({
           label
         )}
       </button>
-      {free && <p className={`mt-2 text-center text-[11px] font-semibold text-slate-500 ${trustClassName}`}>Free · just log in or sign up to unlock</p>}
+      {free && <p className={`mt-2 text-center text-xs font-semibold text-slate-500 ${trustClassName}`}>Free · just log in or sign up to unlock</p>}
       {trust && !free && (
         <>
-          <p className={`mt-2 flex items-center justify-center gap-1 text-[11px] font-semibold text-slate-500 ${trustClassName}`}>
+          <p className={`mt-2 flex items-center justify-center gap-1 text-xs font-semibold text-slate-500 ${trustClassName}`}>
             <ShieldIcon className="h-3.5 w-3.5 text-emerald-600" /> 100% Secure Payments by Razorpay
           </p>
           <RefundNote kind={refundKind} className="mt-1" />
@@ -197,7 +197,7 @@ export default function BuyButton({
 export function SecurePaymentNote({ className = "", refundKind = "digital" }: { className?: string; refundKind?: RefundKind }) {
   return (
     <div className={className}>
-      <p className="flex items-center justify-center gap-1 text-[11px] font-semibold text-slate-500">
+      <p className="flex items-center justify-center gap-1 text-xs font-semibold text-slate-500">
         <ShieldIcon className="h-3.5 w-3.5 text-emerald-600" /> 100% Secure Payments by Razorpay
       </p>
       <RefundNote kind={refundKind} className="mt-1" />

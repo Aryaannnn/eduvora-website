@@ -50,9 +50,9 @@ async function DirectContactInner({ variant = "card", paidOnly = false, formNext
 
   if (variant === "footer") {
     return (
-      <div className="space-y-2">
-        <a href={tel} className="flex gap-2.5 hover:text-white"><PhoneIcon className="mt-0.5 h-4 w-4 shrink-0" />{access.display}</a>
-        <a href={wa} target="_blank" rel="noopener noreferrer" className="flex gap-2.5 hover:text-white"><WhatsAppIcon className="mt-0.5 h-4 w-4 shrink-0" />WhatsApp us</a>
+      <div className="space-y-1 sm:space-y-2">
+        <a href={tel} className="flex min-h-11 items-center gap-2.5 hover:text-white sm:min-h-0 sm:items-start"><PhoneIcon className="h-4 w-4 shrink-0 sm:mt-0.5" />{access.display}</a>
+        <a href={wa} target="_blank" rel="noopener noreferrer" className="flex min-h-11 items-center gap-2.5 hover:text-white sm:min-h-0 sm:items-start"><WhatsAppIcon className="h-4 w-4 shrink-0 sm:mt-0.5" />WhatsApp us</a>
       </div>
     );
   }
@@ -85,8 +85,8 @@ async function DirectContactInner({ variant = "card", paidOnly = false, formNext
 function Enquiry({ variant, note, formNextToIt }: { variant: Variant; note: string; formNextToIt: boolean }) {
   if (variant === "footer") {
     return (
-      <Link href="/contact#enquiry" className="flex gap-2.5 hover:text-white">
-        <MailIcon className="mt-0.5 h-4 w-4 shrink-0" />
+      <Link href="/contact#enquiry" className="flex min-h-11 items-center gap-2.5 hover:text-white sm:min-h-0 sm:items-start">
+        <MailIcon className="h-4 w-4 shrink-0 sm:mt-0.5" />
         <span>Send a free enquiry — {note.charAt(0).toLowerCase() + note.slice(1)}</span>
       </Link>
     );

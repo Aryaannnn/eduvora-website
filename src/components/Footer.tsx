@@ -39,9 +39,9 @@ export default async function Footer() {
   ];
 
   return (
-    <footer className="border-t-4 border-accent-400 bg-brand-700 pb-24 text-slate-300 md:pb-0 print:hidden">
-      <div className="container-page grid gap-10 py-14 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1.3fr]">
-        <div>
+    <footer className="border-t-4 border-accent-400 bg-brand-700 pb-[calc(6rem+env(safe-area-inset-bottom))] text-slate-300 md:pb-0 print:hidden">
+      <div className="container-page grid grid-cols-2 gap-x-6 gap-y-10 py-14 lg:grid-cols-[1.4fr_1fr_1fr_1.3fr]">
+        <div className="col-span-2 sm:col-span-1">
           {/* The logo has navy text, so it sits on a white card */}
           <div className="inline-flex rounded-2xl bg-white px-4 py-3 shadow-lg"><Logo size="lg" /></div>
           <p className="mt-4 text-base font-bold text-accent-300">{siteConfig.tagline}</p>
@@ -49,7 +49,7 @@ export default async function Footer() {
           <p className="mt-4 max-w-sm text-sm leading-relaxed text-slate-400">{siteConfig.description}</p>
           <div className="mt-5 flex gap-3">
             {socials.map((s) => (
-              <a key={s.label} href={s.href} target={s.newTab ? "_blank" : undefined} rel="noopener noreferrer" aria-label={s.label} className="grid h-10 w-10 place-items-center rounded-full bg-white/5 ring-1 ring-white/10 transition hover:bg-accent-400 hover:text-brand-950">
+              <a key={s.label} href={s.href} target={s.newTab ? "_blank" : undefined} rel="noopener noreferrer" aria-label={s.label} className="grid h-11 w-11 place-items-center rounded-full bg-white/5 ring-1 ring-white/10 transition hover:bg-accent-400 hover:text-brand-950">
                 <s.icon className="h-5 w-5" />
               </a>
             ))}
@@ -59,13 +59,13 @@ export default async function Footer() {
         <FooterList title="Explore" links={explore} />
         <FooterList title="Company" links={company} />
 
-        <div>
+        <div className="col-span-2 sm:col-span-1">
           <p className="text-sm font-bold uppercase tracking-wider text-white">Get in touch</p>
           <p className="mt-3 text-sm leading-relaxed text-slate-400">{cm.mode === "open" ? cm.openNote : "Send us a free enquiry or email us anytime."}</p>
-          <ul className="mt-4 space-y-3 text-sm">
+          <ul className="mt-3 space-y-1 text-[15px] sm:mt-4 sm:space-y-3 sm:text-sm">
             {/* Open: number + Call + WhatsApp · Private: the enquiry link (decided on the server) */}
             <li><DirectContact variant="footer" /></li>
-            <li><a href={emailLink} className="flex gap-2.5 break-all hover:text-white"><MailIcon className="mt-0.5 h-4 w-4 shrink-0" />{siteConfig.email}</a></li>
+            <li><a href={emailLink} className="flex min-h-11 items-center gap-2.5 hover:text-white sm:min-h-0 sm:items-start break-all"><MailIcon className="h-4 w-4 shrink-0 sm:mt-0.5" />{siteConfig.email}</a></li>
             {siteConfig.showAddress && <li className="flex gap-2.5"><MapPinIcon className="mt-0.5 h-4 w-4 shrink-0" />{siteConfig.address}</li>}
           </ul>
         </div>
@@ -86,9 +86,9 @@ function FooterList({ title, links }: { title: string; links: { href: string; la
   return (
     <div>
       <p className="text-sm font-bold uppercase tracking-wider text-white">{title}</p>
-      <ul className="mt-4 space-y-2.5 text-sm">
+      <ul className="mt-3 text-[15px] sm:mt-4 sm:space-y-2.5 sm:text-sm">
         {links.map((l) => (
-          <li key={l.href}><Link href={l.href} className="transition hover:text-white">{l.label}</Link></li>
+          <li key={l.href}><Link href={l.href} className="flex min-h-11 items-center py-1.5 leading-snug transition hover:text-white sm:inline sm:min-h-0 sm:py-0">{l.label}</Link></li>
         ))}
       </ul>
     </div>

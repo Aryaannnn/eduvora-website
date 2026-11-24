@@ -47,7 +47,7 @@ export default async function FounderSection({ className = "", eagerPhoto = fals
             <div className="mt-5 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
               <p className="text-sm font-semibold text-slate-500">Call or WhatsApp</p>
               <p className="text-xl font-extrabold tracking-wide text-brand-700">{open.display}</p>
-              <p className="mt-1 text-xs leading-relaxed text-slate-600">{cm.openNote}</p>
+              <p className="mt-1 text-[13px] leading-relaxed text-slate-600 sm:text-xs">{cm.openNote}</p>
               <div className="mt-3 grid grid-cols-2 gap-2">
                 <a href={`tel:${open.tel}`} className="btn-light !py-2.5 text-sm"><PhoneIcon className="h-4 w-4" /> Call</a>
                 <a href={whatsappLink(siteConfig.whatsappMessage, open.waDigits)} target="_blank" rel="noopener noreferrer" className="btn-primary !bg-[#25D366] !py-2.5 text-sm hover:!bg-[#1ebe5b]">
@@ -56,7 +56,7 @@ export default async function FounderSection({ className = "", eagerPhoto = fals
               </div>
             </div>
           )}
-          <Link href="/about" className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-brand-700 hover:underline">
+          <Link href="/about" className="tap mt-4 inline-flex items-center gap-1 text-sm font-semibold text-brand-700 hover:underline">
             About EDUVORA <ArrowRightIcon className="h-4 w-4" />
           </Link>
         </Reveal>

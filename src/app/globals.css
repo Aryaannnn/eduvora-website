@@ -77,6 +77,18 @@ body {
   overflow-x: clip; /* never let decorations cause sideways scrolling on phones */
 }
 
+@layer base {
+  /* Sideways scroll boxes (comparison tables, chip rows) keep EVERYTHING inside them —
+     including hidden screen-reader labels ("sr-only", positioned absolutely). Without
+     this such a label escaped the box and made the whole phone page wider than the
+     screen (the page zoomed out and fixed bars / the menu sat in the wrong place). */
+  .overflow-x-auto,
+  .overflow-auto,
+  .overflow-x-scroll {
+    position: relative;
+  }
+}
+
 /* ---------- Scroll-in animation (used by <Reveal>) ---------- */
 /* Always keep room for the page scrollbar, so pages never jump sideways when
    a scrollbar appears or disappears (e.g. while content loads). */
@@ -269,6 +281,41 @@ html { scrollbar-gutter: stable; }
   transition: border-color 150ms, box-shadow 150ms;
   &::placeholder { color: var(--color-slate-400); }
   &:focus { border-color: var(--color-brand-500); box-shadow: 0 0 0 4px var(--color-brand-100); }
+}
+
+/* Small text links ("Try the free predictor →", "Sign Up") get an invisible
+   44px-tall tap area on top of them, without moving anything on the page. */
+@utility tap {
+  position: relative;
+  &::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: -0.375rem;
+    right: -0.375rem;
+    height: max(100%, 44px);
+    transform: translateY(-50%);
+  }
+}
+
+/* ---------- Phones ---------- */
+@media (max-width: 639px) {
+  /* Reading text on phones: 15px at least (cards use 14px "text-sm" on computers) */
+  main :is(p, li, dd).text-sm {
+    font-size: 0.9375rem;
+  }
+}
+@media (max-width: 767px) {
+  /* Every form field 16px+ so iPhones don't zoom in when you tap it
+     (the admin screens use some smaller fields on computers) */
+  :is(input, select, textarea):is(.text-xs, .text-sm, .\!text-xs, .\!text-sm) {
+    font-size: 16px !important;
+  }
+  /* While typing, the bottom bars (Call / Book / WhatsApp, Enroll Now) step aside,
+     so they can never sit on top of the field you are filling in */
+  body:has(:is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="button"], [type="submit"]), textarea, select):focus) [data-bottom-bar] {
+    display: none;
+  }
 }
 
 /* ---------- Text styling for policy pages ---------- */

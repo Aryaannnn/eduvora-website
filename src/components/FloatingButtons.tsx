@@ -70,9 +70,8 @@ function Buttons({ open }: { open: OpenContact }) {
 
       {showBar && (
         <>
-          {/* Space at the end of the page so the bar never covers the footer */}
-          <div className="h-20 md:hidden print:hidden" aria-hidden />
-          <nav
+          {/* (the footer keeps room at its bottom on phones, so the bar never covers it) */}
+          <nav data-bottom-bar
             aria-label="Quick contact"
             className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-3 pt-2.5 shadow-[0_-8px_24px_-12px_rgba(15,23,42,0.25)] backdrop-blur pb-[max(0.625rem,env(safe-area-inset-bottom))] md:hidden print:hidden"
           >

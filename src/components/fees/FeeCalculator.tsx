@@ -43,7 +43,7 @@ export default function FeeCalculator({ campuses, fees, startRank, predicted }: 
         </div>
         <p className="rounded-xl bg-amber-50 p-3 text-xs font-semibold text-amber-900 ring-1 ring-amber-200">
           ⚠️ {FEE_NOTE}{" "}
-          <a href="https://vit.ac.in" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 underline">vit.ac.in <ExternalIcon className="h-3 w-3" /></a>
+          <a href="https://vit.ac.in" target="_blank" rel="noopener noreferrer" className="tap inline-flex items-center gap-0.5 underline">vit.ac.in <ExternalIcon className="h-3 w-3" /></a>
         </p>
       </form>
 

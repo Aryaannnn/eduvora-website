@@ -10,8 +10,9 @@
 // =====================================================================
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { isGroup, mainNav, type NavGroup, type NavLink } from "@/lib/navigation";
+import { lockScroll } from "@/lib/scroll-lock";
 import { loadBrowserSupabase, useHasLoginCookie } from "@/lib/supabase/lazy";
 import { useLogout } from "@/lib/useLogout";
 import { Spinner } from "./Spinner";
@@ -124,7 +125,7 @@ function HeaderBar({ pathname }: { pathname: string }) {
           ) : (
             <Link
               href={loginHref}
-              className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-xl border border-slate-300 px-3 py-2 text-sm font-bold text-slate-800 transition-colors hover:border-brand-400 hover:text-brand-700"
+              className="inline-flex min-h-11 items-center gap-1.5 whitespace-nowrap rounded-xl border border-slate-300 px-3 py-2 text-sm font-bold sm:min-h-0 text-slate-800 transition-colors hover:border-brand-400 hover:text-brand-700"
             >
               <UserIcon className="h-4 w-4" /> Login
             </Link>
@@ -144,7 +145,7 @@ function HeaderBar({ pathname }: { pathname: string }) {
 
     </header>
     {/* Outside the <header>: its blur effect would trap a "fixed" panel inside the header bar */}
-    <MobileMenu open={open} onClose={() => setOpen(false)} isActive={isActive} user={user} loginHref={loginHref} />
+    <MobileMenu open={open} setOpen={setOpen} pathname={pathname} isActive={isActive} user={user} loginHref={loginHref} />
     </>
   );
 }
@@ -217,74 +218,102 @@ function Dropdown({ group, isActive }: { group: NavGroup; isActive: (href: strin
 }
 
 // ---------- Phone / tablet slide-in menu ----------
-function MobileMenu({ open, onClose, isActive, user, loginHref }: { open: boolean; onClose: () => void; isActive: (href: string) => boolean; user: User | null; loginHref: string }) {
+// The panel's position lives in inline styles (plain `transform`, not the newer
+// `translate` property, and not only in the stylesheet), so it is right off-screen
+// on the RIGHT from the very first paint in every phone browser — even before the
+// CSS file has loaded — and always slides in from the right and back out.
+const MENU_STATE = "eduvoraMenu"; // marks the history entry the open menu adds
+
+function MobileMenu({ open, setOpen, pathname, isActive, user, loginHref }: { open: boolean; setOpen: (v: boolean) => void; pathname: string; isActive: (href: string) => boolean; user: User | null; loginHref: string }) {
   const closeBtn = useRef<HTMLButtonElement>(null);
 
-  // Lock page scrolling, close with Escape, focus the close button
+  // X, outside tap, Escape: if the menu added a history entry, go Back (that removes
+  // the entry and the "popstate" below closes the menu); otherwise just close.
+  const close = useCallback(() => {
+    if ((history.state as Record<string, unknown> | null)?.[MENU_STATE]) history.back();
+    else setOpen(false);
+  }, [setOpen]);
+
   useEffect(() => {
     if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const html = document.documentElement;
+    html.dataset.menuOpen = "1"; // NavigationEffects: this Back only closes the menu
+    const unlock = lockScroll(); // the page behind stays still
+    // The phone's Back button closes the menu instead of leaving the page
+    const state = (history.state ?? {}) as Record<string, unknown>;
+    if (!state[MENU_STATE]) history.pushState({ ...state, [MENU_STATE]: true }, "");
+    const onPop = () => setOpen(false);
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
+    addEventListener("popstate", onPop);
     document.addEventListener("keydown", onKey);
-    const t = setTimeout(() => closeBtn.current?.focus(), 50);
+    const t = setTimeout(() => closeBtn.current?.focus({ preventScroll: true }), 50);
     return () => {
-      document.body.style.overflow = prev;
+      removeEventListener("popstate", onPop);
       document.removeEventListener("keydown", onKey);
       clearTimeout(t);
+      unlock();
+      // a moment later, so NavigationEffects still sees the flag during this Back
+      setTimeout(() => delete html.dataset.menuOpen, 0);
     };
-  }, [open, onClose]);
+  }, [open, close, setOpen]);
+
+  // Any link in the menu: the page already shown → just close; another page → close
+  // and open it IN PLACE of the menu's history entry (links use `replace`), so Back
+  // afterwards goes to the previous page, not to a copy of it.
+  const onLinkClick = (e: React.MouseEvent) => {
+    const a = (e.target as Element).closest("a[href]") as HTMLAnchorElement | null;
+    if (!a) return;
+    if (a.origin === location.origin && a.pathname === location.pathname && a.search === location.search) {
+      e.preventDefault();
+      close();
+    } else setOpen(false);
+  };
 
   const tab = open ? 0 : -1;
   const linkClass = (href: string) =>
-    `flex items-center rounded-2xl px-4 py-3.5 text-[17px] font-bold transition-colors ${isActive(href) ? "bg-brand-50 text-brand-700" : "text-slate-800 active:bg-slate-100"}`;
+    `flex min-h-12 items-center rounded-2xl px-4 py-3.5 text-[17px] font-bold transition-colors ${isActive(href) ? "bg-brand-50 text-brand-700" : "text-slate-800 active:bg-slate-100"}`;
+  const ease = open ? "300ms cubic-bezier(0.22, 1, 0.36, 1)" : "250ms cubic-bezier(0.4, 0, 1, 1)";
 
   return (
-    <div id="mobile-menu" className={`fixed inset-0 z-[60] overflow-hidden lg:hidden print:hidden ${open ? "" : "pointer-events-none"}`} aria-hidden={!open} inert={!open}>
-      {/* dim background */}
+    <div
+      id="mobile-menu"
+      className="lg:hidden print:hidden"
+      // hidden (not only moved away) once the slide-out has finished
+      style={{ position: "fixed", inset: 0, zIndex: 60, overflow: "hidden", pointerEvents: open ? "auto" : "none", visibility: open ? "visible" : "hidden", transition: `visibility 0s linear ${open ? "0s" : "250ms"}` }}
+      aria-hidden={!open}
+      inert={!open}
+    >
+      {/* dim background — tap it to close */}
       <button
         type="button"
         tabIndex={-1}
         aria-label="Close menu"
-        onClick={onClose}
-        className={`absolute inset-0 bg-slate-950/50 transition-opacity duration-300 ${open ? "opacity-100" : "opacity-0"}`}
+        onClick={close}
+        className="absolute inset-0 h-full w-full cursor-default bg-slate-950/50 motion-reduce:!transition-none"
+        style={{ opacity: open ? 1 : 0, transition: `opacity ${ease}` }}
       />
       {/* panel */}
       <nav
         aria-label="Mobile"
-        className={`absolute inset-y-0 right-0 flex w-[min(88vw,22rem)] flex-col bg-white shadow-2xl transition-transform duration-300 ease-out ${open ? "translate-x-0" : "translate-x-full"}`}
+        onClick={onLinkClick}
+        className="absolute inset-y-0 right-0 flex w-[min(88vw,22rem)] flex-col bg-white shadow-2xl motion-reduce:!transition-none"
+        style={{ transform: open ? "translate3d(0, 0, 0)" : "translate3d(100%, 0, 0)", transition: `transform ${ease}` }}
       >
-        <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2">
-          <Logo size="sidebar" />
-          <button ref={closeBtn} type="button" onClick={onClose} tabIndex={tab} aria-label="Close menu" className="grid h-11 w-11 place-items-center rounded-xl text-slate-700 hover:bg-slate-100">
+        <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2 pt-[calc(0.5rem+env(safe-area-inset-top))]">
+          <Logo size="sidebar" link={false} />
+          <button ref={closeBtn} type="button" onClick={close} tabIndex={tab} aria-label="Close menu" className="grid h-11 w-11 place-items-center rounded-xl text-slate-700 hover:bg-slate-100">
             <CloseIcon />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-3 py-3">
+        <div className="flex-1 overflow-y-auto overscroll-contain px-3 py-3">
           <ul className="space-y-1">
             {mainNav.map((item) =>
               isGroup(item) ? (
-                <li key={item.label} className="pt-2">
-                  <p className="px-4 pb-1 text-xs font-bold uppercase tracking-[0.15em] text-slate-400">{item.label}</p>
-                  <ul className="space-y-1">
-                    {item.children.map((c) => (
-                      <li key={c.href}>
-                        <Link href={c.href} onClick={onClose} tabIndex={tab} aria-current={isActive(c.href) ? "page" : undefined} className={`${linkClass(c.href)} !py-3 !text-base !font-semibold`}>
-                          <span>
-                            {c.label}
-                            <Badges link={c} size="lg" />
-                            {c.hint && <span className="block text-xs font-medium text-slate-500">{c.hint}</span>}
-                          </span>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                  <div className="mx-4 mt-2 border-t border-slate-100" />
-                </li>
+                <MobileGroup key={item.label} group={item} isActive={isActive} tab={tab} linkClass={linkClass} />
               ) : (
                 <li key={item.href}>
-                  <Link href={item.href} onClick={onClose} tabIndex={tab} aria-current={isActive(item.href) ? "page" : undefined} className={linkClass(item.href)}>
+                  <Link href={item.href} replace tabIndex={tab} aria-current={isActive(item.href) ? "page" : undefined} className={linkClass(item.href)}>
                     {item.label}
                     <Badges link={item} size="lg" />
                   </Link>
@@ -296,19 +325,56 @@ function MobileMenu({ open, onClose, isActive, user, loginHref }: { open: boolea
 
         {/* Highlighted actions at the bottom */}
         <div className="space-y-2 border-t border-slate-100 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-          <Link href="/book-a-slot" onClick={onClose} tabIndex={tab} className="btn-accent w-full !py-4 text-base">
+          <Link href="/book-a-slot" replace tabIndex={tab} aria-current={pathname === "/book-a-slot" ? "page" : undefined} className="btn-accent w-full !py-4 text-base">
             <CalendarIcon className="h-5 w-5" /> Book a Slot
           </Link>
           {user ? (
             <MobileLogout tabIndex={tab} />
           ) : (
-            <Link href={loginHref} onClick={onClose} tabIndex={tab} className="btn-light w-full !py-3.5">
+            <Link href={loginHref} replace tabIndex={tab} className="btn-light w-full !py-3.5">
               <UserIcon className="h-4 w-4" /> Login / Sign Up
             </Link>
           )}
         </div>
       </nav>
     </div>
+  );
+}
+
+// "Resources ▾" inside the phone menu: opens and closes smoothly (the height animates)
+function MobileGroup({ group, isActive, tab, linkClass }: { group: NavGroup; isActive: (href: string) => boolean; tab: number; linkClass: (href: string) => string }) {
+  const hasActive = group.children.some((c) => isActive(c.href));
+  const [open, setOpen] = useState(hasActive);
+  const id = `menu-group-${group.label.toLowerCase().replace(/\W+/g, "-")}`;
+  return (
+    <li>
+      <button
+        type="button"
+        tabIndex={tab}
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-controls={id}
+        className={`flex min-h-12 w-full items-center justify-between rounded-2xl px-4 py-3.5 text-left text-[17px] font-bold transition-colors active:bg-slate-100 ${hasActive ? "text-brand-700" : "text-slate-800"}`}
+      >
+        {group.label}
+        <ChevronDownIcon className={`h-5 w-5 text-slate-500 transition-transform duration-300 motion-reduce:transition-none ${open ? "rotate-180" : ""}`} />
+      </button>
+      <div id={id} className={`grid transition-[grid-template-rows] duration-300 ease-out motion-reduce:transition-none ${open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`} inert={!open}>
+        <ul className="min-h-0 space-y-1 overflow-hidden pl-3">
+          {group.children.map((c) => (
+            <li key={c.href}>
+              <Link href={c.href} replace tabIndex={open ? tab : -1} aria-current={isActive(c.href) ? "page" : undefined} className={`${linkClass(c.href)} !py-3 !text-base !font-semibold`}>
+                <span>
+                  {c.label}
+                  <Badges link={c} size="lg" />
+                  {c.hint && <span className="block text-[13px] font-medium text-slate-500">{c.hint}</span>}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </li>
   );
 }
 

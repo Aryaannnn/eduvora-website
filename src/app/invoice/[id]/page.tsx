@@ -13,7 +13,7 @@ export const metadata: Metadata = { title: "Invoice", robots: { index: false } }
 // Students see only their own invoices; admins (with 2-step login) see any.
 export default function InvoicePage(props: PageProps<"/invoice/[id]">) {
   return (
-    <section className="min-h-[60vh] bg-slate-50 py-8 sm:py-12">
+    <section className="min-h-[60dvh] bg-slate-50 py-8 sm:py-12">
       <div className="container-page">
         <Suspense fallback={<div className="mx-auto max-w-3xl"><DashSkeleton /></div>}>
           {props.params.then(({ id }) => <Invoice id={id} />)}

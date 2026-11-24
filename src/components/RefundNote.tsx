@@ -12,7 +12,7 @@ export default function RefundNote({ kind, className = "" }: { kind: RefundKind;
   const r = siteConfig.refunds;
   const text = kind === "counselling" ? r.counsellingNote : kind === "live" ? r.liveBatchNote : r.digitalNote;
   return (
-    <p className={`flex items-start justify-center gap-1.5 text-center text-[11px] leading-snug text-slate-500 ${className}`}>
+    <p className={`flex items-start justify-center gap-1.5 text-center text-xs leading-snug text-slate-500 ${className}`}>
       <ReceiptIcon className="mt-px h-3.5 w-3.5 shrink-0 text-slate-400" />
       <span>
         {text}{" "}

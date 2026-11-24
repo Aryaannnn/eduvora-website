@@ -213,7 +213,7 @@ export default function LoginForm({ initialMode = "signin" }: { initialMode?: Mo
                 Continue with Google
               </button>
               {mode === "signup" && (
-                <p className="mt-2 text-center text-[11px] text-slate-500">
+                <p className="mt-2 text-center text-xs leading-relaxed text-slate-500">
                   By continuing with Google you agree to our <Link href="/terms-and-conditions" className="underline">Terms</Link> &amp; <Link href="/privacy-policy" className="underline">Privacy Policy</Link>.
                 </p>
               )}
@@ -287,7 +287,7 @@ export default function LoginForm({ initialMode = "signin" }: { initialMode?: Mo
                     <button
                       type="button"
                       onClick={() => setShowPassword((v) => !v)}
-                      className="absolute inset-y-0 right-3 my-auto h-fit text-xs font-bold text-brand-700"
+                      className="absolute inset-y-0 right-0 grid min-w-12 place-items-center rounded-r-[0.8rem] px-3 text-xs font-bold text-brand-700"
                       aria-label={showPassword ? "Hide password" : "Show password"}
                     >
                       {showPassword ? "Hide" : "Show"}
@@ -314,7 +314,7 @@ export default function LoginForm({ initialMode = "signin" }: { initialMode?: Mo
                 )}
                 {mode === "signin" && (
                   <div className="-mt-2 text-right">
-                    <Link href="/forgot-password" className="inline-block py-1 text-sm font-semibold text-brand-600 underline-offset-2 hover:text-accent-700 hover:underline">
+                    <Link href="/forgot-password" className="inline-flex min-h-11 items-center text-sm font-semibold text-brand-600 underline-offset-2 hover:text-accent-700 hover:underline">
                       Forgot password?
                     </Link>
                   </div>
@@ -359,7 +359,7 @@ export default function LoginForm({ initialMode = "signin" }: { initialMode?: Mo
 
           <p className="mt-5 text-center text-sm text-slate-600">
             {mode === "signin" ? "Don't have an account? " : "Already have an account? "}
-            <button type="button" onClick={() => reset(mode === "signin" ? "signup" : "signin")} className="font-bold text-brand-700 hover:underline">
+            <button type="button" onClick={() => reset(mode === "signin" ? "signup" : "signin")} className="tap font-bold text-brand-700 hover:underline">
               {mode === "signin" ? "Sign Up" : "Sign In"}
             </button>
           </p>

@@ -29,13 +29,13 @@ export default async function ContactPage() {
             </div>
             <div>
               <dt className="text-xs font-bold uppercase tracking-wide text-slate-500">Email</dt>
-              <dd className="mt-0.5"><a href={emailLink} className="inline-flex items-center gap-1.5 font-semibold text-brand-700 hover:underline"><MailIcon className="h-4 w-4" /> {siteConfig.email}</a></dd>
+              <dd className="mt-0.5"><a href={emailLink} className="tap inline-flex items-center gap-1.5 font-semibold text-brand-700 hover:underline"><MailIcon className="h-4 w-4" /> {siteConfig.email}</a></dd>
             </div>
             <div>
               <dt className="text-xs font-bold uppercase tracking-wide text-slate-500">Phone / WhatsApp</dt>
               <dd className="mt-0.5">
                 {open ? (
-                  <a href={`tel:${open.tel}`} className="inline-flex items-center gap-1.5 font-semibold text-brand-700 hover:underline"><PhoneIcon className="h-4 w-4" /> {open.display}</a>
+                  <a href={`tel:${open.tel}`} className="tap inline-flex items-center gap-1.5 font-semibold text-brand-700 hover:underline"><PhoneIcon className="h-4 w-4" /> {open.display}</a>
                 ) : (
                   <span className="text-slate-700">For enrolled students — others, please <Link href="#enquiry" className="font-semibold text-brand-700 underline">send a free enquiry</Link> and we&apos;ll call you back.</span>
                 )}

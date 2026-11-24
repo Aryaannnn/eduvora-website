@@ -130,7 +130,7 @@ export default function SlotPicker({ board, mode, selectedId = "", onSelect, cla
 
       {/* Date strip (scrolls sideways on phones) */}
       <p className="mt-6 flex items-center gap-1.5 text-sm font-bold text-slate-800"><CalendarIcon className="h-4 w-4 text-brand-600" /> Choose a date</p>
-      <div className="-mx-1 mt-2 flex snap-x gap-2 overflow-x-auto px-1 pb-2 pt-1" role="group" aria-label="Dates">
+      <div className="-mx-1 mt-2 flex snap-x gap-2 overflow-x-auto overscroll-x-contain px-1 pb-2 pt-1" role="group" aria-label="Dates">
         {dates.map((d) => {
           const full = !freeDates.has(d);
           const on = d === active;
@@ -149,9 +149,9 @@ export default function SlotPicker({ board, mode, selectedId = "", onSelect, cla
                   : full ? "bg-slate-100 text-slate-500 ring-slate-200 hover:bg-slate-200" : "bg-accent-400/20 text-slate-900 ring-accent-400/70 hover:bg-accent-400/35"
               }`}
             >
-              <span className="block text-[11px] font-semibold uppercase opacity-80">{wd}</span>
+              <span className="block text-xs font-semibold uppercase opacity-80">{wd}</span>
               <span className="block text-lg font-extrabold leading-tight">{day}</span>
-              <span className="block text-[11px] font-semibold opacity-80">{month}</span>
+              <span className="block text-xs font-semibold opacity-80">{month}</span>
               {full && <span className={`mt-0.5 block text-[10px] font-extrabold uppercase tracking-wider ${on ? "text-white/90" : "text-slate-500"}`}>Full</span>}
             </button>
           );
@@ -176,7 +176,7 @@ export default function SlotPicker({ board, mode, selectedId = "", onSelect, cla
                 className={`min-h-[3.25rem] rounded-xl px-2 py-2 text-center text-sm ring-1 transition ${tapped === s.id ? "bg-slate-200 ring-slate-400" : "bg-slate-100 ring-slate-200 hover:bg-slate-200"}`}
               >
                 <span className="block font-semibold text-slate-500">{label}</span>
-                <span className="block text-[11px] font-bold uppercase tracking-wide text-slate-500">Booked</span>
+                <span className="block text-xs font-bold uppercase tracking-wide text-slate-500">Booked</span>
               </button>,
               tapped === s.id && <BookedNote key={`${s.id}-note`} slot={s} free={free} mode={mode} onChoose={choose} onClose={() => setTapped("")} />,
             ];
@@ -188,7 +188,7 @@ export default function SlotPicker({ board, mode, selectedId = "", onSelect, cla
           const inner = (
             <>
               <span>{label}</span>
-              <span className={`text-[11px] font-semibold ${on ? "text-white/85" : "text-slate-600"}`}>{on ? "Selected" : formatPrice(s.price)}</span>
+              <span className={`text-xs font-semibold ${on ? "text-white/85" : "text-slate-600"}`}>{on ? "Selected" : formatPrice(s.price)}</span>
             </>
           );
           return mode === "link" ? (
@@ -215,14 +215,14 @@ function BookedNote({ slot, free, mode, onChoose, onClose }: { slot: BoardSlot; 
 
   const go = (s: BoardSlot, primary: boolean, text: string) =>
     mode === "link" ? (
-      <Link key={s.id} href={`/book-a-slot?slot=${s.id}#book`} className={primary ? "btn-primary mt-3 w-full !py-2.5 text-sm sm:w-auto" : "rounded-full bg-white px-3 py-2 text-xs font-bold text-brand-700 ring-1 ring-brand-200 hover:bg-brand-50"}>{text}</Link>
+      <Link key={s.id} href={`/book-a-slot?slot=${s.id}#book`} className={primary ? "btn-primary mt-3 min-h-11 w-full !py-2.5 text-sm sm:w-auto" : "inline-flex min-h-11 items-center rounded-full bg-white px-3.5 text-sm font-bold text-brand-700 ring-1 ring-brand-200 hover:bg-brand-50"}>{text}</Link>
     ) : (
-      <button key={s.id} type="button" onClick={() => onChoose(s)} className={primary ? "btn-primary mt-3 w-full !py-2.5 text-sm sm:w-auto" : "min-h-9 rounded-full bg-white px-3 py-2 text-xs font-bold text-brand-700 ring-1 ring-brand-200 hover:bg-brand-50"}>{text}</button>
+      <button key={s.id} type="button" onClick={() => onChoose(s)} className={primary ? "btn-primary mt-3 min-h-11 w-full !py-2.5 text-sm sm:w-auto" : "inline-flex min-h-11 items-center rounded-full bg-white px-3.5 text-sm font-bold text-brand-700 ring-1 ring-brand-200 hover:bg-brand-50"}>{text}</button>
     );
 
   return (
-    <div role="status" className="relative col-span-full rounded-xl bg-amber-50 p-3 pr-9 text-sm text-amber-950 ring-1 ring-amber-200">
-      <button type="button" onClick={onClose} aria-label="Close" className="absolute right-1 top-1 grid h-8 w-8 place-items-center rounded-lg text-lg leading-none text-amber-900/70 hover:bg-amber-100">×</button>
+    <div role="status" className="relative col-span-full rounded-xl bg-amber-50 p-3 pr-11 text-[15px] leading-relaxed text-amber-950 ring-1 ring-amber-200 sm:text-sm">
+      <button type="button" onClick={onClose} aria-label="Close" className="absolute right-0 top-0 grid h-11 w-11 place-items-center rounded-lg text-xl leading-none text-amber-900/70 hover:bg-amber-100">×</button>
       {first ? (
         <>
           <p>
@@ -230,7 +230,7 @@ function BookedNote({ slot, free, mode, onChoose, onClose }: { slot: BoardSlot; 
           </p>
           {go(first, true, `Book ${formatDate(first.date)} at ${time}`)}
           {more.length > 0 && (
-            <p className="mt-2 flex flex-wrap items-center gap-2 text-xs text-amber-900">
+            <p className="mt-2 flex flex-wrap items-center gap-2 text-sm text-amber-900">
               Also free at {time}: {more.map((m) => go(m, false, formatDate(m.date)))}
             </p>
           )}

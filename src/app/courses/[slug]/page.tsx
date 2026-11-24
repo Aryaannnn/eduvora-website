@@ -142,7 +142,7 @@ async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
               <HomeIcon className="h-4 w-4" /> Home
             </Link>
             <span className="text-slate-400" aria-hidden>›</span>
-            <Link href="/courses" className="font-medium text-slate-300 hover:text-white">Courses</Link>
+            <Link href="/courses" className="tap font-medium text-slate-300 hover:text-white">Courses</Link>
           </nav>
           <div className="mt-4 flex flex-wrap items-center gap-2">
             {badge && <span className="inline-block rounded-full bg-accent-400 px-3 py-1 text-xs font-extrabold text-brand-950">{badge}</span>}
@@ -353,7 +353,7 @@ async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
 
       {/* PHONES: sticky "Enroll Now – ₹price" bar (replaces the usual Book a Slot bar on this page) */}
       <div className="h-24 md:hidden" aria-hidden />
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-3 pt-2.5 shadow-[0_-8px_24px_-12px_rgba(15,23,42,0.25)] backdrop-blur pb-[max(0.625rem,env(safe-area-inset-bottom))] md:hidden print:hidden">
+      <div data-bottom-bar className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-3 pt-2.5 shadow-[0_-8px_24px_-12px_rgba(15,23,42,0.25)] backdrop-blur pb-[max(0.625rem,env(safe-area-inset-bottom))] md:hidden print:hidden">
         <div className="mx-auto flex max-w-md items-center gap-2.5">
           {open ? (
             <a href={whatsappLink(`Hi, I have a question about the ${course.title}`, open.waDigits)} target="_blank" rel="noopener noreferrer" aria-label="Ask on WhatsApp" className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-[#25D366] text-white">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { lockScroll } from "@/lib/scroll-lock";
 import { CloseIcon } from "../Icons";
 
 // Shared pieces for the admin screens
@@ -9,22 +10,22 @@ export function Modal({ title, onClose, children, wide = false }: { title: strin
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     document.addEventListener("keydown", onKey);
-    document.body.style.overflow = "hidden";
+    const unlock = lockScroll();
     return () => {
       document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
+      unlock();
     };
   }, [onClose]);
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label={title}>
       <button type="button" aria-label="Close" className="absolute inset-0 bg-slate-950/50" onClick={onClose} />
-      <div className={`relative flex max-h-[92vh] w-full flex-col rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl ${wide ? "sm:max-w-3xl" : "sm:max-w-lg"}`}>
+      <div className={`relative flex max-h-[92dvh] w-full flex-col rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl ${wide ? "sm:max-w-3xl" : "sm:max-w-lg"}`}>
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
           <h2 className="text-lg font-extrabold text-slate-900">{title}</h2>
-          <button type="button" onClick={onClose} aria-label="Close" className="grid h-9 w-9 place-items-center rounded-full hover:bg-slate-100"><CloseIcon className="h-5 w-5" /></button>
+          <button type="button" onClick={onClose} aria-label="Close" className="-mr-1 grid h-11 w-11 place-items-center rounded-full hover:bg-slate-100"><CloseIcon className="h-5 w-5" /></button>
         </div>
-        <div className="overflow-y-auto px-5 py-5">{children}</div>
+        <div className="overflow-y-auto overscroll-contain px-5 py-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))]">{children}</div>
       </div>
     </div>
   );

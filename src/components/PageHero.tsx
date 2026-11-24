@@ -35,7 +35,7 @@ export default function PageHero({
           )}
         </nav>
         {eyebrow && <p className="text-xs font-bold uppercase tracking-[0.15em] text-accent-300">{eyebrow}</p>}
-        <h1 className="mt-2 text-3xl font-extrabold tracking-tight sm:text-5xl">{title}</h1>
+        <h1 className="mt-2 text-balance text-[1.75rem] font-extrabold leading-tight tracking-tight sm:text-5xl">{title}</h1>
         {subtitle && <p className="mt-4 max-w-2xl text-base text-slate-300 sm:text-lg">{subtitle}</p>}
         {children}
       </div>

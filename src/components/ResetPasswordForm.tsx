@@ -64,7 +64,7 @@ export default function ResetPasswordForm() {
           Reset links work only once and for a limited time. They also need to be opened on the same device and browser where you asked for them.
         </p>
         <Link href="/forgot-password" className="btn-primary mt-6 w-full !py-3.5">Request a new link</Link>
-        <Link href="/login" className="mt-3 block text-sm font-semibold text-brand-600 hover:underline">Back to Sign In</Link>
+        <Link href="/login" className="mt-2 flex min-h-11 items-center justify-center text-sm font-semibold text-brand-600 hover:underline">Back to Sign In</Link>
       </div>
     );
   }
@@ -107,7 +107,7 @@ function PasswordField({ id, label, value, onChange, show, toggle, autoComplete 
       <div className="relative">
         <input id={id} type={show ? "text" : "password"} autoComplete={autoComplete} value={value} onChange={(e) => onChange(e.target.value)} className="input !pr-16" required minLength={MIN} />
         <button type="button" onClick={toggle} aria-label={show ? `Hide ${label.toLowerCase()}` : `Show ${label.toLowerCase()}`} aria-pressed={show}
-          className="absolute inset-y-0 right-3 my-auto h-fit rounded-md px-1 text-xs font-bold text-brand-600 hover:text-accent-700">
+          className="absolute inset-y-0 right-0 grid min-w-12 place-items-center rounded-r-[0.8rem] px-3 text-xs font-bold text-brand-600 hover:text-accent-700">
           {show ? "Hide" : "Show"}
         </button>
       </div>

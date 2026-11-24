@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: "Admin 2-step verification", robots: 
 // check before opening /admin. First time: QR code setup. Later: 6-digit code.
 export default function AdminVerifyPage(props: PageProps<"/admin-verify">) {
   return (
-    <section className="hero-bg relative min-h-[70vh] overflow-hidden px-4 py-12 sm:py-16">
+    <section className="hero-bg relative min-h-[70dvh] overflow-hidden px-4 py-12 sm:py-16">
       <div className="grid-pattern absolute inset-0 opacity-40" aria-hidden />
       <div className="relative mx-auto max-w-md">
         <Suspense fallback={<div className="card h-96 animate-pulse" />}>

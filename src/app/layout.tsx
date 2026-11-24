@@ -18,7 +18,9 @@ import PrivatePageGuard from "@/components/auth/PrivatePageGuard";
 import { PRE_LAUNCH } from "@/config/launch";
 import { siteConfig } from "@/config/site";
 
-const jakarta = Plus_Jakarta_Sans({ variable: "--font-jakarta", subsets: ["latin"] });
+// "latin-ext" holds the ₹ sign (on every price), so it is preloaded too: the
+// headings no longer wait for the stylesheet before this font starts downloading
+const jakarta = Plus_Jakarta_Sans({ variable: "--font-jakarta", subsets: ["latin", "latin-ext"] });
 
 const homeTitle = `${siteConfig.businessName} | ${siteConfig.tagline}`;
 

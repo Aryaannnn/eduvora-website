@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { lockScroll } from "@/lib/scroll-lock";
 import { useLogout } from "@/lib/useLogout";
 import { Spinner } from "../Spinner";
 import Logo from "../Logo";
-import { BookIcon, ChatIcon, CalendarIcon, ChartIcon, ClipboardIcon, ClockIcon, GiftIcon, GridIcon, LogoutIcon, MailIcon, ReceiptIcon, ShieldIcon, StarIcon, TagIcon, TargetIcon, UsersIcon, AwardIcon } from "../Icons";
+import { ChevronDownIcon, CloseIcon, BookIcon, ChatIcon, CalendarIcon, ChartIcon, ClipboardIcon, ClockIcon, GiftIcon, GridIcon, LogoutIcon, MailIcon, ReceiptIcon, ShieldIcon, StarIcon, TagIcon, TargetIcon, UsersIcon, AwardIcon } from "../Icons";
 import { siteConfig } from "@/config/site";
 
 const allLinks = [
@@ -40,6 +42,19 @@ export default function AdminNav({ role }: { role: "admin" | "counsellor" }) {
   const links = role === "admin" ? allLinks : allLinks.filter((l) => STAFF_PAGES.includes(l.href));
   const { logout, loggingOut } = useLogout();
   const active = (href: string) => (href === "/admin" ? pathname === href : pathname.startsWith(href));
+  const current = links.find((l) => active(l.href));
+  const [open, setOpen] = useState(false);
+  // Sections sheet open (phones): the page behind stays still; Escape closes it
+  useEffect(() => {
+    if (!open) return;
+    const unlock = lockScroll();
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      unlock();
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
 
   return (
     <>
@@ -73,22 +88,55 @@ export default function AdminNav({ role }: { role: "admin" | "counsellor" }) {
         </nav>
       </aside>
 
-      {/* Phone / tablet: scrollable tab bar */}
-      <nav aria-label="Admin" className="-mx-4 mb-4 overflow-x-auto px-4 lg:hidden">
-        <ul className="flex w-max gap-2">
-          {links.map((l) => (
-            <li key={l.href}>
-              <Link
-                href={l.href}
-                aria-current={active(l.href) ? "page" : undefined}
-                className={`flex min-h-11 items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold ring-1 transition-colors ${active(l.href) ? "bg-slate-900 text-white ring-slate-900" : "bg-white text-slate-600 ring-slate-200 hover:bg-slate-50"}`}
-              >
-                <l.icon className="h-4 w-4" /> {l.label}
+      {/* Phone / tablet: one button with the current section → a sheet with every section */}
+      <div className="mb-4 lg:hidden">
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          aria-expanded={open}
+          aria-haspopup="dialog"
+          className="flex min-h-12 w-full items-center gap-3 rounded-2xl bg-slate-900 px-4 text-left text-[15px] font-bold text-white shadow-md"
+        >
+          {current ? <current.icon className="h-5 w-5 text-accent-300" /> : <GridIcon />}
+          <span className="min-w-0 flex-1 truncate">{current?.label ?? (role === "admin" ? "Admin panel" : "Counsellor panel")}</span>
+          <span className="text-xs font-semibold text-slate-400">All sections</span>
+          <ChevronDownIcon className="h-5 w-5 text-slate-300" />
+        </button>
+      </div>
+      {open && (
+        <div className="fixed inset-0 z-[60] lg:hidden" role="dialog" aria-modal="true" aria-label="Admin sections">
+          <button type="button" aria-label="Close" className="absolute inset-0 bg-slate-950/50" onClick={() => setOpen(false)} />
+          <div className="absolute inset-x-0 bottom-0 max-h-[85dvh] animate-fade-up overflow-y-auto overscroll-contain rounded-t-3xl bg-white p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl">
+            <div className="flex items-center justify-between px-1">
+              <p className="font-extrabold text-slate-900">{role === "admin" ? "Admin panel" : "Counsellor panel"}</p>
+              <button type="button" onClick={() => setOpen(false)} aria-label="Close" className="-mr-1 grid h-11 w-11 place-items-center rounded-full hover:bg-slate-100">
+                <CloseIcon className="h-5 w-5" />
+              </button>
+            </div>
+            <ul className="mt-2 grid grid-cols-2 gap-2" onClick={(e) => (e.target as Element).closest("a") && setOpen(false)}>
+              {links.map((l) => (
+                <li key={l.href}>
+                  <Link
+                    href={l.href}
+                    aria-current={active(l.href) ? "page" : undefined}
+                    className={`flex min-h-12 items-center gap-2.5 rounded-xl px-3 py-2.5 text-[15px] font-semibold ring-1 ${active(l.href) ? "bg-slate-900 text-white ring-slate-900" : "bg-white text-slate-700 ring-slate-200 active:bg-slate-50"}`}
+                  >
+                    <l.icon className="h-5 w-5 shrink-0" /> <span className="min-w-0 leading-tight">{l.label}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-3 grid grid-cols-2 gap-2 border-t border-slate-100 pt-3">
+              <Link href="/dashboard" onClick={() => setOpen(false)} className="flex min-h-12 items-center gap-2.5 rounded-xl px-3 text-[15px] font-semibold text-slate-700 ring-1 ring-slate-200">
+                <GridIcon /> Student view
               </Link>
-            </li>
-          ))}
-        </ul>
-      </nav>
+              <button type="button" onClick={logout} disabled={loggingOut} aria-busy={loggingOut} className="flex min-h-12 items-center gap-2.5 rounded-xl px-3 text-[15px] font-semibold text-red-600 ring-1 ring-red-200 disabled:cursor-wait disabled:opacity-70">
+                {loggingOut ? <><Spinner /> Logging out…</> : <><LogoutIcon /> Logout</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

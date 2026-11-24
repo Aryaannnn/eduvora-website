@@ -97,7 +97,10 @@ function Effects() {
     // Back / Forward. Browsers tell us in different orders: the router may already have
     // shown the page before "popstate" arrives. So: remember WHEN a Back / Forward
     // started; and if the page change already ran as a "new page", fix it up here.
+    // The phone menu adds one history entry while it is open; Back then only closes it
+    const menuBack = () => document.documentElement.dataset.menuOpen === "1" || Boolean((history.state as Record<string, unknown> | null)?.eduvoraMenu);
     const onTraverse = () => {
+      if (menuBack()) return;
       const c = lastChange.current;
       if (c && performance.now() - c.at < 1000 && c.key === pageKey()) {
         if (c.back) return; // already handled as Back / Forward
@@ -113,7 +116,7 @@ function Effects() {
     type NavEvent = Event & { navigationType?: string };
     const nav = (window as unknown as { navigation?: EventTarget }).navigation;
     const onNavigate = (e: Event) => {
-      if ((e as NavEvent).navigationType === "traverse") traverseAt.current = performance.now();
+      if ((e as NavEvent).navigationType === "traverse" && document.documentElement.dataset.menuOpen !== "1") traverseAt.current = performance.now();
     };
     // A link to the page you are already on (e.g. the logo on the home page) → back to the top
     const onClick = (e: MouseEvent) => {

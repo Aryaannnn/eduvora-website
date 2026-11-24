@@ -6,6 +6,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
+import { useScrollLock } from "@/lib/scroll-lock";
 import { acceptPrivacyTerms } from "@/lib/privacy-actions";
 import { loadBrowserSupabase, useHasLoginCookie } from "@/lib/supabase/lazy";
 import { useLogout } from "@/lib/useLogout";
@@ -56,6 +57,7 @@ function Prompt() {
       unsubscribe?.();
     };
   }, [loggedIn]);
+  useScrollLock(show && !skipHere);
 
   if (!show || skipHere) return null;
 
@@ -70,7 +72,7 @@ function Prompt() {
 
   return (
     <div className="fixed inset-0 z-[75] grid place-items-center bg-slate-950/60 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="consent-title">
-      <div className="w-full max-w-md rounded-[1.75rem] bg-white p-6 shadow-2xl sm:p-8">
+      <div className="max-h-[92dvh] w-full max-w-md overflow-y-auto overscroll-contain rounded-[1.75rem] bg-white p-6 shadow-2xl sm:p-8">
         <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-brand-50 text-brand-600 ring-1 ring-brand-100"><ShieldIcon className="h-7 w-7" /></span>
         <h2 id="consent-title" className="mt-4 text-center text-xl font-extrabold text-slate-900">Your privacy</h2>
         <p className="mt-2 text-center text-sm text-slate-600">

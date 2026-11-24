@@ -527,7 +527,7 @@ export function Exam({ exam, onDone }: { exam: Started; onDone: (r: Report) => v
       {/* Palette (phone) */}
       {paletteOpen && (
         <div className="fixed inset-0 z-[90] flex items-end bg-slate-950/50 lg:hidden" onClick={() => setPaletteOpen(false)}>
-          <div className="max-h-[80vh] w-full overflow-y-auto rounded-t-3xl bg-white p-5" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Question palette">
+          <div className="max-h-[80dvh] w-full overflow-y-auto rounded-t-3xl bg-white p-5" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Question palette">
             <div className="mb-3 flex items-center justify-between">
               <p className="font-extrabold text-slate-900">Questions</p>
               <button type="button" onClick={() => setPaletteOpen(false)} className="rounded-full p-1.5 text-slate-500 hover:bg-slate-100" aria-label="Close"><CloseIcon className="h-5 w-5" /></button>

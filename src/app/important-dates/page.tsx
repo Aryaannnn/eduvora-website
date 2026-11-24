@@ -38,7 +38,7 @@ export default async function ImportantDatesPage() {
             <span aria-hidden>⚠️</span>
             <span>
               {OFFICIAL_NOTE}{" "}
-              <a href="https://vit.ac.in" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 underline">vit.ac.in <ExternalIcon className="h-3 w-3" /></a>
+              <a href="https://vit.ac.in" target="_blank" rel="noopener noreferrer" className="tap inline-flex items-center gap-0.5 underline">vit.ac.in <ExternalIcon className="h-3 w-3" /></a>
             </span>
           </p>
 

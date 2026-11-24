@@ -3,7 +3,7 @@ import BackButton from "@/components/BackButton";
 
 export default function NotFound() {
   return (
-    <section className="container-page grid min-h-[60vh] place-items-center py-16 text-center">
+    <section className="container-page grid min-h-[60dvh] place-items-center py-16 text-center">
       <div>
         <div className="mb-6 flex justify-center"><BackButton /></div>
         <p className="text-6xl font-extrabold text-brand-600">404</p>
