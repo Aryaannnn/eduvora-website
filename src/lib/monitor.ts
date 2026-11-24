@@ -10,9 +10,10 @@
 // =====================================================================
 import { SENTRY_DSN } from "./sentry-scrub";
 
-export type FailureArea = "payment" | "booking" | "email" | "login" | "calendar" | "reader";
+export type FailureArea = "payment" | "booking" | "email" | "login" | "calendar" | "reader" | "pdf" | "progress";
 
-export function reportFailure(area: FailureArea, what: string, err?: unknown, extra?: Record<string, string | number | boolean | null | undefined>) {
+/** level "warning" = worth seeing in Sentry, but not an alert (e.g. a student's connection dropped). */
+export function reportFailure(area: FailureArea, what: string, err?: unknown, extra?: Record<string, string | number | boolean | null | undefined>, level: "error" | "warning" = "error") {
   const detail = err instanceof Error ? err.message : typeof err === "string" ? err : "";
   console.warn(`[${area}] ${what}${detail ? `: ${detail}` : ""}`);
   if (!SENTRY_DSN) return;
@@ -20,8 +21,9 @@ export function reportFailure(area: FailureArea, what: string, err?: unknown, ex
     .then((Sentry) =>
       Sentry.withScope((scope) => {
         scope.setTag("area", area);
-        scope.setTag("critical", "yes");
-        scope.setLevel("error");
+        scope.setTag("critical", level === "error" ? "yes" : "no");
+        if (typeof extra?.step === "string") scope.setTag("step", extra.step); // which step failed (searchable)
+        scope.setLevel(level);
         scope.setFingerprint([area, what]); // one issue per kind of failure
         if (extra) scope.setExtras(extra);
         if (err instanceof Error) {

@@ -6,6 +6,7 @@ import { formatBytes } from "@/lib/product-files";
 import { SUBJECT_KEYS, SUBJECT_UI, type SubjectKey } from "../courses/SubjectIcon";
 import { CheckIcon, ExternalIcon } from "../Icons";
 import PdfButtons from "./PdfButtons";
+import SaveError, { safeSave, type SaveFailure } from "./SaveError";
 import type { SubjectFile } from "./SubjectFiles";
 
 export type TabProgress = Record<string, { done: boolean; done_at: string | null; last_opened_at: string | null }>;
@@ -25,7 +26,7 @@ export default function SubjectTabs({ files, title, progress = {}, tracking = tr
   const [active, setActive] = useState(() => (startSubject && tabs.some((t) => t.key === startSubject) ? startSubject : tabs.find((t) => t.items.some((f) => isNew.has(f.id)))?.key ?? tabs.find((t) => t.items.length)?.key ?? "physics"));
   const [done, setDone] = useState<Record<string, boolean>>(() => Object.fromEntries(Object.entries(progress).map(([id, p]) => [id, p.done])));
   const [saving, setSaving] = useState<string>("");
-  const [error, setError] = useState("");
+  const [error, setError] = useState<SaveFailure | null>(null);
   const id = useId();
   const current = tabs.find((t) => t.key === active) ?? tabs[0];
 
@@ -38,14 +39,14 @@ export default function SubjectTabs({ files, title, progress = {}, tracking = tr
     .sort((a, b) => String(progress[b.id]!.last_opened_at).localeCompare(String(progress[a.id]!.last_opened_at)))[0];
 
   async function toggle(f: SubjectFile, value: boolean) {
-    setError("");
+    setError(null);
     setSaving(f.id);
     setDone((d) => ({ ...d, [f.id]: value })); // show it at once
-    const r = await setFileDone(f.id, value);
+    const r = await safeSave("mark-pdf-done", () => setFileDone(f.id, value), { fileId: f.id });
     setSaving("");
     if (!r.ok) {
-      setDone((d) => ({ ...d, [f.id]: !value }));
-      setError(r.error);
+      setDone((d) => ({ ...d, [f.id]: !value })); // back to what is really saved
+      setError({ message: r.error, again: () => void toggle(f, value) });
     }
   }
 
@@ -103,7 +104,7 @@ export default function SubjectTabs({ files, title, progress = {}, tracking = tr
             <Bar pct={Math.round((count(current.items) / current.items.length) * 100)} label={`${current.label} progress`} small />
           </div>
         )}
-        {error && <p role="alert" className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 ring-1 ring-red-200">{error}</p>}
+        <SaveError failure={error} className="mb-2" />
         {current.items.length === 0 ? (
           <p className="rounded-xl bg-white p-4 text-center text-sm text-slate-500 ring-1 ring-slate-200">PDFs for this subject will be added soon.</p>
         ) : (

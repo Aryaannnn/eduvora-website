@@ -14,7 +14,7 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { degrees, PDFDocument, type PDFFont, type PDFPage, rgb, StandardFonts } from "pdf-lib";
+import { degrees, ParseSpeeds, PDFDocument, type PDFFont, type PDFPage, rgb, StandardFonts } from "pdf-lib";
 import { siteConfig } from "@/config/site";
 
 /** Bump when the look of the watermark changes → every cached copy is made again. */
@@ -61,8 +61,11 @@ function view(page: PDFPage) {
 }
 
 /** Returns the watermarked PDF. Throws if the PDF can't be read (e.g. password-protected) — never returns the original. */
+// Speed: pdf-lib normally pauses every 50–100 objects to let other work run, which makes a
+// big PDF several times slower (3,000 pages: ~7 s → ~1.5 s without the pauses). A server
+// function handles one copy at a time, so it reads and writes the whole file in one go.
 export async function watermarkPdf(original: Uint8Array, info: WatermarkInfo): Promise<Uint8Array> {
-  const doc = await PDFDocument.load(original, { updateMetadata: false });
+  const doc = await PDFDocument.load(original, { updateMetadata: false, parseSpeed: ParseSpeeds.Fastest });
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
   const small = await doc.embedFont(StandardFonts.Helvetica);
   const name = pdfSafe(info.name).slice(0, 60) || "Student";
@@ -105,7 +108,7 @@ export async function watermarkPdf(original: Uint8Array, info: WatermarkInfo): P
   doc.setCreator(brand);
   doc.setProducer(`${brand} (licensed copy ${shortId})`);
   doc.setModificationDate(info.when);
-  return doc.save();
+  return doc.save({ objectsPerTick: Infinity });
 }
 
 /** Short anonymous device id (to spot one account used on many devices). Not the IP itself. */

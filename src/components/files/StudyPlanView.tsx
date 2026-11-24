@@ -5,6 +5,7 @@ import { setPlanDayDone, setPlanStart } from "@/lib/study-plan-actions";
 import { addDays, todayDayNumber, type PlanDay } from "@/lib/study-plan";
 import { formatDate } from "@/lib/format";
 import { CheckIcon, DownloadIcon, ExternalIcon } from "../Icons";
+import SaveError, { safeSave, type SaveFailure } from "./SaveError";
 
 // A course's day-wise study plan for the student: start date (theirs, or the
 // enrolment date), progress bar, today's day highlighted, "Mark day as done",
@@ -16,7 +17,7 @@ export default function StudyPlanView({
 }) {
   const [done, setDone] = useState<Set<string>>(new Set(initialDone));
   const [startDate, setStartDate] = useState(start);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<SaveFailure | null>(null);
   const [saving, setSaving] = useState("");
   const todayRef = useRef<HTMLLIElement>(null);
   const todayN = todayDayNumber(startDate, today);
@@ -27,7 +28,7 @@ export default function StudyPlanView({
   }, []);
 
   async function toggle(d: PlanDay, value: boolean) {
-    setError("");
+    setError(null);
     setSaving(d.id);
     setDone((s) => {
       const n = new Set(s);
@@ -35,10 +36,10 @@ export default function StudyPlanView({
       else n.delete(d.id);
       return n;
     });
-    const r = await setPlanDayDone(d.id, value);
+    const r = await safeSave("mark-day-done", () => setPlanDayDone(d.id, value), { dayId: d.id });
     setSaving("");
     if (!r.ok) {
-      setError(r.error);
+      setError({ message: r.error, again: () => void toggle(d, value) });
       setDone((s) => {
         const n = new Set(s);
         if (value) n.delete(d.id);
@@ -49,11 +50,12 @@ export default function StudyPlanView({
   }
   async function changeStart(v: string | null) {
     const before = startDate;
+    setError(null);
     setStartDate(v ?? defaultStart);
-    const r = await setPlanStart(productId, v);
+    const r = await safeSave("plan-start-date", () => setPlanStart(productId, v), { productId });
     if (!r.ok) {
       setStartDate(before);
-      setError(r.error);
+      setError({ message: r.error, again: () => void changeStart(v) });
     }
   }
 
@@ -81,7 +83,7 @@ export default function StudyPlanView({
           <a href={`/api/study-plan/${productId}/pdf`} className="btn-light !px-3 !py-2 text-sm"><DownloadIcon className="h-4 w-4" /> Printable PDF</a>
         </div>
       </div>
-      {error && <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 ring-1 ring-red-200">{error}</p>}
+      <SaveError failure={error} />
 
       <ol className="max-h-[32rem] space-y-2 overflow-y-auto pr-1">
         {days.map((d) => {
