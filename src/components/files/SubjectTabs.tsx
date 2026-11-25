@@ -3,7 +3,7 @@
 import { useId, useState } from "react";
 import { setFileDone } from "@/lib/progress-actions";
 import { formatBytes } from "@/lib/product-files";
-import { SUBJECT_KEYS, SUBJECT_UI, type SubjectKey } from "../courses/SubjectIcon";
+import { SUBJECT_UI, subjectKeysFor, type SubjectKey } from "../courses/SubjectIcon";
 import { CheckIcon, ExternalIcon } from "../Icons";
 import PdfButtons from "./PdfButtons";
 import SaveError, { safeSave, type SaveFailure } from "./SaveError";
@@ -13,11 +13,12 @@ export type TabProgress = Record<string, { done: boolean; done_at: string | null
 
 // A course in My Courses & Material:
 //  • overall progress bar + "Continue where you left off" (the last PDF opened)
-//  • Physics · Chemistry · Mathematics tabs, each with "x of y done"
+//  • Physics · Chemistry · Mathematics (· English & Aptitude for the crash courses) tabs, each with "x of y done"
 //  • every PDF: Open PDF + Download (watermarked, access checked by the server) and "Mark as done"
 // Progress is saved per student (supabase/course-progress.sql — own rows only).
-export default function SubjectTabs({ files, title, progress = {}, tracking = true, newIds = [], startSubject }: { files: SubjectFile[]; title: string; progress?: TabProgress; tracking?: boolean; newIds?: string[]; startSubject?: string }) {
+export default function SubjectTabs({ slug, files, title, progress = {}, tracking = true, newIds = [], startSubject }: { slug?: string; files: SubjectFile[]; title: string; progress?: TabProgress; tracking?: boolean; newIds?: string[]; startSubject?: string }) {
   const isNew = new Set(newIds);
+  const SUBJECT_KEYS = subjectKeysFor(slug); // crash courses: 4 subjects · Formula Book / Question Bank: 3
   const other = files.filter((f) => !SUBJECT_KEYS.includes(f.subject as SubjectKey));
   const tabs: { key: string; label: string; items: SubjectFile[] }[] = [
     ...SUBJECT_KEYS.map((k) => ({ key: k as string, label: SUBJECT_UI[k].label, items: files.filter((f) => f.subject === k) })),
@@ -73,7 +74,7 @@ export default function SubjectTabs({ files, title, progress = {}, tracking = tr
         </div>
       )}
 
-      <div role="tablist" aria-label={`${title} subjects`} className="grid grid-cols-3 gap-1 rounded-2xl bg-slate-200/70 p-1 sm:inline-grid sm:auto-cols-fr sm:grid-flow-col">
+      <div role="tablist" aria-label={`${title} subjects`} className={`grid ${tabs.length === 3 ? "grid-cols-3" : "grid-cols-2"} gap-1 rounded-2xl bg-slate-200/70 p-1 sm:inline-grid sm:auto-cols-fr sm:grid-flow-col`}>
         {tabs.map((t) => {
           const ui = SUBJECT_UI[t.key as SubjectKey];
           const on = t.key === current.key;
@@ -89,7 +90,7 @@ export default function SubjectTabs({ files, title, progress = {}, tracking = tr
               className={`flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-2 text-xs font-bold transition sm:px-4 sm:text-sm ${on ? "bg-white text-brand-800 shadow" : "text-slate-600 hover:text-slate-900"}`}
             >
               {ui && <ui.Icon className="h-4 w-4 shrink-0" />}
-              <span className="truncate">{t.label}</span>
+              <span className="truncate">{ui ? <><span className="sm:hidden" aria-hidden>{ui.short}</span><span className="max-sm:sr-only">{t.label}</span></> : t.label}</span>
               <span className={`rounded-full px-1.5 text-[11px] ${on ? "bg-brand-50 text-brand-700" : "bg-white/70"}`}>{tracking ? `${count(t.items)}/${t.items.length}` : t.items.length}</span>
               {t.items.some((f) => isNew.has(f.id)) && <span className="rounded-full bg-accent-400 px-1.5 text-[10px] font-extrabold text-brand-950">{t.items.filter((f) => isNew.has(f.id)).length} new</span>}
             </button>

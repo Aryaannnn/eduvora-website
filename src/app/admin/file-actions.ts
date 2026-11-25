@@ -8,7 +8,7 @@
 import { randomBytes } from "node:crypto";
 import { updateTag } from "next/cache";
 import { adminOrError, isError, type ActionResult } from "@/lib/admin";
-import { checkFile, isPdfSubject, kindOf, MIME, niceName, slugName, subjectLabel, type PdfSubject, type ProductFile } from "@/lib/product-files";
+import { checkFile, isPcmSubject, isPdfSubject, kindOf, MIME, niceName, slugName, subjectLabel, subjectsForSlug, type PdfSubject, type ProductFile } from "@/lib/product-files";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import { removePages } from "@/lib/pdf-pages";
 import { clearCopiesOfFile } from "@/lib/pdf-delivery";
@@ -25,6 +25,18 @@ async function adminDb() {
   if (!db) return { ok: false as const, error: "SUPABASE_SERVICE_ROLE_KEY is missing in .env.local." };
   return db;
 }
+
+/** English & Aptitude belongs to the crash courses only — not the Formula Book or the Question Bank. null = fine. */
+async function subjectNotAllowed(db: NonNullable<ReturnType<typeof getAdminSupabase>>, productId: string, subject: string | null | undefined): Promise<string | null> {
+  if (!subject || isPcmSubject(subject)) return null;
+  const { data: p } = await db.from("products").select("slug,category").eq("id", productId).maybeSingle();
+  if (!p) return "Product not found.";
+  if (p.category !== "crash_course" || !subjectsForSlug(p.slug as string).some((x) => x.id === subject)) return `${subjectLabel(subject)} is only for the crash courses. Please choose Physics, Chemistry or Mathematics.`;
+  return null;
+}
+/** The database refused the subject → which SQL file adds it */
+const subjectSqlHint = (subject?: string | null) =>
+  subject === "english_aptitude" ? "Run supabase/english-aptitude.sql in Supabase first (it adds the English & Aptitude subject)." : "Run supabase/courses-question-bank.sql in Supabase first.";
 
 /** Keep products.file_path pointing at the first file (old "Download" buttons keep working). */
 async function syncProductFilePath(db: NonNullable<ReturnType<typeof getAdminSupabase>>, productId: string) {
@@ -54,6 +66,8 @@ export async function finishFileUpload(input: { productId: string; path: string;
   const { productId, path, fileName, size, replaceId } = input;
   const subject = isPdfSubject(input.subject) ? input.subject : null;
   if (!isId(productId) || !path.startsWith(`${productId}/`)) return fail("Invalid upload.");
+  const subjectProblem = await subjectNotAllowed(db, productId, subject);
+  if (subjectProblem) return fail(subjectProblem);
   const kind = kindOf(path);
   if (!kind) return fail("Only PDF and ZIP files are allowed.");
 
@@ -106,7 +120,7 @@ export async function finishFileUpload(input: { productId: string; path: string;
   }
   if (error) {
     await db.storage.from(BUCKET).remove([path]); // this upload is not used
-    return fail(/subject/.test(error.message) ? "Run supabase/courses-question-bank.sql in Supabase first." : /product_files/.test(error.message) ? "Run supabase/product-files.sql in Supabase first." : error.message);
+    return fail(/subject/.test(error.message) ? subjectSqlHint(subject) : /product_files/.test(error.message) ? "Run supabase/product-files.sql in Supabase first." : error.message);
   }
   await dropUploadIfReused();
   await syncProductFilePath(db, productId);
@@ -120,12 +134,17 @@ export async function updateFileInfo(id: string, info: { subject?: string | null
   if (!isId(id)) return fail("File not found.");
   const patch: Record<string, string | null> = {};
   if (info.subject !== undefined) {
-    if (info.subject && !isPdfSubject(info.subject)) return fail("Please choose Physics, Chemistry or Mathematics.");
+    if (info.subject && !isPdfSubject(info.subject)) return fail("Please choose a subject from the list.");
+    if (info.subject) {
+      const { data: file } = await db.from("product_files").select("product_id").eq("id", id).maybeSingle();
+      const problem = file ? await subjectNotAllowed(db, file.product_id as string, info.subject) : "File not found.";
+      if (problem) return fail(problem);
+    }
     patch.subject = info.subject || null;
   }
   if (info.chapter !== undefined) patch.chapter = (info.chapter ?? "").trim().slice(0, 60) || null;
   const { error } = await db.from("product_files").update(patch).eq("id", id);
-  if (error) return fail(/subject|chapter/.test(error.message) ? "Run supabase/courses-question-bank.sql in Supabase first." : error.message);
+  if (error) return fail(/subject|chapter/.test(error.message) ? subjectSqlHint(info.subject) : error.message);
   updateTag("products"); // "45 PDFs · Physics, …" on the course page
   return { ok: true, message: "Saved." };
 }
@@ -148,10 +167,11 @@ export async function listFileDestinations(): Promise<ActionResult<{ destination
     for (const p of (data ?? []).filter((x) => x.category === cat)) {
       const hidden = p.is_active ? "" : " (hidden)";
       if (cat === "crash_course") {
-        for (const s of ["physics", "chemistry", "mathematics"] as PdfSubject[]) out.push({ value: `${p.id}:${s}`, label: `${p.title} → ${subjectLabel(s)}${hidden}`, group: MOVE_GROUPS[cat] });
+        // crash courses: Physics, Chemistry, Mathematics, English & Aptitude · Formula Book / Question Bank: the first three
+        for (const s of subjectsForSlug(p.slug)) out.push({ value: `${p.id}:${s.id}`, label: `${p.title} → ${s.label}${hidden}`, group: MOVE_GROUPS[cat] });
       } else if (cat === "question_bank") {
         if (p.subject === "pcm") continue; // the bundle opens the three subject banks — PDFs live in those
-        out.push({ value: `${p.id}:${isPdfSubject(p.subject) ? p.subject : ""}`, label: `${p.title}${hidden}`, group: MOVE_GROUPS[cat] });
+        out.push({ value: `${p.id}:${isPcmSubject(p.subject) ? p.subject : ""}`, label: `${p.title}${hidden}`, group: MOVE_GROUPS[cat] });
       } else out.push({ value: `${p.id}:`, label: `${p.title}${p.college ? ` · ${p.college}` : ""}${hidden}`, group: MOVE_GROUPS[cat] });
     }
   }
@@ -171,7 +191,7 @@ export async function moveProductFiles(ids: string[], destination: string): Prom
   const { data: dest } = await db.from("products").select("*").eq("id", toProduct).maybeSingle();
   if (!dest || !(dest.category in MOVE_GROUPS)) return fail("That destination doesn't exist any more.");
   const subject: PdfSubject | null =
-    dest.category === "crash_course" ? (isPdfSubject(rawSubject) ? rawSubject : null) : dest.category === "question_bank" && isPdfSubject(dest.subject) ? dest.subject : null;
+    dest.category === "crash_course" ? (subjectsForSlug(dest.slug).some((x) => x.id === rawSubject) ? (rawSubject as PdfSubject) : null) : dest.category === "question_bank" && isPcmSubject(dest.subject) ? dest.subject : null;
   if (dest.category === "crash_course" && !subject) return fail("Please choose a subject for the crash course.");
 
   const { data: files, error: fErr } = await db.from("product_files").select("id,product_id,display_name").in("id", list);

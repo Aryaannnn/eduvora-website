@@ -20,7 +20,7 @@ import { breadcrumbLd, courseLd, pageMeta } from "@/lib/seo";
 import EnrolledBadge from "@/components/EnrolledBadge";
 import { getFileSummary, getPlanSummary } from "@/lib/file-summary";
 import CourseGrid from "@/components/courses/CourseGrid";
-import { SUBJECT_KEYS, SUBJECT_UI } from "@/components/courses/SubjectIcon";
+import { chipKeysFor, SUBJECT_UI } from "@/components/courses/SubjectIcon";
 import { durationBadge, enrollLabel as enrollText, productNoun } from "@/lib/courses";
 import { siteConfig } from "@/config/site";
 
@@ -225,8 +225,8 @@ async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
 
         <div className="space-y-12 lg:order-1">
           <Section title="What's included">
-            <ul className="grid gap-3 sm:grid-cols-3">
-              {SUBJECT_KEYS.map((k) => {
+            <ul className={`grid gap-3 ${chipKeysFor(course.slug, files?.bySubject).length > 3 ? "grid-cols-2 xl:grid-cols-4" : "sm:grid-cols-3"}`}>
+              {chipKeysFor(course.slug, files?.bySubject).map((k) => {
                 const ui = SUBJECT_UI[k];
                 const n = files?.bySubject[k] ?? 0;
                 return (

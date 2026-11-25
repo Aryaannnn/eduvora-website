@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import JsonLd from "@/components/seo/JsonLd";
 import { pageMeta, breadcrumbLd } from "@/lib/seo";
 import CourseGrid from "@/components/courses/CourseGrid";
-import { SUBJECT_KEYS, SUBJECT_UI } from "@/components/courses/SubjectIcon";
+import { PCM_KEYS, SUBJECT_UI } from "@/components/courses/SubjectIcon";
 import CtaBanner from "@/components/CtaBanner";
 import { LockIcon, ShieldIcon, ZapIcon } from "@/components/Icons";
 import PageHero from "@/components/PageHero";
@@ -29,7 +29,7 @@ export default async function CoursesPage() {
       <PageHero eyebrow="Courses" title="VITEEE Crash Courses" subtitle="Pick the plan that fits the time you have left, or the Formula Book. Each covers Physics, Chemistry and Mathematics." />
       <section className="container-page py-10 sm:py-16">
         <div className="mb-6 flex flex-wrap items-center justify-center gap-2 text-xs font-semibold sm:mb-8 sm:text-sm">
-          {SUBJECT_KEYS.map((k) => {
+          {PCM_KEYS.map((k) => {
             const ui = SUBJECT_UI[k];
             return (
               <span key={k} className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 ring-1 ${ui.chip}`}><ui.Icon className="h-4 w-4" /> {ui.label}</span>

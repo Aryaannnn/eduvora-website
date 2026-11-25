@@ -5,12 +5,12 @@ import type { FileSummary } from "@/lib/file-summary";
 import { discountPercent, formatPrice } from "@/lib/format";
 import type { Product } from "@/lib/types";
 import BuyButton, { SecurePaymentNote } from "../BuyButton";
-import { SUBJECT_KEYS, SUBJECT_UI } from "../courses/SubjectIcon";
+import { chipKeysFor, SUBJECT_UI } from "../courses/SubjectIcon";
 import FreeBadge from "../FreeBadge";
 import { StarIcon } from "../Icons";
 
 // One crash course card: duration badge · name · short description · Physics /
-// Chemistry / Mathematics with their PDF counts · price · Details + Enroll Now.
+// Chemistry / Mathematics (+ English & Aptitude once it has PDFs) with their PDF counts · price · Details + Enroll Now.
 // Compact enough for TWO cards side by side on a phone.
 export default function CourseCard({ course, files }: { course: Product; files?: FileSummary | null }) {
   const d = course.details;
@@ -41,12 +41,12 @@ export default function CourseCard({ course, files }: { course: Product; files?:
         {(d.short ?? course.description) && <p className="text-[13px] leading-relaxed text-slate-600 sm:text-sm">{d.short ?? course.description}</p>}
 
         <ul className="mt-3 space-y-1.5" aria-label="Subjects">
-          {SUBJECT_KEYS.map((k) => {
+          {chipKeysFor(course.slug, files?.bySubject).map((k) => {
             const ui = SUBJECT_UI[k];
             const n = files?.bySubject[k] ?? 0;
             return (
               <li key={k} className={`flex items-center justify-between gap-1 rounded-lg px-2 py-1 text-[11px] font-semibold ring-1 sm:text-xs ${ui.chip}`}>
-                <span className="flex min-w-0 items-center gap-1.5"><ui.Icon className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{ui.label}</span></span>
+                <span className="flex min-w-0 items-center gap-1.5"><ui.Icon className="h-3.5 w-3.5 shrink-0" /><span className="truncate"><span className="sm:hidden" aria-hidden>{ui.short}</span><span className="max-sm:sr-only">{ui.label}</span></span></span>
                 <span className="shrink-0 tabular-nums">{n ? `${n} PDF${n === 1 ? "" : "s"}` : "Soon"}</span>
               </li>
             );

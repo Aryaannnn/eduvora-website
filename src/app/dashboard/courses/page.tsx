@@ -175,7 +175,7 @@ async function CoursesContent({ searchParams }: { searchParams: PageProps<"/dash
                     ) : (
                       <CourseTabs
                         planDays={plans?.get(c.products!.id)?.days.length ?? 0}
-                        pdfs={<SubjectTabs files={filesOf.get(c.products!.id) ?? []} title={c.products!.title} progress={progress ?? {}} tracking={progress !== null} newIds={newIds} startSubject={c.products!.id === focusId ? startSubject : undefined} />}
+                        pdfs={<SubjectTabs slug={c.products!.slug} files={filesOf.get(c.products!.id) ?? []} title={c.products!.title} progress={progress ?? {}} tracking={progress !== null} newIds={newIds} startSubject={c.products!.id === focusId ? startSubject : undefined} />}
                         plan={(() => {
                           const p = plans?.get(c.products!.id);
                           return p ? <StudyPlanView productId={c.products!.id} days={p.days} done={p.done} start={p.start} defaultStart={p.defaultStart} today={today} fileNames={namesOf(c.products!.id)} /> : null;
@@ -201,7 +201,7 @@ async function CoursesContent({ searchParams }: { searchParams: PageProps<"/dash
                         <p className="text-xs text-slate-500">Included with your earlier purchase</p>
                       </div>
                     </div>
-                    <SubjectTabs files={qbFiles} title={qbIncluded.title} progress={progress ?? {}} tracking={progress !== null} newIds={newIds} startSubject={qbIncluded.id === focusId ? startSubject : undefined} />
+                    <SubjectTabs slug={qbIncluded.slug} files={qbFiles} title={qbIncluded.title} progress={progress ?? {}} tracking={progress !== null} newIds={newIds} startSubject={qbIncluded.id === focusId ? startSubject : undefined} />
                   </li>
                 )}
               </ul>

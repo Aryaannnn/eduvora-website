@@ -26,10 +26,10 @@ import {
 import { siteConfig } from "@/config/site";
 import { processPdfPages, type PagesProgress } from "@/lib/process-pages-client";
 import { formatDateTime } from "@/lib/format";
-import { checkFile, formatBytes, PDF_SUBJECTS, subjectLabel, type ProductFile } from "@/lib/product-files";
+import { checkFile, formatBytes, subjectLabel, subjectsForSlug, type ProductFile } from "@/lib/product-files";
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/supabase/env";
 import { CheckIcon, DownloadIcon, EditIcon, TrashIcon, UploadIcon } from "../Icons";
-import { SUBJECT_KEYS, SUBJECT_UI } from "../courses/SubjectIcon";
+import { SUBJECT_UI, subjectKeysFor } from "../courses/SubjectIcon";
 
 type Upload = { key: string; name: string; size: number; progress: number; status: "uploading" | "done" | "error"; error?: string };
 
@@ -67,8 +67,11 @@ const Badge = ({ kind }: { kind: "pdf" | "zip" }) => (
   <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl text-[11px] font-extrabold text-white ${kind === "pdf" ? "bg-red-500" : "bg-amber-500"}`}>{kind.toUpperCase()}</span>
 );
 
-export default function FilesManager({ productId, category = "" }: { productId: string; category?: string }) {
-  const bySubject = category === "crash_course"; // PDFs filed under Physics / Chemistry / Mathematics
+export default function FilesManager({ productId, category = "", slug = "" }: { productId: string; category?: string; slug?: string }) {
+  const bySubject = category === "crash_course"; // PDFs filed under Physics / Chemistry / Mathematics (+ English & Aptitude)
+  // The four crash courses: 4 subjects. Formula Book and Question Bank: Physics, Chemistry, Mathematics only.
+  const SUBJECT_KEYS = subjectKeysFor(slug);
+  const subjectOptions = subjectsForSlug(slug);
   const withChapter = category === "crash_course" || category === "question_bank";
   const uploadSubject = useRef(""); // which subject area's "Choose files" was clicked
   const [selected, setSelected] = useState<string[]>([]);
@@ -290,7 +293,7 @@ export default function FilesManager({ productId, category = "" }: { productId: 
                         aria-label={`Subject of ${f.display_name}`}
                       >
                         <option value="">Subject…</option>
-                        {PDF_SUBJECTS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+                        {subjectOptions.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
                       </select>
                     )}
                     {withChapter && (
@@ -442,7 +445,7 @@ export default function FilesManager({ productId, category = "" }: { productId: 
           {files.some((f) => !SUBJECT_KEYS.includes(f.subject as never)) && (
             <section className="rounded-2xl bg-amber-50 p-3 ring-1 ring-amber-200 sm:p-4" aria-label="PDFs without a subject">
               <h4 className="mb-1 font-extrabold text-amber-900">Not sorted yet ({files.filter((f) => !SUBJECT_KEYS.includes(f.subject as never)).length})</h4>
-              <p className="mb-3 text-xs text-amber-900">Choose Physics, Chemistry or Mathematics for each — students see these under &ldquo;Other&rdquo; until then.</p>
+              <p className="mb-3 text-xs text-amber-900">Choose {subjectOptions.map((s) => s.label).join(", ").replace(/, ([^,]*)$/, " or $1")} for each — students see these under &ldquo;Other&rdquo; until then.</p>
               {list(files.filter((f) => !SUBJECT_KEYS.includes(f.subject as never)), "PDFs without a subject")}
             </section>
           )}

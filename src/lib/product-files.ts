@@ -1,5 +1,6 @@
 // Shared rules for product files (used by the browser AND the server)
 import { siteConfig } from "@/config/site";
+import { isFormulaBook, isQuestionBank } from "./courses";
 
 export type FileKind = "pdf" | "zip";
 export const MAX_FILE_BYTES = siteConfig.uploads.maxFileMB * 1024 * 1024;
@@ -27,13 +28,20 @@ export type ProductFile = {
 };
 
 /** Subjects a PDF can be filed under (crash courses and the Question Bank) */
-export type PdfSubject = "physics" | "chemistry" | "mathematics";
-export const PDF_SUBJECTS: { id: PdfSubject; label: string }[] = [
+export type PdfSubject = "physics" | "chemistry" | "mathematics" | "english_aptitude";
+export type PcmSubject = Exclude<PdfSubject, "english_aptitude">;
+/** Physics · Chemistry · Mathematics — the Formula Book and the Question Bank have only these */
+export const PCM_SUBJECTS: { id: PcmSubject; label: string }[] = [
   { id: "physics", label: "Physics" },
   { id: "chemistry", label: "Chemistry" },
   { id: "mathematics", label: "Mathematics" },
 ];
-export const isPdfSubject = (s: unknown): s is PdfSubject => s === "physics" || s === "chemistry" || s === "mathematics";
+/** Every subject a PDF can have: the crash courses also have English & Aptitude */
+export const PDF_SUBJECTS: { id: PdfSubject; label: string }[] = [...PCM_SUBJECTS, { id: "english_aptitude", label: "English & Aptitude" }];
+export const isPdfSubject = (s: unknown): s is PdfSubject => PDF_SUBJECTS.some((x) => x.id === s);
+export const isPcmSubject = (s: unknown): s is PcmSubject => PCM_SUBJECTS.some((x) => x.id === s);
+/** The subjects of one product: the crash courses have four; the Formula Book and the Question Bank three. */
+export const subjectsForSlug = (slug?: string | null) => (slug && (isFormulaBook(slug) || isQuestionBank(slug)) ? PCM_SUBJECTS : PDF_SUBJECTS);
 /** "physics" → "Physics", "pcm" → "PCM bundle", empty → "Other" */
 export const subjectLabel = (s?: string | null) => PDF_SUBJECTS.find((x) => x.id === s)?.label ?? (s === "pcm" ? "PCM bundle" : "Other");
 

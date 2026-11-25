@@ -1,4 +1,4 @@
-// "45 PDFs · Physics, Chemistry, Mathematics" — what a product includes, built from
+// "45 PDFs · Physics, Chemistry, Mathematics, English & Aptitude" — what a product includes, built from
 // its files. Only counts and subjects: no file names, no links (server only, cached;
 // refreshed whenever files change in Admin → Products).
 import "server-only";
@@ -19,7 +19,7 @@ export async function getFileSummary(productId: string): Promise<FileSummary | n
   if (error) ({ data, error } = await q("id")); // SQL not run yet → count only
   if (error) return null;
   const rows = (data ?? []) as unknown as { subject?: string | null }[];
-  const bySubject = { physics: 0, chemistry: 0, mathematics: 0 } as Record<PdfSubject, number>;
+  const bySubject = Object.fromEntries(PDF_SUBJECTS.map((s) => [s.id, 0])) as Record<PdfSubject, number>;
   for (const r of rows) if (r.subject && r.subject in bySubject) bySubject[r.subject as PdfSubject]++;
   const subjects = PDF_SUBJECTS.filter((s) => bySubject[s.id] > 0).map((s) => s.label);
   const pdfs = rows.length;

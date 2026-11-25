@@ -287,7 +287,7 @@ ${f.details}`}>
           <Label>Files — PDF or ZIP (private: only students who paid can download)</Label>
           {info && <p className="mb-2 rounded-xl bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800 ring-1 ring-emerald-200">✓ {info}</p>}
           {productId ? (
-            <FilesManager productId={productId} category={f.category} />
+            <FilesManager productId={productId} category={f.category} slug={product?.slug ?? f.slug} />
           ) : (
             <p className="rounded-xl bg-slate-50 p-3 text-sm text-slate-600 ring-1 ring-slate-200">
               Fill in the details above and click <strong>Save</strong> — then you can add files here.

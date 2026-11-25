@@ -41,7 +41,7 @@ grant select (subject, includes_question_bank) on public.products to anon, authe
 alter table public.product_files add column if not exists subject text;
 alter table public.product_files drop constraint if exists product_files_subject_check;
 alter table public.product_files add constraint product_files_subject_check
-  check (subject is null or subject in ('physics', 'chemistry', 'mathematics'));
+  check (subject is null or subject in ('physics', 'chemistry', 'mathematics', 'english_aptitude')); -- english_aptitude: crash courses only (supabase/english-aptitude.sql)
 alter table public.product_files add column if not exists chapter text;
 alter table public.product_files drop constraint if exists product_files_chapter_check;
 alter table public.product_files add constraint product_files_chapter_check check (chapter is null or char_length(chapter) <= 60);
