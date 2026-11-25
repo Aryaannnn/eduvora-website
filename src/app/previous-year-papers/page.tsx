@@ -8,6 +8,7 @@ import PageHero from "@/components/PageHero";
 import Reveal from "@/components/Reveal";
 import EmptyState from "@/components/EmptyState";
 import { getProducts } from "@/lib/data";
+import RelatedPages from "@/components/seo/RelatedPages";
 
 export const metadata: Metadata = pageMeta({ title: "VITEEE Previous Year Papers (PYQs)", description: "Memory-based VITEEE previous year question papers with step-by-step solutions — practise real exam patterns and improve your speed.", path: "/previous-year-papers" });
 
@@ -48,6 +49,7 @@ export default async function PreviousYearPapersPage() {
       </section>
 
       <CtaBanner />
+      <RelatedPages current="/previous-year-papers" />
     </>
   );
 }

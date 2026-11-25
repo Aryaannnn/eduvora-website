@@ -12,8 +12,8 @@ const r = siteConfig.refunds;
 
 export const parentsPage = {
   meta: {
-    title: "For Parents — VITEEE & VIT Counselling Guidance",
-    description: "A calm, clear guide for parents: what VIT counselling help covers, how a session works, fees, hostel and refund questions, and how payments and data are kept safe.",
+    title: "VIT Fee Categories & Counselling: A Parents' Guide",
+    description: "A clear guide for parents: VIT counselling, campus and branch choice, VIT fee categories, hostel and refund questions, and how payments stay safe.",
   },
 
   hero: {

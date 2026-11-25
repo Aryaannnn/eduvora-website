@@ -27,6 +27,8 @@ export const siteConfig = {
   logoAlt: "EDUVORA logo",
   description:
     "EDUVORA offers expert VITEEE counselling, crash courses, mock tests, a rank & college predictor and study material to help you get a better rank and the right VIT campus and branch.",
+  // Google's snippet for pages without their own description (keep under 155 characters)
+  metaDescription: "VITEEE counselling, crash courses, mock tests and a free VITEEE rank predictor to help you pick the right VIT campus, branch and fee category.",
 
   // Your website's address. Set NEXT_PUBLIC_SITE_URL (in .env.local and in Vercel).
   // Used for link previews, email links, invoices and login redirects — see src/lib/site-url.ts
@@ -164,7 +166,7 @@ export const siteConfig = {
   //    sitemap, predictor links, admin menu). While off, the pages show "Coming soon"
   //    and are not indexed. All code and data are kept.
   showFeeCalculator: false,
-  showBlog: false,
+  showBlog: true,
   // Study Material (campus admission kits): menu, footer, home page section and slide,
   // sitemap. Students who already bought a kit still have it in My Courses.
   showStudyMaterial: false,

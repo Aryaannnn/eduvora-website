@@ -7,6 +7,7 @@
 //               (2) runs with the admin's own login, so Supabase RLS checks it again,
 //               (3) refreshes the public website cache (updateTag) so changes show at once.
 // =====================================================================
+import { cleanVerificationCode } from "@/lib/search-console";
 import { revalidatePath, updateTag } from "next/cache";
 import { siteConfig } from "@/config/site";
 import { adminOrError, friendlyDbError, isError, staffOrError, type ActionResult } from "@/lib/admin";
@@ -1410,6 +1411,24 @@ export async function saveShowOriginalPrice(show: boolean): Promise<ActionResult
     .rpc("log_admin_event", { p_action: "settings.price_labels", p_summary: show ? "Showed original prices and % off labels" : "Hid original prices and % off labels", p_details: {} })
     .then(() => undefined, () => undefined);
   return { ok: true, message: show ? "Original prices and \"% off\" labels are shown on the website now." : "Original prices and \"% off\" labels are hidden on the website now." };
+}
+
+// ---------------------------------------------------------------- GOOGLE SEARCH CONSOLE (supabase/search-console.sql)
+/** The "HTML tag" verification code from Google Search Console ("" = remove it). Shown in every page's <head>. */
+export async function saveSearchConsoleCode(raw: string): Promise<ActionResult> {
+  const s = await adminOrError();
+  if (isError(s)) return s;
+  const text = String(raw ?? "").trim();
+  const code = text ? cleanVerificationCode(text) : null;
+  if (text && !code) return fail("That doesn't look like a Google verification code. Paste the code (or the whole <meta name=\"google-site-verification\" …> tag) from Search Console → Settings → Ownership verification → HTML tag.");
+  const { data, error } = await s.supabase.from("display_settings").update({ google_site_verification: code }).eq("id", 1).select("id");
+  if (error) return fail(/google_site_verification|display_settings/.test(error.message) ? "Run supabase/search-console.sql in Supabase first." : friendlyDbError(error.message));
+  if (!data?.length) return fail("Run supabase/price-labels.sql and supabase/search-console.sql in Supabase first.");
+  updateTag("settings"); // every page's <head> updates at once
+  await s.supabase
+    .rpc("log_admin_event", { p_action: "settings.search_console", p_summary: code ? "Saved the Google Search Console verification code" : "Removed the Google Search Console verification code", p_details: {} })
+    .then(() => undefined, () => undefined);
+  return { ok: true, message: code ? "Saved. Every page now has the verification tag — go back to Search Console and click Verify." : "Removed." };
 }
 
 // ---------------------------------------------------------------- "WHY EDUVORA?" (supabase/why-eduvora.sql)

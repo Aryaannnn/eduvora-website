@@ -9,8 +9,9 @@ import CommunityBanner from "@/components/CommunityBanner";
 import PageHero from "@/components/PageHero";
 import Reveal from "@/components/Reveal";
 import { formatDayIST } from "@/lib/format";
+import RelatedPages from "@/components/seo/RelatedPages";
 
-export const metadata: Metadata = pageMeta({ title: "VITEEE Important Dates & Counselling Schedule", description: "VITEEE application, exam, result, VIT counselling and fee payment dates in one timeline, plus the latest updates from EDUVORA.", path: "/important-dates" });
+export const metadata: Metadata = pageMeta({ title: "VITEEE 2027 Dates & Counselling Schedule", description: "VITEEE 2027 application, exam, result, VIT counselling and fee payment dates in one timeline, plus the latest exam and counselling updates.", path: "/important-dates" });
 
 // ✏️ Edit events and updates in Admin → Important Dates.
 export default async function ImportantDatesPage() {
@@ -107,6 +108,7 @@ export default async function ImportantDatesPage() {
           </div>
         </aside>
       </section>
+      <RelatedPages current="/important-dates" />
     </>
   );
 }

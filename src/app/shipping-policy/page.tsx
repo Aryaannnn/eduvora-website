@@ -7,7 +7,7 @@ import { pageMeta } from "@/lib/seo";
 
 export const metadata: Metadata = pageMeta({
   title: "Shipping & Delivery Policy",
-  description: "EDUVORA sells digital services only — no physical shipping. How and when you get access to counselling, PDF crash courses, study material and tests after payment.",
+  description: "EDUVORA sells digital services only — no shipping. How and when you get counselling, PDF crash courses, study material and tests after payment.",
   path: "/shipping-policy",
 });
 

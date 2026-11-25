@@ -7,6 +7,7 @@ import PageHero from "@/components/PageHero";
 import PredictorGate from "@/components/predictor/PredictorGate";
 import Reveal from "@/components/Reveal";
 import SectionHeading from "@/components/SectionHeading";
+import RelatedPages from "@/components/seo/RelatedPages";
 
 export const metadata: Metadata = pageMeta({ title: "VITEEE Rank Predictor – Marks vs Rank", description: "Free VITEEE rank predictor: enter your marks to see your likely rank range. Get your full VIT campus and branch list with EDUVORA counselling.", path: "/predictor" });
 
@@ -32,6 +33,7 @@ export default function PredictorPage() {
         <Reveal className="mt-8"><Accordion items={faqs} /></Reveal>
         <Disclaimer className="mt-8" />
       </section>
+      <RelatedPages current="/predictor" />
     </>
   );
 }

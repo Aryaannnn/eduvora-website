@@ -9,6 +9,7 @@ import { CalendarIcon, HomeIcon, InstagramIcon, YouTubeIcon } from "@/components
 import Reveal from "@/components/Reveal";
 import { siteConfig } from "@/config/site";
 import { founder } from "@/content/founder";
+import RelatedPages from "@/components/seo/RelatedPages";
 
 export const metadata: Metadata = pageMeta({ title: "Utkarsh Shrivastava – VIT Counselling Mentor", description: "Utkarsh Shrivastava, founder of EDUVORA, guides VITEEE students and parents through VIT counselling: rank, campus, branch and fee category decisions.", path: "/founder", image: { url: founder.photo, alt: founder.photoAlt }, type: "profile" });
 
@@ -51,6 +52,7 @@ export default function FounderPage() {
         <div className="bg-white">
           <div className="container-page py-12 sm:py-16">
             <div className="mx-auto max-w-2xl space-y-6 text-[1.075rem] leading-[1.85] text-slate-700 sm:text-lg">
+              <h2 className="text-2xl font-extrabold tracking-tight text-brand-700 sm:text-3xl">The story behind EDUVORA</h2>
               {founder.story.map((p, i) => (
                 <Reveal key={i}>
                   <p className={i === 0 ? "text-lg leading-[1.8] text-slate-800 sm:text-xl first-letter:float-left first-letter:mr-2 first-letter:text-6xl first-letter:font-extrabold first-letter:leading-[0.9] first-letter:text-accent-500" : ""}>{p}</p>
@@ -60,7 +62,7 @@ export default function FounderPage() {
               {/* Vision — highlighted gold quote */}
               <Reveal>
                 <figure className="my-10 rounded-3xl bg-brand-700 p-7 text-center shadow-xl shadow-brand-900/20 sm:p-10">
-                  <p className="text-sm font-bold uppercase tracking-[0.18em] text-accent-300">{founder.visionIntro}</p>
+                  <h2 className="text-sm font-bold uppercase tracking-[0.18em] text-accent-300">{founder.visionIntro}</h2>
                   <blockquote className="mt-4 text-xl font-extrabold leading-snug text-accent-400 sm:text-2xl">
                     &ldquo;{founder.vision}&rdquo;
                   </blockquote>
@@ -74,7 +76,7 @@ export default function FounderPage() {
             </div>
 
             <Reveal className="mx-auto mt-12 max-w-2xl rounded-3xl bg-slate-50 p-6 text-center ring-1 ring-slate-200 sm:p-8">
-              <p className="text-lg font-extrabold text-brand-700">Want personal guidance for VITEEE and VIT admissions?</p>
+              <h2 className="text-lg font-extrabold text-brand-700">Want personal guidance for VITEEE and VIT admissions?</h2>
               <p className="mt-1 text-slate-600">Talk to {firstName} one-to-one about your rank, campus and branch choices.</p>
               <Link href="/book-a-slot" className="btn-accent mt-6 !px-7 !py-3.5 text-base">
                 <CalendarIcon className="h-5 w-5" /> Book a Counselling Call with {firstName}
@@ -92,6 +94,7 @@ export default function FounderPage() {
           </div>
         </div>
       </article>
+      <RelatedPages current="/founder" />
     </>
   );
 }

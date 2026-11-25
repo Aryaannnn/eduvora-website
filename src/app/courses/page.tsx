@@ -7,6 +7,7 @@ import CtaBanner from "@/components/CtaBanner";
 import { LockIcon, ShieldIcon, ZapIcon } from "@/components/Icons";
 import PageHero from "@/components/PageHero";
 import { getCourses } from "@/lib/data";
+import RelatedPages from "@/components/seo/RelatedPages";
 
 export const metadata: Metadata = pageMeta({
   title: "VITEEE Crash Courses (60, 45, 30 & 10 Days)",
@@ -47,6 +48,7 @@ export default async function CoursesPage() {
         </ul>
       </section>
       <CtaBanner title="Need help picking a course?" text="Tell us how much time you have and where you stand — we'll suggest the right plan." />
+      <RelatedPages current="/courses" />
     </>
   );
 }

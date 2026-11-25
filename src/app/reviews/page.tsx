@@ -10,6 +10,7 @@ import SuccessStoriesSection from "@/components/reviews/SuccessStories";
 import Stars from "@/components/Stars";
 import { CheckIcon } from "@/components/Icons";
 import VideoTestimonials from "@/components/reviews/VideoTestimonials";
+import RelatedPages from "@/components/seo/RelatedPages";
 
 export const metadata: Metadata = pageMeta({ title: "Student Reviews of Our VITEEE Counselling", description: "Real reviews from students and parents about EDUVORA's VITEEE counselling, VIT counselling guidance, crash courses and mock tests.", path: "/reviews" });
 
@@ -54,6 +55,7 @@ export default async function ReviewsPage() {
           </Link>
         </Reveal>
       </section>
+      <RelatedPages current="/reviews" />
     </>
   );
 }

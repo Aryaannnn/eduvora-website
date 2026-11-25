@@ -10,6 +10,7 @@ import PageHero from "@/components/PageHero";
 import Reveal from "@/components/Reveal";
 import SectionHeading from "@/components/SectionHeading";
 import { getProducts } from "@/lib/data";
+import RelatedPages from "@/components/seo/RelatedPages";
 
 export const metadata: Metadata = pageMeta({ title: "VITEEE Mock Tests & MCQ Practice", description: "VITEEE full-length mock tests and chapter-wise MCQ practice with instant results, subject-wise analysis and detailed solutions.", path: "/mock-tests" });
 
@@ -66,6 +67,7 @@ export default async function MockTestsPage() {
       </section>
 
       <div className="pt-16"><CtaBanner title="Want a study plan with your tests?" text="Our counsellors can build a week-by-week plan around your mock test results." /></div>
+      <RelatedPages current="/mock-tests" />
     </>
   );
 }

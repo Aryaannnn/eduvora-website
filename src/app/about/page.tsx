@@ -13,6 +13,7 @@ import Reveal from "@/components/Reveal";
 import SectionHeading from "@/components/SectionHeading";
 import { siteConfig } from "@/config/site";
 import { founder } from "@/content/founder";
+import RelatedPages from "@/components/seo/RelatedPages";
 
 export const metadata: Metadata = pageMeta({ title: "About EDUVORA – VITEEE Counselling Experts", description: "EDUVORA: honest VITEEE counselling and VIT counselling guidance for students and parents, from rank planning to campus, branch and fee category choice.", path: "/about" });
 
@@ -80,6 +81,7 @@ export default function AboutPage() {
       <ResultsSection />
       <div className="container-page max-w-4xl pt-10"><Disclaimer /></div>
       <div className="pt-12 sm:pt-16"><CtaBanner /></div>
+      <RelatedPages current="/about" />
     </>
   );
 }

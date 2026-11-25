@@ -26,7 +26,7 @@ export async function getSeatsLeft(productId: string, limit: number | null): Pro
   cacheTag("products", "seats");
   // refreshed in the background about every 30 s; the page itself never "expires"
   // quickly (an expired page would be rebuilt while the visitor waits)
-  cacheLife({ stale: 30, revalidate: 30, expire: 86400 });
+  cacheLife({ stale: 300, revalidate: 30, expire: 86400 }); // stale ≥ 5 min: part of the pre-built page (SEO)
   if (!limit) return null;
   const db = getAdminSupabase();
   if (!db) return null;

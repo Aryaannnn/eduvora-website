@@ -9,6 +9,7 @@ import PageHero from "@/components/PageHero";
 import Reveal from "@/components/Reveal";
 import SectionHeading from "@/components/SectionHeading";
 import { getFreeResources } from "@/lib/free-resources";
+import RelatedPages from "@/components/seo/RelatedPages";
 
 export const metadata: Metadata = pageMeta({ title: "Free VITEEE Mock Tests, Papers & Guides", description: "Free VITEEE resources: mock tests, previous year papers and PDF guides. Sign up free to unlock them instantly and track your scores.", path: "/free-resources" });
 
@@ -46,7 +47,38 @@ export default async function FreeResourcesPage() {
         </>
       )}
 
+      {/* What these are and how to get them — useful text for students and for Google (no login needed to read it) */}
+      <section className="container-page py-14 sm:py-16" aria-labelledby="how-free">
+        <div className="mx-auto max-w-3xl">
+          <h2 id="how-free" className="text-2xl font-extrabold text-brand-700 sm:text-3xl">How the free VITEEE resources work</h2>
+          <div className="mt-6 grid gap-6 sm:grid-cols-2">
+            <div>
+              <h3 className="font-bold text-slate-900">Free mock tests &amp; MCQ practice</h3>
+              <p className="mt-1 text-sm leading-relaxed text-slate-600">Practise VITEEE-style questions online. Each test shows its length and marks; you get your score straight after you submit, so you know which subjects to revise next.</p>
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-900">Free previous year papers</h3>
+              <p className="mt-1 text-sm leading-relaxed text-slate-600">Memory-based VITEEE papers help you get used to the question style and the time pressure of the real exam. See all papers on the <Link href="/previous-year-papers" className="font-semibold text-brand-700 underline">previous year papers</Link> page.</p>
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-900">Free PDF guides</h3>
+              <p className="mt-1 text-sm leading-relaxed text-slate-600">Short guides for VITEEE preparation and VIT admissions. Each PDF is your personal copy, watermarked with your name.</p>
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-900">How to unlock them</h3>
+              <p className="mt-1 text-sm leading-relaxed text-slate-600">Create a free account (phone number or Google). Free items unlock instantly and stay in Dashboard → My Courses &amp; Material — no payment needed.</p>
+            </div>
+          </div>
+          <p className="mt-8 text-sm text-slate-600">
+            Next steps: check your likely rank with the free <Link href="/predictor" className="font-semibold text-brand-700 underline">VITEEE rank predictor</Link>, revise with a{" "}
+            <Link href="/courses" className="font-semibold text-brand-700 underline">VITEEE crash course</Link>, or{" "}
+            <Link href="/book-a-slot" className="font-semibold text-brand-700 underline">book VITEEE counselling</Link> for your campus and branch plan.
+          </p>
+        </div>
+      </section>
+
       <div className="pt-6"><CtaBanner title="Want a personal plan for your rank?" text="Book a one-to-one counselling session for campus, branch and fee category guidance." /></div>
+      <RelatedPages current="/free-resources" />
     </>
   );
 }

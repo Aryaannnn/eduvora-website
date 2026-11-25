@@ -8,6 +8,7 @@ import { ClockIcon, MailIcon, MapPinIcon, PhoneIcon, ShieldIcon } from "@/compon
 import { emailLink, siteConfig } from "@/config/site";
 import { getOpenContact } from "@/lib/contact";
 import { getContactMode } from "@/lib/contact-mode";
+import RelatedPages from "@/components/seo/RelatedPages";
 
 export const metadata: Metadata = pageMeta({ title: "Contact Us – VITEEE Counselling Help", description: "Contact EDUVORA for VITEEE counselling, VIT counselling guidance, courses and study material — send us an enquiry or email us anytime.", path: "/contact" });
 
@@ -60,6 +61,7 @@ export default async function ContactPage() {
       </section>
 
       <ContactSection showHeading={false} />
+      <RelatedPages current="/contact" />
     </>
   );
 }

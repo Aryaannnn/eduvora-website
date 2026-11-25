@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import JsonLd from "@/components/seo/JsonLd";
 import { breadcrumbLd, pageMeta } from "@/lib/seo";
-import { Suspense } from "react";
 import BlogBrowser from "@/components/blog/BlogBrowser";
 import PageHero from "@/components/PageHero";
 import ComingSoon, { comingSoonMeta } from "@/components/ComingSoon";
 import { siteConfig } from "@/config/site";
 import { getPublishedPosts } from "@/lib/blog";
+import RelatedPages from "@/components/seo/RelatedPages";
 
 export const metadata: Metadata = !siteConfig.showBlog ? comingSoonMeta("Blog") : pageMeta({
   title: "VITEEE Blog — Preparation & VIT Counselling Guides",
@@ -23,10 +23,10 @@ export default async function BlogPage() {
       <JsonLd data={breadcrumbLd([{ name: "Blog", path: "/blog" }])} />
       <PageHero eyebrow="Blog" title="VITEEE Guides & Updates" subtitle={`Preparation tips, counselling guidance and VIT campus guides — written by ${siteConfig.founder.name}.`} />
       <section className="container-page py-10 sm:py-14">
-        <Suspense fallback={<div className="h-96 animate-pulse rounded-3xl bg-slate-100" />}>
-          <BlogBrowser posts={posts} />
-        </Suspense>
+        <h2 className="sr-only">All articles</h2>
+        <BlogBrowser posts={posts} />
       </section>
+      <RelatedPages current="/blog" />
     </>
   );
 }

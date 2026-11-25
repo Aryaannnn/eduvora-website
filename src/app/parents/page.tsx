@@ -16,6 +16,7 @@ import { founder } from "@/content/founder";
 import { parentsPage as c } from "@/content/parents";
 import { getApprovedReviews } from "@/lib/data";
 import { breadcrumbLd, faqLd, pageMeta } from "@/lib/seo";
+import RelatedPages from "@/components/seo/RelatedPages";
 
 // ✏️ All the text on this page is in src/content/parents.ts
 export const metadata: Metadata = pageMeta({ title: c.meta.title, description: c.meta.description, path: "/parents" });
@@ -161,6 +162,7 @@ export default function ParentsPage() {
           <div className="mt-8"><Buttons center dark /></div>
         </div>
       </section>
+      <RelatedPages current="/parents" />
     </>
   );
 }

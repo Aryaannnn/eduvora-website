@@ -68,7 +68,7 @@ export function organizationLd() {
         name: siteConfig.businessName,
         url: SITE_URL,
         logo: { "@type": "ImageObject", url: absoluteUrl(siteConfig.logo) },
-        description: siteConfig.description,
+        description: siteConfig.metaDescription,
         email: siteConfig.email,
         founder: { "@type": "Person", name: siteConfig.founder.name, url: absoluteUrl("/founder") },
         areaServed: "IN",

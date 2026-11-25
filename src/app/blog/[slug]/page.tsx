@@ -50,15 +50,19 @@ async function Post({ params }: { params: Promise<{ slug: string }> }) {
   const { html, toc } = withHeadingIds(cleanArticleHtml(post.content_html)); // cleaned again before showing
   const related = relatedPosts(await getPublishedPosts(), post);
   const founderFirst = siteConfig.founder.name.split(" ")[0];
+  const byFounder = post.author_name.trim().toLowerCase() === siteConfig.founder.name.toLowerCase();
+  // "Updated …" only when the post was really edited later (not the same day it was published)
+  const updated = formatDayIST(post.updated_at) !== formatDayIST(post.published_at) && post.updated_at > post.published_at;
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "BlogPosting",
+    "@type": "BlogPosting", // a kind of Article
     headline: post.title,
     description: post.seo_description || post.excerpt || undefined,
     image: post.cover_image_url || `${SITE_URL}/blog/${post.slug}/opengraph-image`,
     datePublished: post.published_at,
     dateModified: post.updated_at,
-    author: { "@type": "Person", name: post.author_name },
+    author: { "@type": "Person", name: post.author_name, ...(byFounder ? { url: `${SITE_URL}/founder` } : {}) },
+    inLanguage: "en-IN",
     publisher: { "@type": "Organization", name: siteConfig.businessName, logo: { "@type": "ImageObject", url: `${SITE_URL}/logo-compact.png` } },
     mainEntityOfPage: `${SITE_URL}/blog/${post.slug}`,
   };
@@ -84,8 +88,12 @@ async function Post({ params }: { params: Promise<{ slug: string }> }) {
           <h1 className="mt-3 text-3xl font-extrabold leading-tight tracking-tight [text-wrap:balance] sm:text-5xl">{post.title}</h1>
           {post.excerpt && <p className="mt-4 max-w-2xl text-lg text-slate-200">{post.excerpt}</p>}
           <p className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-slate-200">
-            <span className="inline-flex items-center gap-1.5"><UserIcon className="h-4 w-4 text-accent-300" /> {post.author_name}</span>
-            <span className="inline-flex items-center gap-1.5"><CalendarIcon className="h-4 w-4 text-accent-300" /> {formatDayIST(post.published_at)}</span>
+            <span className="inline-flex items-center gap-1.5">
+              <UserIcon className="h-4 w-4 text-accent-300" />
+              {byFounder ? <Link href="/founder" rel="author" className="underline-offset-2 hover:underline">{post.author_name}</Link> : post.author_name}
+            </span>
+            <span className="inline-flex items-center gap-1.5"><CalendarIcon className="h-4 w-4 text-accent-300" /> Published <time dateTime={post.published_at}>{formatDayIST(post.published_at)}</time></span>
+            {updated && <span className="inline-flex items-center gap-1.5">Updated <time dateTime={post.updated_at}>{formatDayIST(post.updated_at)}</time></span>}
             <span className="inline-flex items-center gap-1.5"><ClockIcon className="h-4 w-4 text-accent-300" /> {post.reading_minutes} min read</span>
           </p>
         </div>

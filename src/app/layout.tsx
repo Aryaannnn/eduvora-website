@@ -17,6 +17,7 @@ import { Suspense } from "react";
 import PrivatePageGuard from "@/components/auth/PrivatePageGuard";
 import { PRE_LAUNCH } from "@/config/launch";
 import { siteConfig } from "@/config/site";
+import { getSearchConsoleCode } from "@/lib/search-console";
 
 // "latin-ext" holds the ₹ sign (on every price), so it is preloaded too: the
 // headings no longer wait for the stylesheet before this font starts downloading
@@ -24,7 +25,7 @@ const jakarta = Plus_Jakarta_Sans({ variable: "--font-jakarta", subsets: ["latin
 
 const homeTitle = `${siteConfig.businessName} | ${siteConfig.tagline}`;
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   // Full links to the share image for link previews (chat apps, Facebook) (comes from NEXT_PUBLIC_SITE_URL)
   metadataBase: new URL(siteConfig.siteUrl),
   // Pre-launch: hide the whole site from Google (switch in src/config/launch.ts)
@@ -34,13 +35,13 @@ export const metadata: Metadata = {
     default: homeTitle,
     template: `%s | ${siteConfig.businessName}`,
   },
-  description: siteConfig.description,
+  description: siteConfig.metaDescription,
   // Link previews (chat apps, Facebook, LinkedIn, X). The image is src/app/opengraph-image.png
   openGraph: {
     type: "website",
     siteName: siteConfig.businessName,
     title: homeTitle,
-    description: `${siteConfig.tagline} ${siteConfig.description}`,
+    description: siteConfig.metaDescription,
     locale: "en_IN",
   },
   twitter: {
@@ -49,6 +50,12 @@ export const metadata: Metadata = {
     description: siteConfig.tagline,
   },
 };
+
+// + the Google Search Console verification tag (Admin → Settings → Google Search Console)
+export async function generateMetadata(): Promise<Metadata> {
+  const google = await getSearchConsoleCode();
+  return google ? { ...baseMetadata, verification: { google } } : baseMetadata;
+}
 
 export const viewport: Viewport = { themeColor: "#0b2a5b" };
 

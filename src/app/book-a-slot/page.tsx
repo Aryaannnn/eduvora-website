@@ -11,8 +11,9 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { getSlotBoard } from "@/lib/slot-board";
 import { siteConfig } from "@/config/site";
+import RelatedPages from "@/components/seo/RelatedPages";
 
-export const metadata: Metadata = pageMeta({ title: "Book One-to-One VITEEE Counselling", description: "Book a 30-minute one-to-one VITEEE counselling voice call with Utkarsh Shrivastava: rank review, campus and branch choice, fee categories and documents.", path: "/book-a-slot" });
+export const metadata: Metadata = pageMeta({ title: "Book One-to-One VITEEE Counselling", description: "Book a 30-minute VITEEE counselling call with Utkarsh Shrivastava: rank review, VIT campus and branch choice, VIT fee categories and documents.", path: "/book-a-slot" });
 
 export default function BookASlotPage() {
   return (
@@ -46,6 +47,7 @@ export default function BookASlotPage() {
           <PackageComparison />
         </div>
       </section>
+      <RelatedPages current="/book-a-slot" />
     </>
   );
 }

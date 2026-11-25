@@ -49,6 +49,12 @@ export function FreeTestCard({ test }: { test: FreeTest }) {
         </div>
       </div>
       <h3 className="mt-4 font-bold text-slate-900">{test.title}</h3>
+      {/* what it is — readable by Google too (starting the test needs a free account) */}
+      <p className="mt-1.5 text-sm text-slate-600">
+        {test.type === "mcq"
+          ? "Free VITEEE-style multiple-choice practice: answer at your own pace and see your score and the correct answers at the end."
+          : "Free timed VITEEE-style mock test: practise under exam conditions and get your score with a subject-wise breakdown right after you submit."}
+      </p>
       <p className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-slate-500">
         <ClockIcon className="h-3.5 w-3.5" /> {test.duration_minutes} minutes{test.total_marks ? ` · ${test.total_marks} marks` : ""} · instant score
       </p>

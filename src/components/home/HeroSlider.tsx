@@ -37,6 +37,9 @@ type Slide = {
 };
 
 // 4 slides, ONE main button each (a second, quieter text link is optional)
+/** The home page's <h1> (shown as the first slide's small label) */
+const HOME_H1 = "VITEEE Counselling & VIT Admission Guidance";
+
 const slides: Slide[] = [
   {
     brandLine: true,
@@ -186,15 +189,18 @@ export default function HeroSlider() {
                       <span className="text-accent-300">{siteConfig.tagline}</span>
                     </p>
                   )}
-                  <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-slate-100 ring-1 ring-white/15">
-                    <span className="h-2 w-2 animate-pulse rounded-full bg-accent-400" /> {s.eyebrow}
-                  </span>
-                  {/* one <h1> per page (SEO): the first slide; the others look the same but are <h2> */}
+                  {/* SEO: the page's one <h1> is the first slide's small label (what the website is about,
+                      in the words people search for); every slide's big headline is an <h2> */}
                   {i === 0 ? (
-                    <h1 className="mt-4 text-[2rem] font-extrabold leading-[1.1] tracking-tight [text-wrap:balance] sm:mt-5 sm:text-5xl lg:text-6xl">{s.title}</h1>
+                    <h1 className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-slate-100 ring-1 ring-white/15">
+                      <span className="h-2 w-2 animate-pulse rounded-full bg-accent-400" aria-hidden /> {HOME_H1}
+                    </h1>
                   ) : (
-                    <h2 className="mt-4 text-[2rem] font-extrabold leading-[1.1] tracking-tight [text-wrap:balance] sm:mt-5 sm:text-5xl lg:text-6xl">{s.title}</h2>
+                    <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-slate-100 ring-1 ring-white/15">
+                      <span className="h-2 w-2 animate-pulse rounded-full bg-accent-400" /> {s.eyebrow}
+                    </span>
                   )}
+                  <h2 className="mt-4 text-[2rem] font-extrabold leading-[1.1] tracking-tight [text-wrap:balance] sm:mt-5 sm:text-5xl lg:text-6xl">{s.title}</h2>
                   <p className="mt-4 max-w-xl text-base leading-relaxed text-slate-200 sm:mt-5 sm:text-lg">{s.text}</p>
 
                   {/* Small "Marks → Rank → College" strip on phones/tablets */}

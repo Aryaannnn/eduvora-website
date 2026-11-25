@@ -2,16 +2,20 @@
 
 // Search box + category tabs for /blog (filters the list in the browser).
 // /blog?category=counselling opens with that category selected.
-import { useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { BLOG_CATEGORIES, CATEGORY_NAME, type BlogCategory } from "@/lib/blog-shared";
 import { SearchIcon } from "../Icons";
 import PostCard, { type PostCardData } from "./PostCard";
 
 export default function BlogBrowser({ posts }: { posts: PostCardData[] }) {
-  const sp = useSearchParams();
-  const initial = sp.get("category");
-  const [category, setCategory] = useState<"all" | BlogCategory>(BLOG_CATEGORIES.includes(initial as BlogCategory) ? (initial as BlogCategory) : "all");
+  // SEO: the pre-built page always lists EVERY post (Google sees them all); a ?category=… in the
+  // address is applied after the page has loaded
+  const [category, setCategory] = useState<"all" | BlogCategory>("all");
+  useEffect(() => {
+    const initial = new URLSearchParams(window.location.search).get("category");
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- read once from the address after loading
+    if (BLOG_CATEGORIES.includes(initial as BlogCategory)) setCategory(initial as BlogCategory);
+  }, []);
   const [q, setQ] = useState("");
 
   const shown = useMemo(() => {

@@ -16,13 +16,14 @@ import { getCourses, getProductBySlug } from "@/lib/data";
 import { discountPercent, formatDate, formatPrice } from "@/lib/format";
 import { getSeatsLeft, seatLimitOf } from "@/lib/seats";
 import JsonLd from "@/components/seo/JsonLd";
-import { breadcrumbLd, courseLd, pageMeta } from "@/lib/seo";
+import { breadcrumbLd, courseLd, faqLd, pageMeta } from "@/lib/seo";
 import EnrolledBadge from "@/components/EnrolledBadge";
 import { getFileSummary, getPlanSummary } from "@/lib/file-summary";
 import CourseGrid from "@/components/courses/CourseGrid";
 import { chipKeysFor, SUBJECT_UI } from "@/components/courses/SubjectIcon";
 import { durationBadge, enrollLabel as enrollText, productNoun } from "@/lib/courses";
 import { siteConfig } from "@/config/site";
+import RelatedPages from "@/components/seo/RelatedPages";
 
 export async function generateMetadata(props: PageProps<"/courses/[slug]">): Promise<Metadata> {
   const { slug } = await props.params;
@@ -131,6 +132,7 @@ async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
         data={[
           courseLd({ name: course.title, description: (d.short ?? course.description ?? course.title).slice(0, 300), path: `/courses/${course.slug}`, price: course.price, image: course.thumbnail_url }),
           breadcrumbLd([{ name: "Crash Courses", path: "/courses" }, { name: course.title, path: `/courses/${course.slug}` }]),
+          faqLd(faqs), // the questions shown at the bottom of the page
         ]}
       />
       <section className="hero-bg relative overflow-hidden text-white">
@@ -373,6 +375,7 @@ async function CourseDetail({ params }: { params: Promise<{ slug: string }> }) {
           </div>
         </div>
       </div>
+      <RelatedPages current="/course" />
     </>
   );
 }
