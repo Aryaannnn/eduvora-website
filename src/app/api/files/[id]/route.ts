@@ -3,7 +3,6 @@
 import type { NextRequest } from "next/server";
 import { handleFileRequest } from "@/lib/pdf-route";
 
-export const preferredRegion = "sin1";
 // Large PDFs: up to 5 minutes (Vercel Fluid compute allows 300 s on every plan)
 export const maxDuration = 300;
 
