@@ -2,10 +2,15 @@
 
 // Which products the logged-in student owns (one request per page, shared by
 // every Buy button and "Enrolled" badge on the page).
+import { hasLoginCookie } from "./supabase/lazy";
+
 export type Owned = { loggedIn: boolean; owned: string[] };
 let ownedPromise: Promise<Owned> | null = null;
 
 export function getOwned() {
+  // Visitors who aren't logged in have no Supabase login cookie → nothing can be owned,
+  // so no request at all (saves a server call on every page with a Buy button)
+  if (!hasLoginCookie()) return Promise.resolve<Owned>({ loggedIn: false, owned: [] });
   ownedPromise ??= fetch("/api/payments/owned", { cache: "no-store" })
     .then((r) => (r.ok ? r.json() : { loggedIn: false, owned: [] }))
     .catch(() => ({ loggedIn: false, owned: [] }));

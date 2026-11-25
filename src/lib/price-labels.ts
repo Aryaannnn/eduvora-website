@@ -13,7 +13,7 @@ export async function showOriginalPrices(): Promise<boolean> {
   if (!supabase) return (cacheLife("minutes"), true);
   const { data, error } = await supabase.from("display_settings").select("show_original_price").eq("id", 1).maybeSingle();
   if (error || !data) {
-    cacheLife({ stale: 300, revalidate: 60, expire: 3600 });
+    cacheLife("minutes"); // failed → try again within 5 minutes (sooner after an admin save)
     return true;
   }
   cacheLife("minutes");

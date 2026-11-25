@@ -8,6 +8,7 @@
 //  • Does nothing when Sentry is off (no DSN); still logs to the console.
 //  • Sentry is loaded only when a failure happens (keeps pages fast).
 // =====================================================================
+import { loadSentry } from "./sentry-browser";
 import { SENTRY_DSN } from "./sentry-scrub";
 
 export type FailureArea = "payment" | "booking" | "email" | "login" | "calendar" | "reader" | "pdf" | "progress";
@@ -17,9 +18,10 @@ export function reportFailure(area: FailureArea, what: string, err?: unknown, ex
   const detail = err instanceof Error ? err.message : typeof err === "string" ? err : "";
   console.warn(`[${area}] ${what}${detail ? `: ${detail}` : ""}`);
   if (!SENTRY_DSN) return;
-  void import("@sentry/nextjs")
+  // server: Sentry is already set up (src/instrumentation.ts) · browser: downloaded only now
+  void (typeof window === "undefined" ? import("@sentry/nextjs") : loadSentry())
     .then((Sentry) =>
-      Sentry.withScope((scope) => {
+      Sentry?.withScope((scope) => {
         scope.setTag("area", area);
         scope.setTag("critical", level === "error" ? "yes" : "no");
         if (typeof extra?.step === "string") scope.setTag("step", extra.step); // which step failed (searchable)

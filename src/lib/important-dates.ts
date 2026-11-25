@@ -46,7 +46,7 @@ export async function getImportantDates(): Promise<ImportantDate[]> {
     .order("start_date");
   if (error) {
     console.warn("Supabase important_dates:", error.message, "(run supabase/important-dates.sql?)");
-    cacheLife({ stale: 300, revalidate: 60, expire: 3600 });
+    cacheLife("minutes"); // failed → try again within 5 minutes (sooner after an admin save)
     return [];
   }
   cacheLife({ stale: 300, revalidate: 3600, expire: 86400 }); // status can change at midnight
@@ -81,7 +81,7 @@ export async function getSiteUpdates(limit = 20): Promise<SiteUpdate[]> {
     .order("published_at", { ascending: false })
     .limit(limit);
   if (error) {
-    cacheLife({ stale: 300, revalidate: 60, expire: 3600 });
+    cacheLife("minutes"); // failed → try again within 5 minutes (sooner after an admin save)
     return [];
   }
   cacheLife({ stale: 300, revalidate: 900, expire: 86400 }); // scheduled posts appear within ~15 min

@@ -36,7 +36,7 @@ export async function getFreeResources(): Promise<FreeResources> {
   ]);
   if (products.error || tests.error) {
     console.warn("Supabase getFreeResources:", (products.error ?? tests.error)?.message);
-    cacheLife({ stale: 300, revalidate: 30, expire: 3600 });
+    cacheLife("minutes"); // failed → try again within 5 minutes (sooner after an admin save)
   } else {
     cacheLife("minutes");
   }

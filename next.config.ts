@@ -18,9 +18,19 @@ const nextConfig: NextConfig = {
   // at runtime, not bundled (pdf.js loads its own worker file; the canvas is a native module)
   serverExternalPackages: ["pdfjs-dist", "@napi-rs/canvas"],
   partialPrefetching: true,
+  // Public pages are pre-built and served from Vercel's CDN. Data cached with
+  // cacheLife("minutes") (courses, settings, reviews, …) is refreshed in the background
+  // every 5 minutes, and AT ONCE when you save in the admin panel (updateTag).
+  // expire 1 day: a page nobody opened for a while is still served instantly from the
+  // CDN (and refreshed behind the scenes) instead of being built while the visitor waits.
+  cacheLife: {
+    minutes: { stale: 300, revalidate: 300, expire: 86400 },
+  },
   // Image qualities the website may use (90 keeps the logo's thin letters sharp)
   images: {
     qualities: [75, 90],
+    // AVIF first (smallest), WebP for browsers without AVIF
+    formats: ["image/avif", "image/webp"],
     // YouTube thumbnails for video testimonials
     remotePatterns: [
       { protocol: "https", hostname: "i.ytimg.com", pathname: "/vi/**" },

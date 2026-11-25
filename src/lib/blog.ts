@@ -29,7 +29,7 @@ export async function getPublishedPosts(): Promise<BlogPostSummary[]> {
   const { data, error } = await supabase.from("blog_posts").select(SUMMARY).eq("status", "published").order("published_at", { ascending: false }).limit(500);
   if (error) {
     console.warn("Supabase blog_posts:", error.message, "(run supabase/blog.sql?)");
-    cacheLife({ stale: 300, revalidate: 60, expire: 3600 });
+    cacheLife("minutes"); // failed → try again within 5 minutes (sooner after an admin save)
     return [];
   }
   cacheLife({ stale: 300, revalidate: 900, expire: 86400 }); // scheduled posts appear within ~15 min
@@ -43,7 +43,7 @@ export async function getPostBySlug(slug: string): Promise<BlogPost | null> {
   if (!supabase || !/^[a-z0-9-]{1,100}$/.test(slug)) return (cacheLife("minutes"), null);
   const { data, error } = await supabase.from("blog_posts").select(`${SUMMARY},content_html,seo_title,seo_description`).eq("slug", slug).eq("status", "published").maybeSingle();
   if (error) {
-    cacheLife({ stale: 300, revalidate: 60, expire: 3600 });
+    cacheLife("minutes"); // failed → try again within 5 minutes (sooner after an admin save)
     return null;
   }
   cacheLife({ stale: 300, revalidate: 900, expire: 86400 });

@@ -17,7 +17,7 @@ export async function getReferralSettings(): Promise<ReferralSettings | null> {
   if (!supabase) return (cacheLife("minutes"), null);
   const { data, error } = await supabase.from("referral_settings").select("enabled,referred_discount,referrer_reward").eq("id", 1).maybeSingle();
   if (error || !data) {
-    cacheLife({ stale: 300, revalidate: 30, expire: 3600 });
+    cacheLife("minutes"); // failed → try again within 5 minutes (sooner after an admin save)
     return null;
   }
   cacheLife("minutes");

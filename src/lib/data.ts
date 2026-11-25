@@ -24,8 +24,8 @@ const retrySoon = (label: string, message: string) => {
   // (console.error here made the dev server reload pages in a loop.)
   const hint = message.includes("schema cache") ? " → run the matching SQL file in Supabase (see SUPABASE_SETUP.md)" : "";
   console.warn(`Supabase ${label}: ${message}${hint}`);
-  // Server retries after 30 s. ("stale" ≥ 5 min keeps the page loading instantly.)
-  cacheLife({ stale: 300, revalidate: 30, expire: 3600 });
+  // Server retries within 5 minutes, or at once after an admin save. ("stale" keeps the page loading instantly.)
+  cacheLife("minutes"); // failed → try again within 5 minutes (sooner after an admin save)
 };
 
 export async function getProducts(category: ProductCategory): Promise<Product[]> {

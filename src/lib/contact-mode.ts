@@ -25,7 +25,7 @@ export async function getContactMode(): Promise<ContactMode> {
   if (!db) return (cacheLife("minutes"), DEFAULTS);
   const { data, error } = await db.from("contact_settings").select("mode,open_note,private_note").eq("id", 1).maybeSingle();
   if (error || !data) {
-    cacheLife({ stale: 300, revalidate: 60, expire: 3600 });
+    cacheLife("minutes"); // failed → try again within 5 minutes (sooner after an admin save)
     return DEFAULTS;
   }
   cacheLife("hours");

@@ -11,7 +11,7 @@ export async function getWhySettings(): Promise<WhySettings> {
   const { data, error } = await supabase.from("why_settings").select("enabled,title,cards").eq("id", 1).maybeSingle();
   if (error || !data) {
     // Not set up yet (supabase/why-eduvora.sql) or a hiccup → the default cards; try again soon
-    cacheLife({ stale: 300, revalidate: 60, expire: 3600 });
+    cacheLife("minutes"); // failed → try again within 5 minutes (sooner after an admin save)
     return DEFAULT_WHY;
   }
   cacheLife("minutes");

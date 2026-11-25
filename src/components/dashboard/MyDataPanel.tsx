@@ -1,6 +1,7 @@
 "use client";
 
 // Dashboard → My Profile → "Your data": download a copy, or delete the account.
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useScrollLock } from "@/lib/scroll-lock";
 import { siteConfig } from "@/config/site";
@@ -34,7 +35,7 @@ export default function MyDataPanel({ isAdmin, consentAt }: { isAdmin: boolean; 
       <h2 className="text-lg font-extrabold text-slate-900">Your data</h2>
       <p className="mt-1 text-sm text-slate-500">
         {consentAt ? <>You accepted the Privacy Policy and Terms on {new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeZone: "Asia/Kolkata" }).format(new Date(consentAt))}. </> : null}
-        Read how we use it in our <a href="/privacy-policy" className="font-semibold text-brand-700 underline">Privacy Policy</a>.
+        Read how we use it in our <Link href="/privacy-policy" className="font-semibold text-brand-700 underline">Privacy Policy</Link>.
       </p>
 
       <div className="mt-5 grid gap-4 md:grid-cols-2">

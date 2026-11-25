@@ -37,7 +37,7 @@ export async function getPackages(): Promise<Package[]> {
     .order("price");
   if (error) {
     console.warn("Supabase getPackages:", error.message, "(run supabase/packages.sql?)");
-    cacheLife({ stale: 300, revalidate: 30, expire: 3600 });
+    cacheLife("minutes"); // failed → try again within 5 minutes (sooner after an admin save)
     return [];
   }
   cacheLife("minutes");

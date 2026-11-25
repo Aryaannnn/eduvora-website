@@ -18,7 +18,7 @@ export async function getCommunityLink(): Promise<string | null> {
   if (!supabase) return (cacheLife("minutes"), null);
   const { data, error } = await supabase.from("community_settings").select("whatsapp_link").eq("id", 1).maybeSingle();
   if (error) {
-    cacheLife({ stale: 300, revalidate: 60, expire: 3600 });
+    cacheLife("minutes"); // failed → try again within 5 minutes (sooner after an admin save)
     return null;
   }
   cacheLife("hours");
