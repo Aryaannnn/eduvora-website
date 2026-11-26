@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import RatingLine from "@/components/reviews/RatingLine";
 import JsonLd from "@/components/seo/JsonLd";
 import { pageMeta, breadcrumbLd } from "@/lib/seo";
@@ -12,6 +13,7 @@ import { Suspense } from "react";
 import { getSlotBoard } from "@/lib/slot-board";
 import { siteConfig } from "@/config/site";
 import RelatedPages from "@/components/seo/RelatedPages";
+import OfficialNotice from "@/components/OfficialNotice";
 
 export const metadata: Metadata = pageMeta({ title: "Book One-to-One VITEEE Counselling", description: "Book a 30-minute VITEEE counselling call with Utkarsh Shrivastava: rank review, VIT campus and branch choice, VIT fee categories and documents.", path: "/book-a-slot" });
 
@@ -31,8 +33,10 @@ export default function BookASlotPage() {
       </PageHero>
       {/* 1. Book a session (slot picker + details) */}
       <section id="book" className="container-page scroll-mt-24 py-10 sm:py-14">
+        <OfficialNotice className="mb-6" />
         <h2 className="mb-2 text-2xl font-extrabold text-brand-700">Book a session</h2>
         <p className="mb-3 text-slate-600">Each session is a 30-minute voice call. Have a package? Your session credit is used automatically. Otherwise pay for a single slot. All times are India time (IST).</p>
+        <p className="mb-3 text-sm text-slate-600">New to VIT counselling? Read our free <Link href="/vit-counselling-guide" className="font-semibold text-brand-700 underline">VIT counselling guide</Link> first.</p>
         <RatingLine className="mb-8 !justify-start" />
         <Suspense fallback={<SlotPickerSkeleton className="max-w-2xl" />}>
           <Booking />

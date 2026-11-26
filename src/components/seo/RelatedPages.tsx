@@ -18,12 +18,13 @@ const PAGES: Record<string, P> = {
   reviews: { href: "/reviews", title: "Student Reviews", text: "What students and parents say about EDUVORA counselling." },
   founder: { href: "/founder", title: `About ${siteConfig.founder.name}`, text: "The counsellor behind EDUVORA." },
   blog: { href: "/blog", title: "VITEEE Blog", text: "Preparation tips and VIT counselling guides." },
+  guide: { href: "/vit-counselling-guide", title: "VIT Counselling Guide", text: "Phases, the official fee, documents and choice filling." },
 };
 const RELATED: Record<string, (keyof typeof PAGES)[]> = {
-  "/predictor": ["booking", "courses", "dates"],
+  "/predictor": ["guide", "booking", "dates"],
   "/courses": ["predictor", "mocks", "free"],
   "/course": ["predictor", "booking", "papers"],
-  "/book-a-slot": ["predictor", "parents", "reviews"],
+  "/book-a-slot": ["guide", "predictor", "parents"],
   "/important-dates": ["predictor", "booking", "courses"],
   "/free-resources": ["mocks", "papers", "predictor"],
   "/mock-tests": ["papers", "courses", "free"],
@@ -31,9 +32,10 @@ const RELATED: Record<string, (keyof typeof PAGES)[]> = {
   "/reviews": ["booking", "founder", "predictor"],
   "/about": ["founder", "booking", "reviews"],
   "/founder": ["booking", "reviews", "blog"],
-  "/parents": ["booking", "dates", "reviews"],
+  "/parents": ["guide", "booking", "dates"],
   "/blog": ["predictor", "booking", "dates"],
   "/contact": ["booking", "parents", "predictor"],
+  "/vit-counselling-guide": ["predictor", "dates", "parents"],
 };
 
 export default function RelatedPages({ current }: { current: keyof typeof RELATED }) {

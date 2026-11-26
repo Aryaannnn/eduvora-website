@@ -10,6 +10,7 @@ import Logo from "./Logo";
 const explore = [
   { href: "/free-resources", label: "Free Resources" },
   { href: "/important-dates", label: "Important Dates" },
+  { href: "/vit-counselling-guide", label: "VIT Counselling Guide" },
   ...(siteConfig.showBlog ? [{ href: "/blog", label: "Blog" }] : []),
   { href: "/courses", label: "Crash Courses" },
   { href: "/predictor", label: "Rank & College Predictor" },

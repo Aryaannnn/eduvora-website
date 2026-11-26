@@ -30,6 +30,7 @@ export const isGroup = (i: NavItem): i is NavGroup => "children" in i;
 const resources: NavLink[] = [
   { href: "/free-resources", label: "Free Resources", hint: "Free tests, papers & PDF guides", free: true },
   { href: "/important-dates", label: "Important Dates", hint: "Exam, results & counselling dates" },
+  { href: "/vit-counselling-guide", label: "VIT Counselling Guide", hint: "Phases, fee, documents & choice filling" },
   ...(siteConfig.showFeeCalculator ? [{ href: "/fee-calculator", label: "Fee Calculator", hint: "Estimate fees & compare campuses" }] : []),
   { href: "/parents", label: "For Parents", hint: "How counselling works for families" },
   ...(siteConfig.showBlog ? [{ href: "/blog", label: "Blog", hint: "Preparation & counselling guides" }] : []),

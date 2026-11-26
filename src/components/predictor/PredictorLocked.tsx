@@ -59,7 +59,7 @@ export default function LockedColleges({ loggedIn, returnTo = "/predictor" }: { 
           </ul>
           <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
             <Link href="/book-a-slot" className="btn-accent !px-6 !py-3.5 text-base">
-              <CalendarIcon className="h-5 w-5" /> Book Counselling to See Your Colleges
+              <CalendarIcon className="h-5 w-5" /> {loggedIn ? "See your full college list and personal plan" : "Book Counselling to See Your Colleges"}
             </Link>
             {!loggedIn && (
               <Link href={`/login?next=${encodeURIComponent(returnTo)}`} className="btn-light !px-6 !py-3.5">
