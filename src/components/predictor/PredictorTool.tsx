@@ -6,7 +6,7 @@
 //  changes their marks, it asks the server (/api/predictor), which checks
 //  access and sends back only the result:
 //    guest -> nothing (asked to log in / sign up)
-//    free  -> rank range + top 3 options (campus / branch / chance); the full list is a blurred FAKE sample
+//    free  -> rank range only; the college list is a blurred FAKE sample
 //    full  -> everything (paid counselling students and admins)
 // =====================================================================
 import Link from "next/link";
@@ -51,9 +51,7 @@ export type PredictorOptions = {
   branchesByCampus: Record<string, string[]>;
 };
 // counts / total / matches are only sent by the server to users with FULL access
-// preview: free students get the best 3 options as campus / branch / chance only
-type PreviewMatch = { campus: string; branch: string; chance: Chance };
-type Result = { prediction: Prediction | null; percentile: number; full: boolean; counts?: Record<Chance, number>; total?: number; matches?: CollegeMatch[]; preview?: PreviewMatch[] };
+type Result = { prediction: Prediction | null; percentile: number; full: boolean; counts?: Record<Chance, number>; total?: number; matches?: CollegeMatch[] };
 
 export default function PredictorTool({
   options,
@@ -311,7 +309,6 @@ export default function PredictorTool({
         </div>
       </div>
 
-      {!full && !guest && prediction && result?.preview && <FreePreview preview={result.preview} />}
       {!full && <LockedColleges loggedIn={!guest} returnTo={returnTo} />}
 
       {full && prediction && mode === "public" && (
@@ -399,32 +396,6 @@ function SaveNote({ state, className = "" }: { state: "idle" | "saving" | "saved
     <p className={`text-xs text-slate-500 print:hidden ${className}`} aria-live="polite">
       {state === "saving" ? "Saving…" : state === "saved" ? "✓ Saved to My Past Predictions" : state === "error" ? "Couldn't save — check your connection" : ""}
     </p>
-  );
-}
-
-// FREE preview: the best 3 campus + branch options with a chance label (no fee category,
-// no closing rank — the server never sends those to free students)
-function FreePreview({ preview }: { preview: PreviewMatch[] }) {
-  return (
-    <section className="card p-5 sm:p-6 print:hidden" aria-labelledby="free-preview-title">
-      <h2 id="free-preview-title" className="text-lg font-extrabold text-slate-900">Your top 3 matching options</h2>
-      <p className="text-sm text-slate-500">A free preview for your predicted rank. Your full list, fee categories, filters and PDF come with counselling.</p>
-      {preview.length === 0 ? (
-        <p className="mt-4 text-sm text-slate-500">No matching options in our data for this rank. Talk to us — there may still be good choices.</p>
-      ) : (
-        <ol className="mt-4 grid gap-3 md:grid-cols-3">
-          {preview.map((m, i) => (
-            <li key={`${m.campus}-${m.branch}`} style={{ animationDelay: `${i * 90}ms` }} className="animate-fade-up rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
-              <p className="text-xs font-bold text-slate-400">#{i + 1}</p>
-              <p className="font-extrabold text-slate-900">{m.campus}</p>
-              <p className="text-sm text-slate-700">{m.branch}</p>
-              <div className="mt-3"><ChanceBadge chance={m.chance} /></div>
-            </li>
-          ))}
-        </ol>
-      )}
-      <Link href="/book-a-slot" className="btn-accent mt-5 !py-3">See your full college list and personal plan</Link>
-    </section>
   );
 }
 

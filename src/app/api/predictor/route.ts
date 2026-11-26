@@ -3,9 +3,8 @@
 //
 // Who gets what (decided here, on the server):
 //   • not logged in            → 401, nothing calculated
-//   • logged in (free)         → the predicted rank range + percentile, and a PREVIEW of the
-//                                best 3 campus + branch options with their chance label only.
-//                                No fee categories, closing ranks, counts, filters or full list.
+//   • logged in (free)         → ONLY the predicted rank range + percentile.
+//                                No colleges, no counts, no cutoffs.
 //   • paid counselling / admin → the full result (colleges, chances, fee categories)
 // With save:true the prediction is stored, so the admin sees it as a lead.
 import { phoneRequired } from "@/lib/phone-guard";
@@ -63,10 +62,8 @@ export async function POST(request: NextRequest) {
   }
 
   if (!access.allowed) {
-    // FREE: rank range + the best 3 options as campus / branch / chance ONLY
-    // (runPrediction gives the 3-best preview when full is false; fee category and closing rank are left out)
-    const preview = result.prediction ? result.matches.slice(0, 3).map((m) => ({ campus: m.campus, branch: m.branch, chance: m.chance })) : [];
-    return NextResponse.json({ prediction: result.prediction, percentile: result.percentile, full: false, preview, saved }, { headers });
+    // FREE: rank range only. Nothing that comes from the college cutoff table.
+    return NextResponse.json({ prediction: result.prediction, percentile: result.percentile, full: false, saved }, { headers });
   }
   return NextResponse.json({ ...result, full: true, saved }, { headers });
 }

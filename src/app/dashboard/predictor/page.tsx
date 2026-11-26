@@ -6,7 +6,7 @@ import { requireUser } from "@/lib/dashboard";
 
 export const metadata: Metadata = { title: "Rank & College Predictor" };
 
-// Free: rank range + top 3 options (campus, branch, chance). Paid counselling: full college list (checked on the server)
+// Free: rank range only. Paid counselling: full college list (checked on the server)
 export default function DashboardPredictorPage() {
   return (
     <Suspense fallback={<DashSkeleton />}>

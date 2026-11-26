@@ -7,7 +7,6 @@
 //               (2) runs with the admin's own login, so Supabase RLS checks it again,
 //               (3) refreshes the public website cache (updateTag) so changes show at once.
 // =====================================================================
-import { cleanGuide, countPlaceholders } from "@/lib/vit-guide-shared";
 import { cleanVerificationCode } from "@/lib/search-console";
 import { revalidatePath, updateTag } from "next/cache";
 import { siteConfig } from "@/config/site";
@@ -1455,24 +1454,6 @@ export async function saveWhySettings(input: { enabled: boolean; title: string; 
     .rpc("log_admin_event", { p_action: "settings.why", p_summary: input.enabled ? `Updated the "Why EDUVORA?" cards (${clean.cards.length})` : 'Hid the "Why EDUVORA?" section', p_details: {} })
     .then(() => undefined, () => undefined);
   return { ok: true, message: input.enabled ? "Saved — the home page shows the new cards now." : "Saved — the section is hidden on the home page." };
-}
-
-// ---------------------------------------------------------------- VIT COUNSELLING GUIDE (supabase/vit-guide.sql)
-/** The /vit-counselling-guide text: sections, FAQs, year, last-checked date. */
-export async function saveVitGuide(input: unknown): Promise<ActionResult> {
-  const s = await adminOrError();
-  if (isError(s)) return s;
-  const clean = cleanGuide(input);
-  if (!clean.ok) return fail(clean.error);
-  const { data, error } = await s.supabase.from("vit_guide_settings").update({ content: clean.guide }).eq("id", 1).select("id");
-  if (error) return fail(/vit_guide_settings/.test(error.message) ? "Run supabase/vit-guide.sql in Supabase first." : friendlyDbError(error.message));
-  if (!data?.length) return fail("Run supabase/vit-guide.sql in Supabase first.");
-  updateTag("vit-guide"); // the guide page updates immediately
-  await s.supabase
-    .rpc("log_admin_event", { p_action: "settings.vit_guide", p_summary: `Updated the VIT Counselling Guide${clean.guide.year ? ` (${clean.guide.year})` : ""}`, p_details: { placeholders_left: countPlaceholders(clean.guide) } })
-    .then(() => undefined, () => undefined);
-  const left = countPlaceholders(clean.guide);
-  return { ok: true, message: left ? `Saved. ${left} placeholder(s) still to fill in — they show as "to be confirmed" on the page.` : "Saved — the guide page shows the new text now." };
 }
 
 // ---------------------------------------------------------------- BLOG (supabase/blog.sql)

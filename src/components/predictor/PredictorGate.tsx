@@ -2,7 +2,7 @@
 //  PREDICTOR GATE (server)
 //  Decides on the SERVER which version of the predictor a visitor gets:
 //    • not logged in → marks input + "log in / sign up to see your rank"
-//    • logged in     → FREE: rank range + top 3 options (campus, branch, chance) + blurred SAMPLE list
+//    • logged in     → FREE: rank range only (+ blurred SAMPLE college list)
 //    • paid / admin  → FULL: colleges, chances, fee categories, filters, PDF
 //  Real cutoff data is never sent to the browser. Users without full
 //  access don't even get the campus / branch lists.

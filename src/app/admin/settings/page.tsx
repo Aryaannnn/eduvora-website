@@ -11,8 +11,6 @@ import StatsManager from "@/components/admin/StatsManager";
 import WhySettingsForm from "@/components/admin/WhySettingsForm";
 import PriceLabelsCard from "@/components/admin/PriceLabelsCard";
 import SearchConsoleCard from "@/components/admin/SearchConsoleCard";
-import VitGuideForm from "@/components/admin/VitGuideForm";
-import { cleanGuide, DEFAULT_GUIDE } from "@/lib/vit-guide-shared";
 import InvoiceSettingsCard from "@/components/admin/InvoiceSettingsCard";
 import LeadCaptureCard, { type LeadCaptureState } from "@/components/admin/LeadCaptureCard";
 import PdfLimitCard from "@/components/admin/PdfLimitCard";
@@ -41,7 +39,7 @@ export default function SettingsPage() {
 
 async function Content() {
   const s = await requireAdmin("/admin/settings");
-  const [{ data, error }, ref, wc, cal, mt, wy, ds, gs, fp, bn, cm, pl, sr, gsv, vg] = await Promise.all([
+  const [{ data, error }, ref, wc, cal, mt, wy, ds, gs, fp, bn, cm, pl, sr, gsv] = await Promise.all([
     s.supabase.from("site_stats").select("id,label,value,suffix,sort_order").order("sort_order"),
     s.supabase.from("referral_settings").select("enabled,referred_discount,referrer_reward").eq("id", 1).maybeSingle(),
     s.supabase.from("community_settings").select("whatsapp_link").eq("id", 1).maybeSingle(),
@@ -56,10 +54,7 @@ async function Content() {
     s.supabase.from("pdf_settings").select("daily_limit").eq("id", 1).maybeSingle(),
     s.supabase.rpc("storage_report"), // supabase/storage-cleanup.sql
     s.supabase.from("display_settings").select("google_site_verification").eq("id", 1).maybeSingle(), // supabase/search-console.sql
-    s.supabase.from("vit_guide_settings").select("content").eq("id", 1).maybeSingle(), // supabase/vit-guide.sql
   ]);
-  const vgClean = vg.data?.content ? cleanGuide(vg.data.content) : null;
-  const vitGuide = <VitGuideForm initial={vgClean?.ok ? vgClean.guide : DEFAULT_GUIDE} setupMissing={!!vg.error || !vg.data} savedBefore={!!vgClean?.ok} />;
   const searchConsole = <SearchConsoleCard initial={(gsv.data?.google_site_verification as string | null) ?? ""} setupMissing={!!gsv.error || !gsv.data} />;
   const storage = <StorageCard kinds={sr.error ? null : ((sr.data ?? []) as StorageKind[]).map((k) => ({ ...k, bytes: Number(k.bytes), files: k.files === null ? null : Number(k.files) }))} setupMissing={!!sr.error} />;
   const pdfLimit = siteConfig.inWebsiteReader ? null : <PdfLimitCard initial={pl.error || !pl.data ? null : Number(pl.data.daily_limit)} />;
@@ -119,7 +114,6 @@ async function Content() {
         {why}
         {priceLabels}
         {searchConsole}
-        {vitGuide}
         <InvoiceSettingsCard />
         {referral}
         <p className="card p-6 text-red-600">{missing ? "Run supabase/stats-reviews.sql in Supabase → SQL Editor to turn on editable stats." : `Could not load settings: ${error.message}`}</p>
@@ -140,7 +134,6 @@ async function Content() {
       {why}
       {priceLabels}
       {searchConsole}
-      {vitGuide}
       <InvoiceSettingsCard />
       {referral}
       <StatsManager stats={(data ?? []) as SiteStat[]} />

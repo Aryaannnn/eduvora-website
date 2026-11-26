@@ -17,7 +17,6 @@ import { parentsPage as c } from "@/content/parents";
 import { getApprovedReviews } from "@/lib/data";
 import { breadcrumbLd, faqLd, pageMeta } from "@/lib/seo";
 import RelatedPages from "@/components/seo/RelatedPages";
-import OfficialNotice from "@/components/OfficialNotice";
 
 // ✏️ All the text on this page is in src/content/parents.ts
 export const metadata: Metadata = pageMeta({ title: c.meta.title, description: c.meta.description, path: "/parents" });
@@ -53,7 +52,6 @@ export default function ParentsPage() {
       <PageHero eyebrow={c.hero.eyebrow} title={c.hero.title} subtitle={c.hero.subtitle}>
         <div className="mt-7"><Buttons dark /></div>
       </PageHero>
-      <div className="container-page pt-6"><OfficialNotice /></div>
 
       {/* What counselling covers */}
       <section className="section">
